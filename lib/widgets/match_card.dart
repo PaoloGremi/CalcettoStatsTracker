@@ -11,7 +11,7 @@ class MatchCard extends StatelessWidget {
   const MatchCard({required this.match, super.key});
 
   String _name(String id) {
-    final p = HiveBoxes.playersBox.get(id) as Player?;
+    final p = HiveBoxes.playersBox.get(id);
     return p?.name ?? 'Sconosciuto';
   }
 

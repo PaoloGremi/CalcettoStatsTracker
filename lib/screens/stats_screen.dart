@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
-import '../data/hive_boxes.dart';
-import '../models/player.dart';
-import '../models/match_model.dart';
 
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
