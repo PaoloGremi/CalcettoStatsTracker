@@ -10,8 +10,8 @@ class DataService extends ChangeNotifier{
   // Players
   List<Player> getAllPlayers() => HiveBoxes.playersBox.values.toList();
 
-  Future<Player> addPlayer(String name) async {
-    final player = Player(id: _uuid.v4(), name: name);
+  Future<Player> addPlayer(String name, {required String role}) async {
+    final player = Player(id: _uuid.v4(), name: name, role: role);
     await HiveBoxes.playersBox.put(player.id, player);
     return player;
   }
