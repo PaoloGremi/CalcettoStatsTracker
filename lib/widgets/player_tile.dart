@@ -18,7 +18,7 @@ class PlayerTile extends StatelessWidget {
         width: 40,
         height: 40,
       ),
-      title: Text(player.name),
+      title: Text(player.name +' - ' + player.role),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -46,7 +46,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: selectedRole,
+                        initialValue: selectedRole,
                         decoration: const InputDecoration(labelText: 'Ruolo'),
                         items: const [
                           DropdownMenuItem(value: 'P', child: Text('P - Portiere')),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
-import '../models/player.dart';
 import '../screens/match_detail_screen.dart';
 import '../services/data_service.dart';
 
