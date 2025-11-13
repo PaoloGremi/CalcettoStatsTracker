@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
-import '../models/player.dart';
 import '../screens/match_detail_screen.dart';
 import '../services/data_service.dart';
 
@@ -11,7 +10,7 @@ class MatchCard extends StatelessWidget {
   const MatchCard({required this.match, super.key});
 
   String _name(String id) {
-    final p = HiveBoxes.playersBox.get(id) as Player?;
+    final p = HiveBoxes.playersBox.get(id);
     return p?.name ?? 'Sconosciuto';
   }
 

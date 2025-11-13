@@ -29,9 +29,11 @@ class MatchDetailScreen extends StatelessWidget {
                 (id) => HiveBoxes.playersBox.get(id)?.name == name,
                 orElse: () => '',
               );
+              final player = HiveBoxes.playersBox.get(playerId);
+              final ruolo = player?.role ?? 'N/D';
               final voto = match.votes[playerId] ?? 0;
               final commento = match.comments[playerId] ?? '';
-              return _buildPlayerTile(name, voto, commento);
+              return _buildPlayerTile(name, ruolo, voto, commento);
             }),
             const SizedBox(height: 16),
 
@@ -41,9 +43,11 @@ class MatchDetailScreen extends StatelessWidget {
                 (id) => HiveBoxes.playersBox.get(id)?.name == name,
                 orElse: () => '',
               );
+              final player = HiveBoxes.playersBox.get(playerId);
+              final ruolo = player?.role ?? 'N/D';
               final voto = match.votes[playerId] ?? 0;
               final commento = match.comments[playerId] ?? '';
-              return _buildPlayerTile(name, voto, commento);
+              return _buildPlayerTile(name, ruolo, voto, commento);
             }),
           ],
         ),
@@ -51,12 +55,12 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlayerTile(String name, int voto, String commento) {
+  Widget _buildPlayerTile(String name, String role, int voto, String commento) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
         leading: const Icon(Icons.person),
-        title: Text(name),
+        title: Text('$name - $role'),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
-import '../data/hive_boxes.dart';
-import '../models/player.dart';
-import '../models/match_model.dart';
 
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
@@ -46,7 +43,7 @@ class StatsScreen extends StatelessWidget {
         children: players.map((player) {
           final s = stats[player.id]!;
           return ListTile(
-            title: Text(player.name),
+            title: Text(player.name +' - '+ player.role),
             subtitle: Text(
               'Partite giocate: ${s['games']}, Voto medio: ${s['avgVote'].toStringAsFixed(2)}',
             ),

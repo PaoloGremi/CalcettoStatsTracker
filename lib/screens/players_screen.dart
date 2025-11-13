@@ -28,23 +28,58 @@ class _PlayersScreenState extends State<PlayersScreen> {
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
-          final controller = TextEditingController();
-          final res = await showDialog<String>(
+          final nameController = TextEditingController();
+          String? selectedRole;
+
+          final res = await showDialog<Map<String, String>>(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Nuovo giocatore'),
-              content: TextField(controller: controller),
+              content: StatefulBuilder(
+                builder: (context, setStateDialog) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(labelText: 'Nome giocatore'),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedRole,
+                        decoration: const InputDecoration(labelText: 'Ruolo'),
+                        items: const [
+                          DropdownMenuItem(value: 'P', child: Text('P - Portiere')),
+                          DropdownMenuItem(value: 'D', child: Text('D - Difensore')),
+                          DropdownMenuItem(value: 'C', child: Text('C - Centrocampista')),
+                          DropdownMenuItem(value: 'A', child: Text('A - Attaccante')),
+                        ],
+                        onChanged: (val) => setStateDialog(() => selectedRole = val),
+                      ),
+                    ],
+                  );
+                },
+              ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annulla')),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Annulla')),
                 ElevatedButton(
-                    onPressed: () => Navigator.pop(context, controller.text),
-                    child: const Text('Aggiungi')),
+                  onPressed: () {
+                    if (nameController.text.trim().isEmpty || selectedRole == null) return;
+                    Navigator.pop(context, {
+                      'name': nameController.text.trim(),
+                      'role': selectedRole!,
+                    });
+                  },
+                  child: const Text('Aggiungi'),
+                ),
               ],
             ),
           );
 
-          if (res != null && res.trim().isNotEmpty) {
-            await data.addPlayer(res.trim());
+          if (res != null && res['name']!.isNotEmpty) {
+            await data.addPlayer(res['name']!, role: res['role']!);
             setState(() {});
           }
         },
