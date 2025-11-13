@@ -4,6 +4,8 @@ import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
 import '../screens/match_detail_screen.dart';
 import '../services/data_service.dart';
+import 'package:intl/intl.dart';
+
 
 class MatchCard extends StatelessWidget {
   final MatchModel match;
@@ -18,11 +20,20 @@ class MatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final playersA = match.teamA.map(_name).join(', ');
     final playersB = match.teamB.map(_name).join(', ');
+    final roundedDate = DateTime(
+      match.date.year,
+      match.date.month,
+      match.date.day,
+      match.date.hour,
+      match.date.minute,
+    );
+    final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(roundedDate);
+
 
     return Card(
       child: ListTile(
         title: Text('${match.scoreA} - ${match.scoreB}'),
-        subtitle: Text('${match.date.toLocal()}\nBianchi: $playersA\nColorati: $playersB'),
+        subtitle: Text('$formattedDate\nBianchi: $playersA\nColorati: $playersB'),
         isThreeLine: true,
         onTap: () => Navigator.push(
           context,
