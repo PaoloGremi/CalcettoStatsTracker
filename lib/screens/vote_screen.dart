@@ -16,13 +16,16 @@ class _VoteScreenState extends State<VoteScreen> {
     final allPlayers = [...widget.match.teamA, ...widget.match.teamB];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dai voti e commenti')),
+      appBar: AppBar(title: const Text('Vota e Commenta')),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
           ...allPlayers.map((id) {
             final playerName = HiveBoxes.playersBox.get(id)?.name ?? 'Sconosciuto';
             final voto = widget.match.votes[id]?.toDouble() ?? 5.0;
+            if (!widget.match.votes.containsKey(id)) {
+            widget.match.votes[id] = 5;
+            }
             final commento = widget.match.comments[id] ?? '';
 
             return Card(
