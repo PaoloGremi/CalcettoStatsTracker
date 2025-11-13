@@ -55,6 +55,7 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     final scoreA = reader.readInt();
     final scoreB = reader.readInt();
     final votesMap = Map<String, int>.from(reader.readMap());
+    final commentsMap = Map<String, String>.from(reader.readMap());
     
 
     return MatchModel(
@@ -65,6 +66,7 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
       scoreA: scoreA,
       scoreB: scoreB,
       votes: votesMap,
+      comments: commentsMap,
     );
   }
 
@@ -77,5 +79,6 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     writer.writeInt(obj.scoreA);
     writer.writeInt(obj.scoreB);
     writer.writeMap(obj.votes);
+    writer.writeMap(obj.comments);
   }
 }
