@@ -13,7 +13,14 @@ class Player extends HiveObject {
   @HiveField(2)
   String role;
 
-  Player({required this.id, required this.name, required this.role});
+  @HiveField(3)
+  final String icon;
+
+  Player({
+    required this.id,
+    required this.name, 
+    required this.role, 
+    required this.icon});
 }
 
 // Adapter manuale per Hive
@@ -26,7 +33,8 @@ class PlayerAdapter extends TypeAdapter<Player> {
     final id = reader.readString();
     final name = reader.readString();
     final role = reader.readString();
-    return Player(id: id, name: name, role: role);
+    final icon = reader.readString();
+    return Player(id: id, name: name, role: role, icon: icon);
   }
 
   @override
@@ -34,6 +42,19 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.writeString(obj.id);
     writer.writeString(obj.name);
     writer.writeString(obj.role);
+    writer.writeString(obj.icon);
   }
+
+static Player? getByName(String name) {
+  final box = Hive.box<Player>('players');
+
+  try {
+    return box.values.firstWhere(
+      (p) => p.name.toLowerCase() == name.toLowerCase(),
+    );
+  } catch (_) {
+    return null;
+  }
+}
 
 }

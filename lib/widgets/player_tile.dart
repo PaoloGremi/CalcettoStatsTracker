@@ -1,3 +1,4 @@
+import 'package:calcetto_tracker/data/player_icons.dart';
 import 'package:flutter/material.dart';
 import '../models/player.dart';
 import '../services/data_service.dart';
@@ -12,11 +13,21 @@ class PlayerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = Provider.of<DataService>(context, listen: false);
 
+    final playerIcon = availableIcons.firstWhere(
+      (icon) => icon.key == player.icon,
+      orElse: () => PlayerIcon(key: 'person', iconData: Icons.person),
+    );
+
     return ListTile(
-      leading: Image.asset(
-        './assets/icons/player_icon.png',
+      leading: playerIcon.isAsset
+    ? Image.asset(
+        playerIcon.assetPath!,
         width: 40,
         height: 40,
+      )
+    : Icon(
+        playerIcon.iconData,
+        size: 40,
       ),
       title: Text(player.name +' - ' + player.role),
       trailing: Row(

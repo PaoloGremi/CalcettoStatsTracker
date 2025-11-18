@@ -31,6 +31,12 @@ class MatchCard extends StatelessWidget {
 
 
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),   // angoli arrotondati
+      ),
+      elevation: 6, // effetto rialzato
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      
       child: ListTile(
         title: Text('${match.scoreA} - ${match.scoreB}'),
         subtitle: Text('$formattedDate\nBianchi: $playersA\nColorati: $playersB'),
