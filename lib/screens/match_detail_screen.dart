@@ -87,8 +87,8 @@ class MatchDetailScreen extends StatelessWidget {
             Text('Voto: $voto'),
             if (commento.isNotEmpty)
               Text(
-                'Commento: $commento',
-                style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                commento,
+                style: const TextStyle(fontStyle: FontStyle.normal, color: Colors.grey),
               ),
           ],
         ),
