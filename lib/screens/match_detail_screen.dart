@@ -1,3 +1,7 @@
+
+
+import 'package:calcetto_tracker/data/player_icons.dart';
+import 'package:calcetto_tracker/models/player.dart';
 import 'package:flutter/material.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
@@ -5,12 +9,14 @@ import '../data/hive_boxes.dart';
 class MatchDetailScreen extends StatelessWidget {
   final MatchModel match;
   const MatchDetailScreen({required this.match, super.key});
+  
+  
 
   @override
   Widget build(BuildContext context) {
     final teamAPlayers = match.teamA.map((id) => HiveBoxes.playersBox.get(id)?.name ?? 'Sconosciuto').toList();
     final teamBPlayers = match.teamB.map((id) => HiveBoxes.playersBox.get(id)?.name ?? 'Sconosciuto').toList();
-
+    
     return Scaffold(
       appBar: AppBar(title: const Text('Dettaglio partita')),
       body: Padding(
@@ -30,10 +36,11 @@ class MatchDetailScreen extends StatelessWidget {
                 orElse: () => '',
               );
               final player = HiveBoxes.playersBox.get(playerId);
+              final icona = player?.icon ?? 'person';
               final ruolo = player?.role ?? 'N/D';
               final voto = match.votes[playerId] ?? 0;
               final commento = match.comments[playerId] ?? '';
-              return _buildPlayerTile(name, ruolo, voto, commento);
+              return _buildPlayerTile(name, icona, ruolo, voto, commento);
             }),
             const SizedBox(height: 16),
 
@@ -44,10 +51,12 @@ class MatchDetailScreen extends StatelessWidget {
                 orElse: () => '',
               );
               final player = HiveBoxes.playersBox.get(playerId);
+              final icona = player?.icon ?? 'person';
               final ruolo = player?.role ?? 'N/D';
               final voto = match.votes[playerId] ?? 0;
               final commento = match.comments[playerId] ?? '';
-              return _buildPlayerTile(name, ruolo, voto, commento);
+              
+              return _buildPlayerTile(name, icona, ruolo, voto, commento);
             }),
           ],
         ),
@@ -55,11 +64,28 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlayerTile(String name, String role, int voto, String commento) {
+  Widget _buildPlayerTile(String name, String icon, String role, int voto, String commento) {
+
+    final iconData = getPlayerIcon(icon);
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
-        leading: const Icon(Icons.person),
+
+        //leading: const Icon(Icons.person),
+//-----------------
+leading: iconData.isAsset
+    ? CircleAvatar(
+        radius: 22,
+        backgroundImage: AssetImage(iconData.assetPath!),
+      )
+    : CircleAvatar(
+        radius: 22,
+        child: Icon(iconData.iconData, size: 24),
+      ),
+               
+//----------------
+
         title: Text('$name - $role'),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

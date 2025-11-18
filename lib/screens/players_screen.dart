@@ -1,3 +1,4 @@
+import 'package:calcetto_tracker/data/player_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
@@ -30,6 +31,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
         onPressed: () async {
           final nameController = TextEditingController();
           String? selectedRole;
+          String selectedIcon = 'person'; // default icon
 
           final res = await showDialog<Map<String, String>>(
             context: context,
@@ -45,6 +47,32 @@ class _PlayersScreenState extends State<PlayersScreen> {
                         decoration: const InputDecoration(labelText: 'Nome giocatore'),
                       ),
                       const SizedBox(height: 16),
+
+                  
+          DropdownButtonFormField<String>(
+            initialValue: selectedIcon,
+            decoration: const InputDecoration(labelText: 'Icona giocatore'),
+            items: availableIcons.map((playerIcon) {
+              return DropdownMenuItem(
+              value: playerIcon.key,
+              child: Row(
+                children: [
+                playerIcon.isAsset
+                ? Image.asset(playerIcon.assetPath!, width: 24, height: 24)
+                : Icon(playerIcon.iconData, size: 24),
+                const SizedBox(width: 8),
+                Text(playerIcon.key),
+              ],
+            ),
+          );
+        }).toList(),
+  onChanged: (val) {
+    setStateDialog(() {
+      selectedIcon = val ?? selectedIcon;
+    });
+  },
+),
+
                       DropdownButtonFormField<String>(
                         initialValue: selectedRole,
                         decoration: const InputDecoration(labelText: 'Ruolo'),
@@ -69,6 +97,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                     if (nameController.text.trim().isEmpty || selectedRole == null) return;
                     Navigator.pop(context, {
                       'name': nameController.text.trim(),
+                      'icon': selectedIcon,
                       'role': selectedRole!,
                     });
                   },
@@ -79,7 +108,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
           );
 
           if (res != null && res['name']!.isNotEmpty) {
-            await data.addPlayer(res['name']!, role: res['role']!);
+            await data.addPlayer(res['name']!,res['icon']! , role: res['role']!);
             setState(() {});
           }
         },
