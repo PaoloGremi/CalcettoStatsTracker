@@ -19,7 +19,7 @@ class StatsScreen extends StatelessWidget {
 
     for (var player in players) {
       int gamesPlayed = 0;
-      int totalVotes = 0;
+      double totalVotes = 0;
       int votesCount = 0;
 
       for (var match in matches) {

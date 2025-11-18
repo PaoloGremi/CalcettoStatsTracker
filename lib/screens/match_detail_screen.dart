@@ -63,7 +63,7 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPlayerTile(String name, String icon, String role, int voto, String commento) {
+  Widget _buildPlayerTile(String name, String icon, String role, double voto, String commento) {
 
     final iconData = getPlayerIcon(icon);
 

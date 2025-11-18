@@ -42,11 +42,11 @@ class _VoteScreenState extends State<VoteScreen> {
                       value: voto,
                       min: 1,
                       max: 10,
-                      divisions: 9,
-                      label: voto.round().toString(),
+                      divisions: 18,
+                      label: voto.toString(),
                       onChanged: (val) {
                         setState(() {
-                          widget.match.votes[id] = val.round();
+                          widget.match.votes[id] = val;
                         });
                       },
                     ),
