@@ -1,7 +1,6 @@
 
 
 import 'package:calcetto_tracker/data/player_icons.dart';
-import 'package:calcetto_tracker/models/player.dart';
 import 'package:flutter/material.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
@@ -71,20 +70,15 @@ class MatchDetailScreen extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
-
-        //leading: const Icon(Icons.person),
-//-----------------
-leading: iconData.isAsset
-    ? CircleAvatar(
+      leading: iconData.isAsset
+        ? CircleAvatar(
         radius: 22,
         backgroundImage: AssetImage(iconData.assetPath!),
-      )
-    : CircleAvatar(
+        )
+      : CircleAvatar(
         radius: 22,
         child: Icon(iconData.iconData, size: 24),
-      ),
-               
-//----------------
+        ),
 
         title: Text('$name - $role'),
         subtitle: Column(
