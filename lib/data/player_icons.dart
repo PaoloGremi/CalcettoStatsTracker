@@ -21,6 +21,7 @@ final List<PlayerIcon> availableIcons = [
   PlayerIcon(key: 'custom5', assetPath: 'assets/icons/lucio.png'),
   PlayerIcon(key: 'custom6', assetPath: 'assets/icons/stefano.png'),
   PlayerIcon(key: 'custom7', assetPath: 'assets/icons/flavio.png'),
+  PlayerIcon(key: 'custom8', assetPath: 'assets/icons/DanieleGandolfi.png'),
 ];
 
 class PlayerIcon {
