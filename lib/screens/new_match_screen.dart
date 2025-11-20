@@ -18,7 +18,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   final Map<String, bool> selectedB = {};
   int scoreA = 0;
   int scoreB = 0;
-
+  String? fieldLocation;
   DateTime? selectedDateTime;
 
   @override
@@ -60,13 +60,41 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               )),
           const SizedBox(height: 10),
 
+                DropdownButtonFormField<String>(
+                    initialValue: fieldLocation,
+                    decoration: const InputDecoration(labelText: 'Location'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'SanFrancesco',
+                          child: Text('San Francesco - Lodi')),
+                      DropdownMenuItem(
+                          value: 'Montanaso',
+                          child: Text('Campo Sportivo - Montanaso')),
+                      DropdownMenuItem(
+                          value: 'Faustina', child: Text('Faustina - Lodi')),
+                      DropdownMenuItem(
+                          value: 'Pergola',
+                          child: Text('La Pergola - San Martino in Strada')),
+                      DropdownMenuItem(
+                          value: 'Other', child: Text('Altro Campo')),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        fieldLocation = val;
+                      }
+                      );
+                    }
+                    
+                    ),
+             
+         
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Column(
                 children: [
                   const Text('Data e Ora'),
-                  SizedBox( 
+                  SizedBox(
                       width: 150,
                       child: ElevatedButton.icon(
                           icon: const Icon(Icons.calendar_today),
@@ -134,7 +162,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 ),
               ]),
             ],
-          ), 
+          ),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
@@ -143,7 +171,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                   .map((e) => e.key)
                   .toList();
               final teamBIds = selectedB.entries
-                  .where((e) => e.value) 
+                  .where((e) => e.value)
                   .map((e) => e.key)
                   .toList();
 
@@ -156,6 +184,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 teamB: teamBIds,
                 scoreA: scoreA,
                 scoreB: scoreB,
+                fieldLocation: fieldLocation ?? 'other',
               );
 
               await data.addMatch(match);
