@@ -28,6 +28,9 @@ class MatchModel extends HiveObject {
   @HiveField(7)
   Map<String, String> comments;
 
+  @HiveField(8)
+  String fieldLocation;
+
   MatchModel({
     required this.id,
     required this.date,
@@ -37,8 +40,10 @@ class MatchModel extends HiveObject {
     this.scoreB = 0,
     Map<String, double>? votes,
     Map<String, String>? comments,
+    required this.fieldLocation,
   }) : votes = votes ?? {},
         comments = comments ?? {};
+    
 }
 
 // Adapter manuale per Hive
@@ -56,6 +61,7 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     final scoreB = reader.readInt();
     final votesMap = Map<String, double>.from(reader.readMap());
     final commentsMap = Map<String, String>.from(reader.readMap());
+    final fieldLocation = reader.readString();
     
 
     return MatchModel(
@@ -67,6 +73,7 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
       scoreB: scoreB,
       votes: votesMap,
       comments: commentsMap,
+      fieldLocation: fieldLocation,
     );
   }
 
@@ -80,5 +87,6 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     writer.writeInt(obj.scoreB);
     writer.writeMap(obj.votes);
     writer.writeMap(obj.comments);
+    writer.writeString(obj.fieldLocation);
   }
 }

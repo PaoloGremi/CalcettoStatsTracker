@@ -44,45 +44,50 @@ class _PlayersScreenState extends State<PlayersScreen> {
                     children: [
                       TextField(
                         controller: nameController,
-                        decoration: const InputDecoration(labelText: 'Nome giocatore'),
+                        decoration:
+                            const InputDecoration(labelText: 'Nome giocatore'),
                       ),
                       const SizedBox(height: 16),
-
-                  
-          DropdownButtonFormField<String>(
-            initialValue: selectedIcon,
-            decoration: const InputDecoration(labelText: 'Icona giocatore'),
-            items: availableIcons.map((playerIcon) {
-              return DropdownMenuItem(
-              value: playerIcon.key,
-              child: Row(
-                children: [
-                playerIcon.isAsset
-                ? Image.asset(playerIcon.assetPath!, width: 24, height: 24)
-                : Icon(playerIcon.iconData, size: 24),
-                const SizedBox(width: 8),
-                Text(playerIcon.key),
-              ],
-            ),
-          );
-        }).toList(),
-  onChanged: (val) {
-    setStateDialog(() {
-      selectedIcon = val ?? selectedIcon;
-    });
-  },
-),
-
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedIcon,
+                        decoration:
+                            const InputDecoration(labelText: 'Icona giocatore'),
+                        items: availableIcons.map((playerIcon) {
+                          return DropdownMenuItem(
+                            value: playerIcon.key,
+                            child: Row(
+                              children: [
+                                playerIcon.isAsset
+                                    ? Image.asset(playerIcon.assetPath!,
+                                        width: 24, height: 24)
+                                    : Icon(playerIcon.iconData, size: 24),
+                                const SizedBox(width: 8),
+                                Text(playerIcon.key),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setStateDialog(() {
+                            selectedIcon = val ?? selectedIcon;
+                          });
+                        },
+                      ),
                       DropdownButtonFormField<String>(
                         initialValue: selectedRole,
                         decoration: const InputDecoration(labelText: 'Ruolo'),
                         items: const [
-                          DropdownMenuItem(value: 'P', child: Text('P - Portiere')),
-                          DropdownMenuItem(value: 'D', child: Text('D - Difensore')),
-                          DropdownMenuItem(value: 'C', child: Text('C - Centrocampista')),
-                          DropdownMenuItem(value: 'A', child: Text('A - Attaccante')),
+                          DropdownMenuItem(
+                              value: 'P', child: Text('P - Portiere')),
+                          DropdownMenuItem(
+                              value: 'D', child: Text('D - Difensore')),
+                          DropdownMenuItem(
+                              value: 'C', child: Text('C - Centrocampista')),
+                          DropdownMenuItem(
+                              value: 'A', child: Text('A - Attaccante')),
                         ],
-                        onChanged: (val) => setStateDialog(() => selectedRole = val),
+                        onChanged: (val) =>
+                            setStateDialog(() => selectedRole = val),
                       ),
                     ],
                   );
@@ -94,7 +99,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
                     child: const Text('Annulla')),
                 ElevatedButton(
                   onPressed: () {
-                    if (nameController.text.trim().isEmpty || selectedRole == null) return;
+                    if (nameController.text.trim().isEmpty ||
+                        selectedRole == null) return;
                     Navigator.pop(context, {
                       'name': nameController.text.trim(),
                       'icon': selectedIcon,
@@ -108,7 +114,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
           );
 
           if (res != null && res['name']!.isNotEmpty) {
-            await data.addPlayer(res['name']!,res['icon']! , role: res['role']!);
+            await data.addPlayer(res['name']!, res['icon']!,
+                role: res['role']!);
             setState(() {});
           }
         },
