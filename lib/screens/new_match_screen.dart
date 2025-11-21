@@ -60,34 +60,33 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               )),
           const SizedBox(height: 10),
 
-                DropdownButtonFormField<String>(
-                    initialValue: fieldLocation,
-                    decoration: const InputDecoration(labelText: 'Location'),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'SanFrancesco',
-                          child: Text('San Francesco - Lodi')),
-                      DropdownMenuItem(
-                          value: 'Montanaso',
-                          child: Text('Campo Sportivo - Montanaso')),
-                      DropdownMenuItem(
-                          value: 'Faustina', child: Text('Faustina - Lodi')),
-                      DropdownMenuItem(
-                          value: 'Pergola',
-                          child: Text('La Pergola - San Martino in Strada')),
-                      DropdownMenuItem(
-                          value: 'Other', child: Text('Altro Campo')),
-                    ],
-                    onChanged: (val) {
-                      setState(() {
-                        fieldLocation = val;
-                      }
-                      );
-                    }
-                    
-                    ),
-             
-         
+          SizedBox(
+            height: 100,
+            width: 100,
+              child:
+              DropdownButtonFormField<String>(
+              initialValue: fieldLocation,
+              decoration: const InputDecoration(labelText: 'Location'),
+              items: const [
+                DropdownMenuItem(
+                    value: 'SanFrancesco', child: Text('San Francesco - Lodi')),
+                DropdownMenuItem(
+                    value: 'Montanaso',
+                    child: Text('Campo Sportivo - Montanaso')),
+                DropdownMenuItem(
+                    value: 'Faustina', child: Text('Faustina - Lodi')),
+                DropdownMenuItem(
+                    value: 'Pergola',
+                    child: Text('La Pergola - San Martino in Strada')),
+                DropdownMenuItem(value: 'Other', child: Text('Altro Campo')),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  fieldLocation = val;
+                });
+              }),
+          ),
+          
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
