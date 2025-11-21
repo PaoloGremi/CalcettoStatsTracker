@@ -20,16 +20,15 @@ class PlayerTile extends StatelessWidget {
 
     return ListTile(
       leading: playerIcon.isAsset
-    ? Image.asset(
-        playerIcon.assetPath!,
-        width: 40,
-        height: 40,
-      )
-    : Icon(
-        playerIcon.iconData,
-        size: 40,
-      ),
-      title: Text(player.name +' - ' + player.role),
+          ? CircleAvatar(
+              radius: 22,
+              backgroundImage: AssetImage(playerIcon.assetPath!),
+            )
+          : CircleAvatar(
+              radius: 22,
+              child: Icon(playerIcon.iconData, size: 24),
+            ),
+      title: Text(player.name + ' - ' + player.role),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -43,8 +42,13 @@ class PlayerTile extends StatelessWidget {
                   title: const Text('Modifica nome'),
                   content: TextField(controller: controller),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annulla')),
-                    ElevatedButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Salva')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annulla')),
+                    ElevatedButton(
+                        onPressed: () =>
+                            Navigator.pop(context, controller.text),
+                        child: const Text('Salva')),
                   ],
                 ),
               );
@@ -63,10 +67,15 @@ class PlayerTile extends StatelessWidget {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('Elimina giocatore?'),
-                  content: const Text('Vuoi eliminare questo giocatore (verrà rimosso dalle partite)?'),
+                  content: const Text(
+                      'Vuoi eliminare questo giocatore (verrà rimosso dalle partite)?'),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-                    ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sì')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('No')),
+                    ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Sì')),
                   ],
                 ),
               );
