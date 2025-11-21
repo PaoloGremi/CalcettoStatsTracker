@@ -12,8 +12,6 @@ class StatsScreen extends StatelessWidget {
     final players = data.getAllPlayers();
     final matches = data.getAllMatches();
 
-    
-
     // Calcola statistiche
     final stats = <String, Map<String, dynamic>>{};
 
@@ -23,7 +21,8 @@ class StatsScreen extends StatelessWidget {
       int votesCount = 0;
 
       for (var match in matches) {
-        if (match.teamA.contains(player.id) || match.teamB.contains(player.id)) {
+        if (match.teamA.contains(player.id) ||
+            match.teamB.contains(player.id)) {
           gamesPlayed++;
           if (match.votes.containsKey(player.id)) {
             totalVotes += match.votes[player.id]!;
@@ -39,7 +38,6 @@ class StatsScreen extends StatelessWidget {
         'avgVote': avgVote,
       };
     }
-    
 
     return Scaffold(
       appBar: AppBar(title: const Text('Statistiche giocatori')),
@@ -49,18 +47,16 @@ class StatsScreen extends StatelessWidget {
           final icona = player.icon;
           final iconData = getPlayerIcon(icona);
           return ListTile(
-            //--------------------------------------------------------
             leading: iconData.isAsset
-        ? CircleAvatar(
-        radius: 22,
-        backgroundImage: AssetImage(iconData.assetPath!),
-        )
-      : CircleAvatar(
-        radius: 22,
-        child: Icon(iconData.iconData, size: 24),
-        ),
-            //------------------------------------------------------
-            title: Text(player.name +' - '+ player.role),
+                ? CircleAvatar(
+                    radius: 22,
+                    backgroundImage: AssetImage(iconData.assetPath!),
+                  )
+                : CircleAvatar(
+                    radius: 22,
+                    child: Icon(iconData.iconData, size: 24),
+                  ),
+            title: Text(player.name + ' - ' + player.role),
             subtitle: Text(
               'Partite giocate: ${s['games']}, Voto medio: ${s['avgVote'].toStringAsFixed(2)}',
             ),

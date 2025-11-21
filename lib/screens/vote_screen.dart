@@ -21,10 +21,11 @@ class _VoteScreenState extends State<VoteScreen> {
         padding: const EdgeInsets.all(12),
         children: [
           ...allPlayers.map((id) {
-            final playerName = HiveBoxes.playersBox.get(id)?.name ?? 'Sconosciuto';
+            final playerName =
+                HiveBoxes.playersBox.get(id)?.name ?? 'Sconosciuto';
             final voto = widget.match.votes[id]?.toDouble() ?? 5.0;
             if (!widget.match.votes.containsKey(id)) {
-            widget.match.votes[id] = 5;
+              widget.match.votes[id] = 5;
             }
             final commento = widget.match.comments[id] ?? '';
 
@@ -37,7 +38,8 @@ class _VoteScreenState extends State<VoteScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(playerName,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     Slider(
                       value: voto,
                       min: 1,

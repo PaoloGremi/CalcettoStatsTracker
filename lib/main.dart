@@ -34,20 +34,20 @@ class CalcettoApp extends StatelessWidget {
         title: 'Champions Calcetto Stats',
         theme: ThemeData.dark().copyWith(
           colorScheme: const ColorScheme.dark(
-          primary: Colors.green, // colore principale (app bar, bottoni)
-          secondary: Colors.tealAccent,
+            primary: Colors.green, // colore principale (app bar, bottoni)
+            secondary: Colors.tealAccent,
+          ),
+          scaffoldBackgroundColor: Colors.black, // sfondo principale
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          cardColor: Colors.grey[900],
+          textTheme: const TextTheme(
+            bodyMedium: TextStyle(color: Colors.white70),
+          ),
         ),
-        scaffoldBackgroundColor: Colors.black, // sfondo principale
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-        ),
-        cardColor: Colors.grey[900],
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Colors.white70),
-        ),
-      ),
-      home: const HomeScreen(),
+        home: const HomeScreen(),
       ),
     );
   }

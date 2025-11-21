@@ -28,13 +28,14 @@ class MatchCard extends StatelessWidget {
     return map[location] ?? 'assets/images/sfondoPalloneGenerico.png';
   }
 
-
-String getDescriptionForLocation(String? location) {
+  String getDescriptionForLocation(String? location) {
     const map = {
       'SanFrancesco': 'San Fracesco - Via Serravalle, 4, 26900 Lodi LO ',
-      'Montanaso': 'McDonalds Stadium - Via G. Garibaldi, 26836 Montanaso Lombardo LO',
+      'Montanaso':
+          'McDonalds Stadium - Via G. Garibaldi, 26836 Montanaso Lombardo LO',
       'Faustina': 'Faustina sport arena - Piazzale degli Sport, 26900 Lodi LO',
-      'Pergola': 'La Pergola - Via per Ca de Bolli, 11, 26817 San Martino in Strada LO',
+      'Pergola':
+          'La Pergola - Via per Ca de Bolli, 11, 26817 San Martino in Strada LO',
       'Other': 'campo sportivo',
     };
 
@@ -55,7 +56,6 @@ String getDescriptionForLocation(String? location) {
     );
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(roundedDate);
 
-//----------------------------------------------------------------------------------------------
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -84,7 +84,7 @@ String getDescriptionForLocation(String? location) {
               style: const TextStyle(color: Colors.white),
             ),
             subtitle: Text(
-              '$formattedDate\nBianchi: $playersA\nColorati: $playersB\n📍 ${getDescriptionForLocation(match.fieldLocation)}',
+              '🗓️ $formattedDate\nBianchi: $playersA\nColorati: $playersB\n📍 ${getDescriptionForLocation(match.fieldLocation)}',
               style: const TextStyle(color: Colors.white70),
             ),
             isThreeLine: true,
@@ -105,32 +105,5 @@ String getDescriptionForLocation(String? location) {
         ),
       ),
     );
-//----------------------------------------------------------------------------------------------
-/*
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),   // angoli arrotondati
-      ),
-      elevation: 6, // effetto rialzato
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      
-      child: ListTile(
-        title: Text('${match.scoreA} - ${match.scoreB}'),
-        subtitle: Text('$formattedDate\nBianchi: $playersA\nColorati: $playersB'),
-        isThreeLine: true,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => MatchDetailScreen(match: match)),
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () async {
-            final data = Provider.of<DataService>(context, listen: false);
-            await data.deleteMatch(match.id);
-            (context as Element).markNeedsBuild();
-          },
-        ),
-      ),
-    );*/
   }
 }
