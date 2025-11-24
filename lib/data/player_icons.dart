@@ -31,6 +31,7 @@ final List<PlayerIcon> availableIcons = [
   PlayerIcon(key: 'Rob', assetPath: 'assets/icons/roberto.png'),
   PlayerIcon(key: 'Sam', assetPath: 'assets/icons/samuele.png'),
   PlayerIcon(key: 'TeoV', assetPath: 'assets/icons/teoVanini.png'),
+  PlayerIcon(key: 'Michael', assetPath: 'assets/icons/michael.png'),
 ];
 
 class PlayerIcon {
