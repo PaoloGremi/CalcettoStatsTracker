@@ -20,6 +20,7 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
   final Map<String, bool> selectedB = {};
   String? fieldLocation;
   DateTime? selectedDateTime;
+  String? numberOfPlayers;
 
   //List<String> squadraNera = [];
   //List<String> squadraBianca = [];
@@ -37,84 +38,129 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Data e Ora'),
-            SizedBox(
-                width: 150,
-                child: ElevatedButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: Text(
-                      selectedDateTime != null
-                          ? DateFormat('dd/MM/yyyy HH:mm')
-                              .format(selectedDateTime!)
-                          : 'Seleziona data e ora',
+            // SINISTRA: selezione data + ora
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Data e Ora'),
+                      const SizedBox(height: 8),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(
+                          selectedDateTime != null
+                              ? DateFormat('dd/MM/yyyy HH:mm')
+                                  .format(selectedDateTime!)
+                              : 'Seleziona data e ora',
+                        ),
+                        onPressed: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickedDate == null) return;
+
+                          final pickedTime = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (pickedTime == null) return;
+
+                          setState(() {
+                            selectedDateTime = DateTime(
+                              pickedDate.year,
+                              pickedDate.month,
+                              pickedDate.day,
+                              pickedTime.hour,
+                              pickedTime.minute,
+                            );
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                      initialValue: numberOfPlayers,
+                      decoration: const InputDecoration(
+                          labelText: 'Numero di Giocatori'),
+                      items: const [
+                        DropdownMenuItem(value: '3 vs 3', child: Text('3 vs 3')),
+                        DropdownMenuItem(value: '4 vs 4', child: Text('4 vs 4')),
+                        DropdownMenuItem(value: '5 vs 5', child: Text('5 vs 5')),
+                        DropdownMenuItem(value: '6 vs 6', child: Text('6 vs 6')),
+                        DropdownMenuItem(value: '8 vs 8', child: Text('8 vs 8')),
+                        DropdownMenuItem(value: '9 vs 9', child: Text('9 vs 9')),
+                        DropdownMenuItem(value: '11 vs 11', child: Text('11 vs 11')),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          numberOfPlayers = val;
+                        });
+                      }),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: fieldLocation,
+                        decoration:
+                            const InputDecoration(labelText: 'Location'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'SanFrancesco',
+                              child: Text('San Francesco - Lodi')),
+                          DropdownMenuItem(
+                              value: 'Montanaso',
+                              child: Text('Campo Sportivo - Montanaso')),
+                          DropdownMenuItem(
+                              value: 'Faustina',
+                              child: Text('Faustina - Lodi')),
+                          DropdownMenuItem(
+                              value: 'Pergola',
+                              child:
+                                  Text('La Pergola - San Martino in Strada')),
+                          DropdownMenuItem(
+                              value: 'Other', child: Text('Altro Campo')),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            fieldLocation = val;
+                          });
+                        },
+                      )
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: TextField(
+                      controller: prezzoCtrl,
+                      decoration: const InputDecoration(
+                        labelText: "Prezzo a persona (€)",
+                      ),
+                      keyboardType: TextInputType.number,
                     ),
-                    onPressed: () async {
-                      // 1️⃣ Seleziona la data
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                      );
-
-                      if (pickedDate == null) return;
-
-                      // 2️⃣ Seleziona l’ora
-                      final pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
-
-                      if (pickedTime == null) return;
-
-                      // 3️⃣ Combina data e ora in un solo DateTime
-                      final combined = DateTime(
-                        pickedDate.year,
-                        pickedDate.month,
-                        pickedDate.day,
-                        pickedTime.hour,
-                        pickedTime.minute,
-                      );
-
-                      // 4️⃣ Aggiorna lo stato
-                      setState(() {
-                        selectedDateTime = combined;
-                      });
-                    })),
-            const SizedBox(height: 16),
-            SizedBox(
-              child: DropdownButtonFormField<String>(
-                  initialValue: fieldLocation,
-                  decoration: const InputDecoration(labelText: 'Location'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'SanFrancesco',
-                        child: Text('San Francesco - Lodi')),
-                    DropdownMenuItem(
-                        value: 'Montanaso',
-                        child: Text('Campo Sportivo - Montanaso')),
-                    DropdownMenuItem(
-                        value: 'Faustina', child: Text('Faustina - Lodi')),
-                    DropdownMenuItem(
-                        value: 'Pergola',
-                        child: Text('La Pergola - San Martino in Strada')),
-                    DropdownMenuItem(
-                        value: 'Other', child: Text('Altro Campo')),
-                  ],
-                  onChanged: (val) {
-                    setState(() {
-                      fieldLocation = val;
-                    });
-                  }),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: prezzoCtrl,
-              decoration: const InputDecoration(
-                labelText: "Prezzo a persona (€)",
-              ),
-              keyboardType: TextInputType.number,
-            ),
+
             const SizedBox(height: 30),
             const Text('Squadra Bianca',
                 style: TextStyle(fontWeight: FontWeight.bold)),
@@ -169,6 +215,7 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
                       dataOra: formattedDate,
                       campo: fieldLocation ?? 'other',
                       prezzo: prezzoCtrl.text,
+                      nGiocatori: numberOfPlayers ?? '5 vs 5',
                       teamBlack: teamAIds,
                       teamWhite: teamBIds,
                     ),

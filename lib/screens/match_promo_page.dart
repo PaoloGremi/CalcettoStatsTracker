@@ -6,6 +6,7 @@ class MatchPromoPage extends StatelessWidget {
   final String dataOra;
   final String campo;
   final String prezzo;
+  final String nGiocatori;
   final List<String> teamBlack;
   final List<String> teamWhite;
   
@@ -16,6 +17,7 @@ class MatchPromoPage extends StatelessWidget {
     required this.dataOra,
     required this.campo,
     required this.prezzo,
+    required this.nGiocatori,
     required this.teamBlack,
     required this.teamWhite,
   });
@@ -29,9 +31,28 @@ String getBackgroundForLocation(String? location) {
       'Other': 'assets/images/sfondoPalloneGenerico.png',
     };
 
+    
+
     // fallback se null o valore non presente
     return map[location] ?? 'assets/images/sfondoPalloneGenerico.png';
   }
+
+  String getDescriptionForLocation(String? location) {
+    const map = {
+      'SanFrancesco': 'San Fracesco - Via Serravalle, 4, 26900 Lodi LO ',
+      'Montanaso':
+          'McDonalds Stadium - Via G. Garibaldi, 26836 Montanaso Lombardo LO',
+      'Faustina': 'Faustina sport arena - Piazzale degli Sport, 26900 Lodi LO',
+      'Pergola':
+          'La Pergola - Via per Ca de Bolli, 11, 26817 San Martino in Strada LO',
+      'Other': 'campo sportivo',
+    };
+
+    // fallback se null o valore non presente
+    return map[location] ?? '';
+  }
+
+  
   @override
   Widget build(BuildContext context) {
 
@@ -102,7 +123,7 @@ final teamBPlayers = teamBlack
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Text(dataOra,
+            Text('🗓️ $dataOra',
                 style:
                 const TextStyle(fontSize: 18/*, fontWeight: FontWeight.w600*/)),
           ]),
@@ -111,12 +132,12 @@ final teamBPlayers = teamBlack
             children: [
               const Icon(Icons.sports_soccer, size: 32),
               const SizedBox(width: 10),
-              const Text("5 vs 5",
+              Text(nGiocatori,
                   style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 10),
-          Text(campo,
+          Text('📍 ${getDescriptionForLocation(campo)}',
               style:
                   const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
           const SizedBox(height: 5),
