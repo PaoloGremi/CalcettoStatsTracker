@@ -48,6 +48,10 @@ class CalcettoApp extends StatelessWidget {
           ),
         ),
         home: const HomeScreen(),
+
+        routes: {
+        '/home': (context) => const HomeScreen(),
+      },
       ),
     );
   }

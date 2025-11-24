@@ -2,6 +2,7 @@ import 'package:calcetto_tracker/screens/stats_screen.dart';
 import 'package:flutter/material.dart';
 import '../services/data_service.dart';
 import 'players_screen.dart';
+import 'match_promo_form_page.dart';
 import 'new_match_screen.dart';
 import '../widgets/match_card.dart';
 import 'package:provider/provider.dart';
@@ -33,17 +34,24 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.rss_feed),
+            onPressed: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const MatchPromoFormPage()));
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.people),
             onPressed: () {
-              Navigator.push(
-                  context, MaterialPageRoute(builder: (_) => const PlayersScreen()));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const PlayersScreen()));
             },
           ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              Navigator.push(
-                  context, MaterialPageRoute(builder: (_) => const NewMatchScreen()))
+              Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const NewMatchScreen()))
                   .then((_) => setState(() {}));
             },
           ),

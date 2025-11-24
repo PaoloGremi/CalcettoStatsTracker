@@ -57,7 +57,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                       selectedA[p.id] = false;
                   });
                 },
-              )),
+              )
+              ),
           const SizedBox(height: 10),
           SizedBox(
             height: 100,
