@@ -163,7 +163,7 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
 
             const SizedBox(height: 30),
             const Text('Squadra Bianca',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
             ...players.map((p) => CheckboxListTile(
                   title: Text(p.name),
                   value: selectedA[p.id] ?? false,
@@ -177,7 +177,7 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
                 )),
             const SizedBox(height: 10),
             const Text('Squadra Colorata',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
             ...players.map((p) => CheckboxListTile(
                   title: Text(p.name),
                   value: selectedB[p.id] ?? false,

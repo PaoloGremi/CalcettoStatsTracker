@@ -31,37 +31,10 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
       body: ListView(
         padding: const EdgeInsets.all(8),
         children: [
-          const Text('Squadra Bianca',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          ...players.map((p) => CheckboxListTile(
-                title: Text(p.name),
-                value: selectedA[p.id] ?? false,
-                onChanged: (v) {
-                  setState(() {
-                    selectedA[p.id] = v!;
-                    if (v && (selectedB[p.id] ?? false))
-                      selectedB[p.id] = false;
-                  });
-                },
-              )),
-          const SizedBox(height: 10),
-          const Text('Squadra Colorata',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          ...players.map((p) => CheckboxListTile(
-                title: Text(p.name),
-                value: selectedB[p.id] ?? false,
-                onChanged: (v) {
-                  setState(() {
-                    selectedB[p.id] = v!;
-                    if (v && (selectedA[p.id] ?? false))
-                      selectedA[p.id] = false;
-                  });
-                },
-              )
-              ),
-          const SizedBox(height: 10),
+          //-----------------------------------------------------------------
+          //const SizedBox(height: 10),
           SizedBox(
-            height: 100,
+            height: 75,
             width: 100,
             child: DropdownButtonFormField<String>(
                 initialValue: fieldLocation,
@@ -161,6 +134,42 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               ]),
             ],
           ),
+
+
+
+
+          //-----------------------------------------------------------------
+          const SizedBox(height: 20),
+          const Text('Squadra Bianca',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+          ...players.map((p) => CheckboxListTile(
+                title: Text(p.name),
+                value: selectedA[p.id] ?? false,
+                onChanged: (v) {
+                  setState(() {
+                    selectedA[p.id] = v!;
+                    if (v && (selectedB[p.id] ?? false))
+                      selectedB[p.id] = false;
+                  });
+                },
+              )),
+          const SizedBox(height: 10),
+          const Text('Squadra Colorata',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+          ...players.map((p) => CheckboxListTile(
+                title: Text(p.name),
+                value: selectedB[p.id] ?? false,
+                onChanged: (v) {
+                  setState(() {
+                    selectedB[p.id] = v!;
+                    if (v && (selectedA[p.id] ?? false))
+                      selectedA[p.id] = false;
+                  });
+                },
+              )
+              ),
+          const SizedBox(height: 10),
+          
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
