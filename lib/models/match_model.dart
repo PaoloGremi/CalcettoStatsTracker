@@ -31,6 +31,12 @@ class MatchModel extends HiveObject {
   @HiveField(8)
   String fieldLocation;
 
+  @HiveField(8)
+  String mvp;
+
+  @HiveField(8)
+  String hustlePlayer;
+
   MatchModel({
     required this.id,
     required this.date,
@@ -41,6 +47,8 @@ class MatchModel extends HiveObject {
     Map<String, double>? votes,
     Map<String, String>? comments,
     required this.fieldLocation,
+    required this.mvp,
+    required this.hustlePlayer,
   })  : votes = votes ?? {},
         comments = comments ?? {};
 }
@@ -61,6 +69,8 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     final votesMap = Map<String, double>.from(reader.readMap());
     final commentsMap = Map<String, String>.from(reader.readMap());
     final fieldLocation = reader.readString();
+    final mvp =reader.readString();
+    final hustlePlayer =reader.readString();
 
     return MatchModel(
       id: id,
@@ -72,6 +82,8 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
       votes: votesMap,
       comments: commentsMap,
       fieldLocation: fieldLocation,
+      mvp: mvp,
+      hustlePlayer: hustlePlayer,
     );
   }
 
@@ -86,5 +98,7 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     writer.writeMap(obj.votes);
     writer.writeMap(obj.comments);
     writer.writeString(obj.fieldLocation);
+    writer.writeString(obj.mvp);
+    writer.writeString(obj.hustlePlayer);
   }
 }

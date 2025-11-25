@@ -55,6 +55,8 @@ class MatchCard extends StatelessWidget {
       match.date.minute,
     );
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(roundedDate);
+    final mvp = match.mvp;
+    final hustlePlayer = match.hustlePlayer;
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -84,9 +86,17 @@ class MatchCard extends StatelessWidget {
               style: const TextStyle(color: Colors.white),
             ),
             subtitle: Text(
-              '🗓️ $formattedDate\nBianchi: $playersA\nColorati: $playersB\n📍 ${getDescriptionForLocation(match.fieldLocation)}',
+              '🗓️ $formattedDate\nBianchi: $playersA\nColorati: $playersB\n📍 ${getDescriptionForLocation(match.fieldLocation)}'
+              +
+              '\nMVP: $mvp\nGiocatore più COMBATTIVO: $hustlePlayer',
               style: const TextStyle(color: Colors.white70),
             ),
+            
+            
+
+
+
+
             isThreeLine: true,
             onTap: () => Navigator.push(
               context,

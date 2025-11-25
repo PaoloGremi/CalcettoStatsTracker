@@ -20,6 +20,9 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   int scoreB = 0;
   String? fieldLocation;
   DateTime? selectedDateTime;
+  String? mvp;
+  String? hustlePlayer;
+  
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +138,6 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
             ],
           ),
 
-
-
-
-          //-----------------------------------------------------------------
           const SizedBox(height: 20),
           const Text('Squadra Bianca',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
@@ -169,7 +168,48 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               )
               ),
           const SizedBox(height: 10),
-          
+
+
+          //MVP e HUSTLE PLAYER
+          Row(
+            children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'MVP della partita',
+                        //border: OutlineInputBorder(),
+                      ),
+                      controller: TextEditingController(text: mvp),
+                      onChanged: (text) {
+                        mvp = text;
+                      },
+                      maxLines: 1,
+                    ),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Giocatore più COMBATTIVO della partita',
+                        //border: OutlineInputBorder(),
+                      ),
+                      controller: TextEditingController(text: hustlePlayer),
+                      onChanged: (text) {
+                        hustlePlayer = text;
+                      },
+                      maxLines: 1,
+                    ),
+                    ]
+                  )
+                )
+            ]
+          ),
+
+
+
+
+
+
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () async {
@@ -192,6 +232,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 scoreA: scoreA,
                 scoreB: scoreB,
                 fieldLocation: fieldLocation ?? 'other',
+                mvp: mvp ?? '',
+                hustlePlayer: hustlePlayer ?? '',
               );
 
               await data.addMatch(match);
