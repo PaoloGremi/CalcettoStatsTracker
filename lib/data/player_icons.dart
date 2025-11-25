@@ -38,8 +38,8 @@ final List<PlayerIcon> availableIcons = [
 
 class PlayerIcon {
   final String key;
-  final IconData? iconData;   // per icone Flutter
-  final String? assetPath;    // per icone personalizzate
+  final IconData? iconData; // per icone Flutter
+  final String? assetPath; // per icone personalizzate
 
   const PlayerIcon({
     required this.key,

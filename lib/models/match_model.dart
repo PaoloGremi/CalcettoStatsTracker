@@ -41,9 +41,8 @@ class MatchModel extends HiveObject {
     Map<String, double>? votes,
     Map<String, String>? comments,
     required this.fieldLocation,
-  }) : votes = votes ?? {},
+  })  : votes = votes ?? {},
         comments = comments ?? {};
-    
 }
 
 // Adapter manuale per Hive
@@ -62,7 +61,6 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     final votesMap = Map<String, double>.from(reader.readMap());
     final commentsMap = Map<String, String>.from(reader.readMap());
     final fieldLocation = reader.readString();
-    
 
     return MatchModel(
       id: id,

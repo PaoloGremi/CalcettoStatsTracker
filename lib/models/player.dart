@@ -16,11 +16,11 @@ class Player extends HiveObject {
   @HiveField(3)
   final String icon;
 
-  Player({
-    required this.id,
-    required this.name, 
-    required this.role, 
-    required this.icon});
+  Player(
+      {required this.id,
+      required this.name,
+      required this.role,
+      required this.icon});
 }
 
 // Adapter manuale per Hive
@@ -44,17 +44,4 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.writeString(obj.role);
     writer.writeString(obj.icon);
   }
-
-static Player? getByName(String name) {
-  final box = Hive.box<Player>('players');
-
-  try {
-    return box.values.firstWhere(
-      (p) => p.name.toLowerCase() == name.toLowerCase(),
-    );
-  } catch (_) {
-    return null;
-  }
-}
-
 }
