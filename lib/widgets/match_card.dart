@@ -96,9 +96,27 @@ class MatchCard extends StatelessWidget {
             trailing: IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () async {
-                final data = Provider.of<DataService>(context, listen: false);
-                await data.deleteMatch(match.id);
-                (context as Element).markNeedsBuild();
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Elimina partita?'),
+                    content: const Text('Vuoi eliminare questa partita?'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('No')),
+                      ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Sì')),
+                    ],
+                  ),
+                );
+
+                if (ok == true) {
+                  final data = Provider.of<DataService>(context, listen: false);
+                  await data.deleteMatch(match.id);
+                  (context as Element).markNeedsBuild();
+                }
               },
             ),
           ),
