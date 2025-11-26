@@ -88,7 +88,7 @@ class MatchCard extends StatelessWidget {
             subtitle: Text(
               '🗓️ $formattedDate\nBianchi: $playersA\nColorati: $playersB\n📍 ${getDescriptionForLocation(match.fieldLocation)}'
               +
-              '\n👑 MVP: $mvp\n🔥 Hustle Player: $hustlePlayer',
+              '\n👑 MVP: $mvp\n🔥 Giocatore più COMBATTIVO: $hustlePlayer',
               style: const TextStyle(color: Colors.white70),
             ),
             
