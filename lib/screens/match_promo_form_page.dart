@@ -216,8 +216,8 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
                       campo: fieldLocation ?? 'other',
                       prezzo: prezzoCtrl.text,
                       nGiocatori: numberOfPlayers ?? '5 vs 5',
-                      teamBlack: teamAIds,
-                      teamWhite: teamBIds,
+                      teamWhite: teamAIds,
+                      teamBlack: teamBIds,
                     ),
                   ),
                 );
