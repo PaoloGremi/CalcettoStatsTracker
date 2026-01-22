@@ -31,6 +31,10 @@ class _MatchFormPageState extends State<MatchPromoFormPage> {
     final data = Provider.of<DataService>(context);
     final players = data.getAllPlayers();
 
+    // Ordina i giocatori in ordine alfabetico per nome
+    players
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
     return Scaffold(
       appBar: AppBar(title: const Text("Promuovi nuova partita")),
       body: SingleChildScrollView(

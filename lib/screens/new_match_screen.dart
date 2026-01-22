@@ -29,6 +29,13 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     final data = Provider.of<DataService>(context);
     final players = data.getAllPlayers();
 
+    // Ordina i giocatori in ordine alfabetico per nome
+    players
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+
+
+
     return Scaffold(
       appBar: AppBar(title: const Text('Nuova Partita')),
       body: ListView(
