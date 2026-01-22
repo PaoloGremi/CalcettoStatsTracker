@@ -12,6 +12,10 @@ class StatsScreen extends StatelessWidget {
     final players = data.getAllPlayers();
     final matches = data.getAllMatches();
 
+// Ordina i giocatori in ordine alfabetico per nome
+    players
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        
     // Calcola statistiche
     final stats = <String, Map<String, dynamic>>{};
 
