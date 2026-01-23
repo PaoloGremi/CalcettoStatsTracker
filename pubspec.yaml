@@ -28,6 +28,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/shields/
 
 flutter_icons:
   android: true
