@@ -115,12 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             0.55, // leggermente sotto il bordo superiore dello scudo
                         child: Align(
                             child: FifaStats(
-                                pac: 89,
-                                sho: 74,
-                                pas: 78,
-                                dri: 81,
-                                def: 71,
-                                phy: 73))),
+                                vel: 78,
+                                tir: 61,
+                                pas: 76,
+                                dri: 56,
+                                dif: 70,
+                                fis: 77))),
                   ],
                 );
               },
@@ -198,21 +198,21 @@ class StatRow extends StatelessWidget {
 }
 
 class FifaStats extends StatelessWidget {
-  final int pac;
-  final int sho;
+  final int vel;
+  final int tir;
   final int pas;
   final int dri;
-  final int def;
-  final int phy;
+  final int dif;
+  final int fis;
 
   const FifaStats({
     Key? key,
-    required this.pac,
-    required this.sho,
+    required this.vel,
+    required this.tir,
     required this.pas,
     required this.dri,
-    required this.def,
-    required this.phy,
+    required this.dif,
+    required this.fis,
   }) : super(key: key);
 
   @override
@@ -224,8 +224,8 @@ class FifaStats extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStat("$pac", "PAC"),
-            _buildStat("$sho", "SHO"),
+            _buildStat("$vel", "VEL"),
+            _buildStat("$tir", "TIR"),
             _buildStat("$pas", "PAS"),
           ],
         ),
@@ -237,8 +237,8 @@ class FifaStats extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStat("$dri", "DRI"),
-            _buildStat("$def", "DEF"),
-            _buildStat("$phy", "PHY"),
+            _buildStat("$dif", "DIF"),
+            _buildStat("$fis", "FIS"),
           ],
         ),
       ],
