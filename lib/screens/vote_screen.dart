@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
+import '../widgets/player_avatar.dart';
 
 class VoteScreen extends StatefulWidget {
   final MatchModel match;
@@ -62,9 +63,16 @@ class _VoteScreenState extends State<VoteScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(playerName,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        if (HiveBoxes.playersBox.get(id) != null)
+                          PlayerAvatar(player: HiveBoxes.playersBox.get(id)!, radius: 20),
+                        const SizedBox(width: 10),
+                        Text(playerName,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                     Slider(
                       value: voto,
                       min: 1,

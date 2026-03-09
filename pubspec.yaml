@@ -14,6 +14,9 @@ dependencies:
   provider: ^6.0.5
   uuid: ^3.0.7
   intl: ^0.20.2
+  image_picker: ^1.1.2        # selezione foto dalla galleria
+  path_provider: ^2.1.4       # cartella documenti dell'app
+  path: ^1.9.0                # utilità per manipolare path di file
 
 dev_dependencies:
   flutter_test:

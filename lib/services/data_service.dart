@@ -10,15 +10,27 @@ class DataService extends ChangeNotifier {
   // Players
   List<Player> getAllPlayers() => HiveBoxes.playersBox.values.toList();
 
-  Future<Player> addPlayer(String name, String icon,
-      {required String role}) async {
-    final player = Player(id: _uuid.v4(), name: name, role: role, icon: icon);
+  Future<Player> addPlayer(
+    String name,
+    String icon, {
+    required String role,
+    String? imagePath, // ✅ nuovo parametro opzionale
+  }) async {
+    final player = Player(
+      id: _uuid.v4(),
+      name: name,
+      role: role,
+      icon: icon,
+      imagePath: imagePath,
+    );
     await HiveBoxes.playersBox.put(player.id, player);
+    notifyListeners();
     return player;
   }
 
   Future<void> updatePlayer(Player player) async {
     await HiveBoxes.playersBox.put(player.id, player);
+    notifyListeners();
   }
 
   Future<void> deletePlayer(String id) async {
@@ -30,6 +42,7 @@ class DataService extends ChangeNotifier {
       match.votes.remove(id);
       await match.save();
     }
+    notifyListeners();
   }
 
   // Matches
@@ -41,11 +54,13 @@ class DataService extends ChangeNotifier {
 
   Future<MatchModel> addMatch(MatchModel match) async {
     await HiveBoxes.matchesBox.put(match.id, match);
+    notifyListeners();
     return match;
   }
 
   Future<void> updateMatch(MatchModel match) async {
     await HiveBoxes.matchesBox.put(match.id, match);
+    notifyListeners();
   }
 
   Future<void> deleteMatch(String id) async {

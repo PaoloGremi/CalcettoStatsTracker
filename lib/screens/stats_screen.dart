@@ -1,7 +1,7 @@
-import 'package:calcetto_tracker/data/player_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
+import '../widgets/player_avatar.dart';
 
 class StatsScreen extends StatelessWidget {
   const StatsScreen({super.key});
@@ -48,18 +48,8 @@ class StatsScreen extends StatelessWidget {
       body: ListView(
         children: players.map((player) {
           final s = stats[player.id]!;
-          final icona = player.icon;
-          final iconData = getPlayerIcon(icona);
           return ListTile(
-            leading: iconData.isAsset
-                ? CircleAvatar(
-                    radius: 22,
-                    backgroundImage: AssetImage(iconData.assetPath!),
-                  )
-                : CircleAvatar(
-                    radius: 22,
-                    child: Icon(iconData.iconData, size: 24),
-                  ),
+            leading: PlayerAvatar(player: player, radius: 22),
             title: Text('${player.name} - ${player.role}'),
             subtitle: Text(
               'Partite giocate: ${s['games']}  •  Voto medio: ${(s['avgVote'] as double).toStringAsFixed(2)}',
