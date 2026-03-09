@@ -17,6 +17,10 @@ dependencies:
   image_picker: ^1.1.2        # selezione foto dalla galleria
   path_provider: ^2.1.4       # cartella documenti dell'app
   path: ^1.9.0                # utilità per manipolare path di file
+  csv: ^6.0.0             # parsing e generazione CSV
+  share_plus: ^10.0.0     # condivisione file (sheet, email, whatsapp...)
+  file_picker: ^8.1.2     # selezione file CSV dal dispositivo per import
+
 
 dev_dependencies:
   flutter_test:
