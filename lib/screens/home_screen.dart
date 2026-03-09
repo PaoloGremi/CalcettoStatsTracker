@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             flex: 4,
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 boxShadow: const [
                   BoxShadow(
@@ -149,25 +149,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   fit: BoxFit.cover,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "INFO GENERICHE",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "INFO GENERICHE",
+                      style: TextStyle(
+                        fontSize: 18,         // ✅ ridotto da 24
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  StatRow(label: "Data di Nascita", value: "10 Agosto 1991"),
-                  StatRow(label: "Ruolo", value: "Attaccante"),
-                  StatRow(label: "Piede Preferito", value: "Sinistro"),
-                  StatRow(label: "Nazionalità", value: "Italiana"),
-                  StatRow(label: "Squadra Preferita", value: "Juventus"),
-                  StatRow(label: "Numero di Maglia", value: "21"),
-                ],
+                    const SizedBox(height: 6),
+                    StatRow(label: "Data di Nascita", value: "10 Agosto 1991"),
+                    StatRow(label: "Ruolo", value: "Attaccante"),
+                    StatRow(label: "Piede Preferito", value: "Sinistro"),
+                    StatRow(label: "Nazionalità", value: "Italiana"),
+                    StatRow(label: "Squadra Preferita", value: "Juventus"),
+                    StatRow(label: "Numero di Maglia", value: "21"),
+                  ],
+                ),
               ),
             ),
           ),
@@ -188,13 +190,12 @@ class StatRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 5), // ✅ ridotto da 10
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 18)),
-          Text(value,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontSize: 14)),   // ✅ ridotto da 18
+          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         ],
       ),
     );

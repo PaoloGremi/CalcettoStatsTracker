@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart'; // ✅ FIX: necessario per it_IT
 import 'package:provider/provider.dart';
 
 import 'data/hive_boxes.dart';
@@ -10,11 +11,13 @@ import 'services/data_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
 
+  // ✅ FIX: inizializza i dati locale per DateFormat('...', 'it_IT')
+  await initializeDateFormatting('it_IT', null);
+
+  await Hive.initFlutter();
   Hive.registerAdapter(PlayerAdapter());
   Hive.registerAdapter(MatchModelAdapter());
-
   await HiveBoxes.init();
 
   runApp(const CalcettoApp());
@@ -34,10 +37,10 @@ class CalcettoApp extends StatelessWidget {
         title: 'Champions Calcetto Stats',
         theme: ThemeData.dark().copyWith(
           colorScheme: const ColorScheme.dark(
-            primary: Colors.green, // colore principale (app bar, bottoni)
+            primary: Colors.green,
             secondary: Colors.tealAccent,
           ),
-          scaffoldBackgroundColor: Colors.black, // sfondo principale
+          scaffoldBackgroundColor: Colors.black,
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
