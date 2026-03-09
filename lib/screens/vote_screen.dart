@@ -11,6 +11,35 @@ class VoteScreen extends StatefulWidget {
 }
 
 class _VoteScreenState extends State<VoteScreen> {
+  // ✅ FIX: controllers creati una volta sola nello State, non dentro build()
+  late final Map<String, TextEditingController> _commentControllers;
+
+  @override
+  void initState() {
+    super.initState();
+    final allPlayers = [...widget.match.teamA, ...widget.match.teamB];
+
+    // Inizializza voti di default e controller commenti
+    _commentControllers = {};
+    for (final id in allPlayers) {
+      if (!widget.match.votes.containsKey(id)) {
+        widget.match.votes[id] = 5.0;
+      }
+      _commentControllers[id] = TextEditingController(
+        text: widget.match.comments[id] ?? '',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    // ✅ FIX: dispose corretto dei controller
+    for (final ctrl in _commentControllers.values) {
+      ctrl.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final allPlayers = [...widget.match.teamA, ...widget.match.teamB];
@@ -24,10 +53,6 @@ class _VoteScreenState extends State<VoteScreen> {
             final playerName =
                 HiveBoxes.playersBox.get(id)?.name ?? 'Sconosciuto';
             final voto = widget.match.votes[id]?.toDouble() ?? 5.0;
-            if (!widget.match.votes.containsKey(id)) {
-              widget.match.votes[id] = 5;
-            }
-            final commento = widget.match.comments[id] ?? '';
 
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 8),
@@ -45,7 +70,7 @@ class _VoteScreenState extends State<VoteScreen> {
                       min: 1,
                       max: 10,
                       divisions: 18,
-                      label: voto.toString(),
+                      label: voto.toStringAsFixed(1),
                       onChanged: (val) {
                         setState(() {
                           widget.match.votes[id] = val;
@@ -57,7 +82,8 @@ class _VoteScreenState extends State<VoteScreen> {
                         labelText: 'Commento (opzionale)',
                         border: OutlineInputBorder(),
                       ),
-                      controller: TextEditingController(text: commento),
+                      // ✅ FIX: usa il controller persistente
+                      controller: _commentControllers[id],
                       onChanged: (text) {
                         widget.match.comments[id] = text;
                       },

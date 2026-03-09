@@ -23,23 +23,17 @@ class MatchCard extends StatelessWidget {
       'Pergola': 'assets/images/laPergola.jpg',
       'Other': 'assets/images/sfondoPalloneGenerico.png',
     };
-
-    // fallback se null o valore non presente
     return map[location] ?? 'assets/images/sfondoPalloneGenerico.png';
   }
 
   String getDescriptionForLocation(String? location) {
     const map = {
-      'SanFrancesco': 'San Fracesco - Via Serravalle, 4, 26900 Lodi LO ',
-      'Montanaso':
-          'McDonalds Stadium - Via G. Garibaldi, 26836 Montanaso Lombardo LO',
+      'SanFrancesco': 'San Francesco - Via Serravalle, 4, 26900 Lodi LO',
+      'Montanaso': 'McDonalds Stadium - Via G. Garibaldi, 26836 Montanaso Lombardo LO',
       'Faustina': 'Faustina sport arena - Piazzale degli Sport, 26900 Lodi LO',
-      'Pergola':
-          'La Pergola - Via per Ca de Bolli, 11, 26817 San Martino in Strada LO',
+      'Pergola': 'La Pergola - Via per Ca de Bolli, 11, 26817 San Martino in Strada LO',
       'Other': 'campo sportivo',
     };
-
-    // fallback se null o valore non presente
     return map[location] ?? '';
   }
 
@@ -59,13 +53,10 @@ class MatchCard extends StatelessWidget {
     final hustlePlayer = match.hustlePlayer;
 
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 6,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: ClipRRect(
-        // serve per applicare il borderRadius all'immagine
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
@@ -73,9 +64,7 @@ class MatchCard extends StatelessWidget {
               image: AssetImage(getBackgroundForLocation(match.fieldLocation)),
               fit: BoxFit.cover,
               colorFilter: ColorFilter.mode(
-                // ignore: deprecated_member_use
-                Colors.black.withOpacity(
-                    0.25), // scurisce leggermente lo sfondo (opzionale)
+                Colors.black.withOpacity(0.25),
                 BlendMode.darken,
               ),
             ),
@@ -87,16 +76,9 @@ class MatchCard extends StatelessWidget {
             ),
             subtitle: Text(
               '🗓️ $formattedDate\nBianchi: $playersA\nColorati: $playersB\n📍 ${getDescriptionForLocation(match.fieldLocation)}'
-              +
               '\n👑 MVP: $mvp\n🔥 Giocatore più COMBATTIVO: $hustlePlayer',
               style: const TextStyle(color: Colors.white70),
             ),
-            
-            
-
-
-
-
             isThreeLine: true,
             onTap: () => Navigator.push(
               context,
@@ -122,10 +104,11 @@ class MatchCard extends StatelessWidget {
                   ),
                 );
 
-                if (ok == true) {
+                if (ok == true && context.mounted) {
+                  // ✅ FIX: usa DataService.deleteMatch che chiama notifyListeners()
+                  // rimosso il pericoloso (context as Element).markNeedsBuild()
                   final data = Provider.of<DataService>(context, listen: false);
                   await data.deleteMatch(match.id);
-                  (context as Element).markNeedsBuild();
                 }
               },
             ),

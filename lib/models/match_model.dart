@@ -21,7 +21,7 @@ class MatchModel extends HiveObject {
   @HiveField(5)
   int scoreB;
 
-  // Mappa voti: key = playerId, value = voto (int)
+  // Mappa voti: key = playerId, value = voto (double)
   @HiveField(6)
   Map<String, double> votes;
 
@@ -31,10 +31,10 @@ class MatchModel extends HiveObject {
   @HiveField(8)
   String fieldLocation;
 
-  @HiveField(8)
+  @HiveField(9)  // ✅ FIX: era 8 (duplicato)
   String mvp;
 
-  @HiveField(8)
+  @HiveField(10) // ✅ FIX: era 8 (duplicato)
   String hustlePlayer;
 
   MatchModel({
@@ -69,8 +69,8 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     final votesMap = Map<String, double>.from(reader.readMap());
     final commentsMap = Map<String, String>.from(reader.readMap());
     final fieldLocation = reader.readString();
-    final mvp =reader.readString();
-    final hustlePlayer =reader.readString();
+    final mvp = reader.readString();
+    final hustlePlayer = reader.readString();
 
     return MatchModel(
       id: id,

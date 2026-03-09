@@ -12,10 +12,9 @@ class StatsScreen extends StatelessWidget {
     final players = data.getAllPlayers();
     final matches = data.getAllMatches();
 
-// Ordina i giocatori in ordine alfabetico per nome
-    players
-        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        
+    // Ordina i giocatori in ordine alfabetico per nome
+    players.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
     // Calcola statistiche
     final stats = <String, Map<String, dynamic>>{};
 
@@ -25,8 +24,7 @@ class StatsScreen extends StatelessWidget {
       int votesCount = 0;
 
       for (var match in matches) {
-        if (match.teamA.contains(player.id) ||
-            match.teamB.contains(player.id)) {
+        if (match.teamA.contains(player.id) || match.teamB.contains(player.id)) {
           gamesPlayed++;
           if (match.votes.containsKey(player.id)) {
             totalVotes += match.votes[player.id]!;
@@ -35,11 +33,13 @@ class StatsScreen extends StatelessWidget {
         }
       }
 
-      final avgVote = votesCount > 0 ? totalVotes / gamesPlayed : 0.0;
+      // ✅ FIX: dividere per votesCount (non gamesPlayed) per la media voti
+      final avgVote = votesCount > 0 ? totalVotes / votesCount : 0.0;
 
       stats[player.id] = {
         'games': gamesPlayed,
         'avgVote': avgVote,
+        'votesCount': votesCount,
       };
     }
 
@@ -60,9 +60,9 @@ class StatsScreen extends StatelessWidget {
                     radius: 22,
                     child: Icon(iconData.iconData, size: 24),
                   ),
-            title: Text(player.name + ' - ' + player.role),
+            title: Text('${player.name} - ${player.role}'),
             subtitle: Text(
-              'Partite giocate: ${s['games']}, Voto medio: ${s['avgVote'].toStringAsFixed(2)}',
+              'Partite giocate: ${s['games']}  •  Voto medio: ${(s['avgVote'] as double).toStringAsFixed(2)}',
             ),
           );
         }).toList(),

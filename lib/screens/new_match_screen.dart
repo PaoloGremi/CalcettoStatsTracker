@@ -20,9 +20,17 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   int scoreB = 0;
   String? fieldLocation;
   DateTime? selectedDateTime;
-  String? mvp;
-  String? hustlePlayer;
-  
+
+  // ✅ FIX: controller creati una volta sola nello State, non dentro build()
+  final TextEditingController _mvpController = TextEditingController();
+  final TextEditingController _hustleController = TextEditingController();
+
+  @override
+  void dispose() {
+    _mvpController.dispose();
+    _hustleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,44 +38,32 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     final players = data.getAllPlayers();
 
     // Ordina i giocatori in ordine alfabetico per nome
-    players
-        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
-
-
+    players.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nuova Partita')),
       body: ListView(
         padding: const EdgeInsets.all(8),
         children: [
-          //-----------------------------------------------------------------
-          //const SizedBox(height: 10),
           SizedBox(
             height: 75,
             width: 100,
             child: DropdownButtonFormField<String>(
-                initialValue: fieldLocation,
-                decoration: const InputDecoration(labelText: 'Location'),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'SanFrancesco',
-                      child: Text('San Francesco - Lodi')),
-                  DropdownMenuItem(
-                      value: 'Montanaso',
-                      child: Text('Campo Sportivo - Montanaso')),
-                  DropdownMenuItem(
-                      value: 'Faustina', child: Text('Faustina - Lodi')),
-                  DropdownMenuItem(
-                      value: 'Pergola',
-                      child: Text('La Pergola - San Martino in Strada')),
-                  DropdownMenuItem(value: 'Other', child: Text('Altro Campo')),
-                ],
-                onChanged: (val) {
-                  setState(() {
-                    fieldLocation = val;
-                  });
-                }),
+              initialValue: fieldLocation,
+              decoration: const InputDecoration(labelText: 'Location'),
+              items: const [
+                DropdownMenuItem(value: 'SanFrancesco', child: Text('San Francesco - Lodi')),
+                DropdownMenuItem(value: 'Montanaso', child: Text('Campo Sportivo - Montanaso')),
+                DropdownMenuItem(value: 'Faustina', child: Text('Faustina - Lodi')),
+                DropdownMenuItem(value: 'Pergola', child: Text('La Pergola - San Martino in Strada')),
+                DropdownMenuItem(value: 'Other', child: Text('Altro Campo')),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  fieldLocation = val;
+                });
+              },
+            ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -76,48 +72,42 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 children: [
                   const Text('Data e Ora'),
                   SizedBox(
-                      width: 150,
-                      child: ElevatedButton.icon(
-                          icon: const Icon(Icons.calendar_today),
-                          label: Text(
-                            selectedDateTime != null
-                                ? DateFormat('dd/MM/yyyy HH:mm')
-                                    .format(selectedDateTime!)
-                                : 'Seleziona data e ora',
-                          ),
-                          onPressed: () async {
-                            // 1️⃣ Seleziona la data
-                            final pickedDate = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2100),
-                            );
+                    width: 150,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        selectedDateTime != null
+                            ? DateFormat('dd/MM/yyyy HH:mm').format(selectedDateTime!)
+                            : 'Seleziona data e ora',
+                      ),
+                      onPressed: () async {
+                        final pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (pickedDate == null) return;
 
-                            if (pickedDate == null) return;
+                        final pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (pickedTime == null) return;
 
-                            // 2️⃣ Seleziona l’ora
-                            final pickedTime = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                            );
-
-                            if (pickedTime == null) return;
-
-                            // 3️⃣ Combina data e ora in un solo DateTime
-                            final combined = DateTime(
-                              pickedDate.year,
-                              pickedDate.month,
-                              pickedDate.day,
-                              pickedTime.hour,
-                              pickedTime.minute,
-                            );
-
-                            // 4️⃣ Aggiorna lo stato
-                            setState(() {
-                              selectedDateTime = combined;
-                            });
-                          }))
+                        final combined = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+                        setState(() {
+                          selectedDateTime = combined;
+                        });
+                      },
+                    ),
+                  ),
                 ],
               ),
               Column(children: [
@@ -154,8 +144,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 onChanged: (v) {
                   setState(() {
                     selectedA[p.id] = v!;
-                    if (v && (selectedB[p.id] ?? false))
-                      selectedB[p.id] = false;
+                    if (v && (selectedB[p.id] ?? false)) selectedB[p.id] = false;
                   });
                 },
               )),
@@ -168,54 +157,40 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 onChanged: (v) {
                   setState(() {
                     selectedB[p.id] = v!;
-                    if (v && (selectedA[p.id] ?? false))
-                      selectedA[p.id] = false;
+                    if (v && (selectedA[p.id] ?? false)) selectedA[p.id] = false;
                   });
                 },
-              )
-              ),
+              )),
           const SizedBox(height: 10),
 
-
-          //MVP e HUSTLE PLAYER
+          // MVP e HUSTLE PLAYER
           Row(
             children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
                       decoration: const InputDecoration(
                         labelText: 'MVP della partita',
-                        //border: OutlineInputBorder(),
                       ),
-                      controller: TextEditingController(text: mvp),
-                      onChanged: (text) {
-                        mvp = text;
-                      },
+                      // ✅ FIX: usa controller persistente
+                      controller: _mvpController,
                       maxLines: 1,
                     ),
                     TextField(
                       decoration: const InputDecoration(
                         labelText: 'Giocatore più COMBATTIVO della partita',
-                        //border: OutlineInputBorder(),
                       ),
-                      controller: TextEditingController(text: hustlePlayer),
-                      onChanged: (text) {
-                        hustlePlayer = text;
-                      },
+                      // ✅ FIX: usa controller persistente
+                      controller: _hustleController,
                       maxLines: 1,
                     ),
-                    ]
-                  )
-                )
-            ]
+                  ],
+                ),
+              ),
+            ],
           ),
-
-
-
-
-
 
           const SizedBox(height: 20),
           ElevatedButton(
@@ -238,9 +213,9 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 teamB: teamBIds,
                 scoreA: scoreA,
                 scoreB: scoreB,
-                fieldLocation: fieldLocation ?? 'other',
-                mvp: mvp ?? '',
-                hustlePlayer: hustlePlayer ?? '',
+                fieldLocation: fieldLocation ?? 'Other',
+                mvp: _mvpController.text.trim(),
+                hustlePlayer: _hustleController.text.trim(),
               );
 
               await data.addMatch(match);
@@ -249,7 +224,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => VoteScreen(match: match)),
-              ).then((_) => Navigator.pop(context)); // torna alla home dopo
+              ).then((_) => Navigator.pop(context));
             },
             child: const Text('Salva Partita e Vota Giocatori'),
           ),
