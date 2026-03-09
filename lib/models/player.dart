@@ -16,9 +16,14 @@ class Player extends HiveObject {
   @HiveField(3)
   String icon;
 
-  /// Path assoluto dell'immagine copiata nella cartella app (può essere null)
   @HiveField(4)
   String? imagePath;
+
+  @HiveField(5)
+  int mvpCount;      // ✅ quante volte MVP
+
+  @HiveField(6)
+  int hustleCount;   // ✅ quante volte Combattivo
 
   Player({
     required this.id,
@@ -26,10 +31,11 @@ class Player extends HiveObject {
     required this.role,
     required this.icon,
     this.imagePath,
+    this.mvpCount = 0,
+    this.hustleCount = 0,
   });
 }
 
-// Adapter manuale per Hive
 class PlayerAdapter extends TypeAdapter<Player> {
   @override
   final int typeId = 0;
@@ -40,17 +46,37 @@ class PlayerAdapter extends TypeAdapter<Player> {
     final name = reader.readString();
     final role = reader.readString();
     final icon = reader.readString();
-    // ✅ Campo nuovo: legge imagePath se presente, altrimenti null (retrocompatibile)
+
+    // imagePath — retrocompatibile
     String? imagePath;
     try {
       final raw = reader.read();
-      if (raw is String && raw.isNotEmpty) {
-        imagePath = raw;
-      }
-    } catch (_) {
-      imagePath = null;
-    }
-    return Player(id: id, name: name, role: role, icon: icon, imagePath: imagePath);
+      if (raw is String && raw.isNotEmpty) imagePath = raw;
+    } catch (_) {}
+
+    // mvpCount — retrocompatibile (0 se non presente)
+    int mvpCount = 0;
+    try {
+      final raw = reader.read();
+      if (raw is int) mvpCount = raw;
+    } catch (_) {}
+
+    // hustleCount — retrocompatibile (0 se non presente)
+    int hustleCount = 0;
+    try {
+      final raw = reader.read();
+      if (raw is int) hustleCount = raw;
+    } catch (_) {}
+
+    return Player(
+      id: id,
+      name: name,
+      role: role,
+      icon: icon,
+      imagePath: imagePath,
+      mvpCount: mvpCount,
+      hustleCount: hustleCount,
+    );
   }
 
   @override
@@ -60,5 +86,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.writeString(obj.role);
     writer.writeString(obj.icon);
     writer.write(obj.imagePath ?? '');
+    writer.write(obj.mvpCount);
+    writer.write(obj.hustleCount);
   }
 }

@@ -58,6 +58,12 @@ class MatchCard extends StatelessWidget {
     final teamANames = match.teamA.map(_playerName).join(' · ');
     final teamBNames = match.teamB.map(_playerName).join(' · ');
     final accent = _accentColor();
+    final mvpName = match.mvp.isNotEmpty
+        ? (HiveBoxes.playersBox.get(match.mvp)?.name ?? match.mvp)
+        : '';
+    final hustleName = match.hustlePlayer.isNotEmpty
+        ? (HiveBoxes.playersBox.get(match.hustlePlayer)?.name ?? match.hustlePlayer)
+        : '';
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -101,8 +107,8 @@ class MatchCard extends StatelessWidget {
 
               // ── ZONA 3: Footer premi + elimina ────────────────
               _FooterSection(
-                mvp: match.mvp,
-                hustle: match.hustlePlayer,
+                mvp: mvpName,
+                hustle: hustleName,
                 accent: accent,
                 match: match,
               ),

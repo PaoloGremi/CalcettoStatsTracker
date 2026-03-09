@@ -217,7 +217,7 @@ class CsvService {
 
         if (name.isEmpty) { skipped++; continue; }
 
-        // Se il giocatore esiste già (stesso id) aggiorna, altrimenti crea
+        // Se il giocatore esiste già (stesso id) aggiorna, preservando i contatori
         final existing = HiveBoxes.playersBox.get(id);
         final player = Player(
           id: existing?.id ?? id,
@@ -225,6 +225,9 @@ class CsvService {
           role: role,
           icon: icon.isEmpty ? 'person' : icon,
           imagePath: imagePath.isEmpty ? null : imagePath,
+          // ✅ Preserva i contatori già presenti, non azzerarli
+          mvpCount: existing?.mvpCount ?? 0,
+          hustleCount: existing?.hustleCount ?? 0,
         );
         await HiveBoxes.playersBox.put(player.id, player);
         imported++;
@@ -305,6 +308,10 @@ class CsvService {
       }
     }
 
+    // ✅ Ricalcola mvpCount e hustleCount per tutti i giocatori
+    // partendo dai match appena importati (fonte di verità)
+    await _recalculateAwardCounters();
+
     return ImportResult.success(imported: imported, skipped: skipped);
   }
 
@@ -354,6 +361,39 @@ class CsvService {
     }
 
     return ImportResult.success(imported: imported, skipped: skipped);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // RICALCOLO CONTATORI AWARD
+  // Conta MVP e Combattivo da zero leggendo tutti i match in Hive.
+  // Chiamato dopo ogni import matches per garantire coerenza.
+  // ─────────────────────────────────────────────────────────────
+
+  Future<void> _recalculateAwardCounters() async {
+    // Azzera tutti i contatori
+    for (final player in HiveBoxes.playersBox.values) {
+      player.mvpCount = 0;
+      player.hustleCount = 0;
+      await HiveBoxes.playersBox.put(player.id, player);
+    }
+
+    // Riconta da tutti i match
+    for (final match in HiveBoxes.matchesBox.values) {
+      if (match.mvp.isNotEmpty) {
+        final p = HiveBoxes.playersBox.get(match.mvp);
+        if (p != null) {
+          p.mvpCount = (p.mvpCount + 1).clamp(0, 9999);
+          await HiveBoxes.playersBox.put(p.id, p);
+        }
+      }
+      if (match.hustlePlayer.isNotEmpty) {
+        final p = HiveBoxes.playersBox.get(match.hustlePlayer);
+        if (p != null) {
+          p.hustleCount = (p.hustleCount + 1).clamp(0, 9999);
+          await HiveBoxes.playersBox.put(p.id, p);
+        }
+      }
+    }
   }
 }
 
