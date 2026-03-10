@@ -8,5 +8,16 @@
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<!-- Permesso lettura file scelti dall'utente (file_picker) -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+
+	<!-- Permesso scrittura file scelti dall'utente (export CSV) -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+
+	<!-- Permesso cartelle Downloads/Documents -->
+	<key>com.apple.security.files.downloads.read-write</key>
+	<true/>
 </dict>
 </plist>
