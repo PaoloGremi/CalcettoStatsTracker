@@ -55,8 +55,8 @@ class MatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = DateFormat('EEE dd MMM yyyy', 'it_IT').format(match.date);
     final time = DateFormat('HH:mm').format(match.date);
-    final teamANames = match.teamA.map(_playerName).join(' · ');
-    final teamBNames = match.teamB.map(_playerName).join(' · ');
+    final teamANames = match.teamA.map(_playerName).toList();
+    final teamBNames = match.teamB.map(_playerName).toList();
     final accent = _accentColor();
     final mvpName = match.mvp.isNotEmpty
         ? (HiveBoxes.playersBox.get(match.mvp)?.name ?? match.mvp)
@@ -234,8 +234,8 @@ class _ScoreSection extends StatelessWidget {
   final int scoreB;
   final Color accent;
   final String resultLabel;
-  final String teamANames;
-  final String teamBNames;
+  final List<String> teamANames;
+  final List<String> teamBNames;
 
   const _ScoreSection({
     required this.scoreA,
@@ -256,7 +256,7 @@ class _ScoreSection extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Team A (sinistra)
+              // Team A (sinistra) — nomi uno sotto l'altro
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,18 +270,25 @@ class _ScoreSection extends StatelessWidget {
                         letterSpacing: 2.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      teamANames,
-                      style: const TextStyle(color: Color(0xFF555555), fontSize: 10),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    const SizedBox(height: 6),
+                    ...teamANames.map((name) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
                   ],
                 ),
               ),
 
-              // Punteggio ENORME al centro
+              // Punteggio al centro
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
@@ -304,7 +311,7 @@ class _ScoreSection extends StatelessWidget {
                 ),
               ),
 
-              // Team B (destra)
+              // Team B (destra) — nomi uno sotto l'altro allineati a destra
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -318,14 +325,21 @@ class _ScoreSection extends StatelessWidget {
                         letterSpacing: 2.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      teamBNames,
-                      style: const TextStyle(color: Color(0xFF555555), fontSize: 10),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                    ),
+                    const SizedBox(height: 6),
+                    ...teamBNames.map((name) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.end,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
                   ],
                 ),
               ),
