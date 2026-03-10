@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => const BackupScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.rss_feed_rounded, color: AppTheme.textSecondary, size: 22),
+            icon: const Icon(Icons.campaign_rounded, color: AppTheme.textSecondary, size: 22),
             tooltip: 'Promuovi partita',
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const MatchPromoFormPage())),
@@ -117,8 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           Positioned(
                             bottom: shieldSize * 0.08,
                             child: const FifaStats(
-                              vel: 81, tir: 63, pas: 79,
-                              dri: 59, dif: 73, fis: 80,
+                              vel: 78, tir: 61, pas: 76,
+                              dri: 56, dif: 70, fis: 77,
                             ),
                           ),
                         ],
@@ -204,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             _NavBtn(icon: Icons.people_rounded, label: 'ROSA',
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PlayersScreen())).then((_) => setState(() {}))),
-            _NavBtn(icon: Icons.emoji_events_rounded, label: 'PROMO',
+            _NavBtn(icon: Icons.campaign_rounded, label: 'PROMO',
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MatchPromoFormPage()))),
           ],
         ),
