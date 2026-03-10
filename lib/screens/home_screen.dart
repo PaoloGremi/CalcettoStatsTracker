@@ -117,8 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           Positioned(
                             bottom: shieldSize * 0.08,
                             child: const FifaStats(
-                              vel: 78, tir: 61, pas: 76,
-                              dri: 56, dif: 70, fis: 77,
+                              vel: 81, tir: 63, pas: 79,
+                              dri: 59, dif: 73, fis: 80,
                             ),
                           ),
                         ],
