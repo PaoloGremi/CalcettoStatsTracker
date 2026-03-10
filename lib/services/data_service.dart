@@ -99,6 +99,15 @@ class DataService extends ChangeNotifier {
         await HiveBoxes.playersBox.put(hustlePlayer.id, hustlePlayer);
       }
     }
+
+    // Best Goal
+    if (match.bestGoalPlayer.isNotEmpty) {
+      final bestGoalPlayer = _findPlayerById(match.bestGoalPlayer);
+      if (bestGoalPlayer != null) {
+        bestGoalPlayer.bestGoalCount = (bestGoalPlayer.bestGoalCount + delta).clamp(0, 9999);
+        await HiveBoxes.playersBox.put(bestGoalPlayer.id, bestGoalPlayer);
+      }
+    }
   }
 
   /// Trova un giocatore per ID (mvp e hustlePlayer ora salvano l'ID, non il nome)

@@ -64,6 +64,9 @@ class MatchCard extends StatelessWidget {
     final hustleName = match.hustlePlayer.isNotEmpty
         ? (HiveBoxes.playersBox.get(match.hustlePlayer)?.name ?? match.hustlePlayer)
         : '';
+    final bestGoalName = match.bestGoalPlayer.isNotEmpty
+        ? (HiveBoxes.playersBox.get(match.bestGoalPlayer)?.name ?? match.bestGoalPlayer)
+        : '';
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -109,6 +112,7 @@ class MatchCard extends StatelessWidget {
               _FooterSection(
                 mvp: mvpName,
                 hustle: hustleName,
+                bestGoal: bestGoalName,
                 accent: accent,
                 match: match,
               ),
@@ -399,12 +403,14 @@ class _ScoreBox extends StatelessWidget {
 class _FooterSection extends StatelessWidget {
   final String mvp;
   final String hustle;
+  final String bestGoal;
   final Color accent;
   final MatchModel match;
 
   const _FooterSection({
     required this.mvp,
     required this.hustle,
+    required this.bestGoal,
     required this.accent,
     required this.match,
   });
@@ -413,6 +419,8 @@ class _FooterSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasMvp = mvp.isNotEmpty;
     final hasHustle = hustle.isNotEmpty;
+    final hasBestGoal = bestGoal.isNotEmpty;
+    final hasAny = hasMvp || hasHustle || hasBestGoal;
 
     return Container(
       decoration: BoxDecoration(
@@ -427,14 +435,21 @@ class _FooterSection extends StatelessWidget {
           if (hasMvp)
             Expanded(child: _AwardBadge(emoji: '👑', label: 'MVP', name: mvp, color: const Color(0xFFFFD700))),
 
-          if (hasMvp && hasHustle)
+          if (hasMvp && (hasHustle || hasBestGoal))
             Container(width: 1, height: 34, color: Colors.white10,
-                margin: const EdgeInsets.symmetric(horizontal: 10)),
+                margin: const EdgeInsets.symmetric(horizontal: 8)),
 
           if (hasHustle)
             Expanded(child: _AwardBadge(emoji: '🔥', label: 'COMBATTIVO', name: hustle, color: const Color(0xFFFF6D00))),
 
-          if (!hasMvp && !hasHustle)
+          if (hasHustle && hasBestGoal)
+            Container(width: 1, height: 34, color: Colors.white10,
+                margin: const EdgeInsets.symmetric(horizontal: 8)),
+
+          if (hasBestGoal)
+            Expanded(child: _AwardBadge(emoji: '⚽', label: 'BEST GOAL', name: bestGoal, color: const Color(0xFF00E676))),
+
+          if (!hasAny)
             const Expanded(
               child: Text('Nessun premio assegnato',
                   style: TextStyle(color: Colors.white24, fontSize: 11)),

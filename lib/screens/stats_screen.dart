@@ -129,24 +129,20 @@ class StatsScreen extends StatelessWidget {
                           ],
                         ),
                         // ✅ Badge MVP e Combattivo
-                        if (player.mvpCount > 0 || player.hustleCount > 0) ...[
+                        if (player.mvpCount > 0 || player.hustleCount > 0 || player.bestGoalCount > 0) ...[
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               if (player.mvpCount > 0) ...[
-                                _AwardCounter(
-                                  emoji: '👑',
-                                  count: player.mvpCount,
-                                  color: AppTheme.accentGold,
-                                ),
+                                _AwardCounter(emoji: '👑', count: player.mvpCount, color: AppTheme.accentGold),
                                 const SizedBox(width: 6),
                               ],
-                              if (player.hustleCount > 0)
-                                _AwardCounter(
-                                  emoji: '🔥',
-                                  count: player.hustleCount,
-                                  color: AppTheme.accentOrange,
-                                ),
+                              if (player.hustleCount > 0) ...[
+                                _AwardCounter(emoji: '🔥', count: player.hustleCount, color: AppTheme.accentOrange),
+                                const SizedBox(width: 6),
+                              ],
+                              if (player.bestGoalCount > 0)
+                                _AwardCounter(emoji: '⚽', count: player.bestGoalCount, color: AppTheme.accentGreen),
                             ],
                           ),
                         ],

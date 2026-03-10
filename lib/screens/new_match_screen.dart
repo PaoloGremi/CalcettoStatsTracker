@@ -23,8 +23,9 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   int scoreB = 0;
   String? fieldLocation;
   DateTime? selectedDateTime;
-  String? mvpPlayerId;       // ✅ ora è un ID giocatore
-  String? hustlePlayerId;    // ✅ ora è un ID giocatore
+  String? mvpPlayerId;
+  String? hustlePlayerId;
+  String? bestGoalPlayerId; // ✅ nuovo
   final TextEditingController _scoreACtrl = TextEditingController();
   final TextEditingController _scoreBCtrl = TextEditingController();
 
@@ -35,12 +36,12 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     super.dispose();
   }
 
-  static const _locations = [
-    ('SanFrancesco', 'San Francesco · Lodi'),
-    ('Montanaso',    'Campo Sportivo · Montanaso'),
-    ('Faustina',     'Faustina Arena · Lodi'),
-    ('Pergola',      'La Pergola · San Martino'),
-    ('Other',        'Altro Campo'),
+  static const _locations = <Map<String, String>>[
+    {'value': 'SanFrancesco', 'label': 'San Francesco · Lodi'},
+    {'value': 'Montanaso',    'label': 'Campo Sportivo · Montanaso'},
+    {'value': 'Faustina',     'label': 'Faustina Arena · Lodi'},
+    {'value': 'Pergola',      'label': 'La Pergola · San Martino'},
+    {'value': 'Other',        'label': 'Altro Campo'},
   ];
 
   /// Restituisce la lista di Player selezionati (teamA + teamB uniti)
@@ -72,6 +73,10 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
         !participatingPlayers.any((p) => p.id == hustlePlayerId)) {
       hustlePlayerId = null;
     }
+    if (bestGoalPlayerId != null &&
+        !participatingPlayers.any((p) => p.id == bestGoalPlayerId)) {
+      bestGoalPlayerId = null;
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
@@ -100,8 +105,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 contentPadding: EdgeInsets.zero,
               ),
               items: _locations.map((loc) => DropdownMenuItem(
-                value: loc.$1,
-                child: Text(loc.$2,
+                value: loc['value'],
+                child: Text(loc['label']!,
                     style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
               )).toList(),
               onChanged: (v) => setState(() => fieldLocation = v),
@@ -244,6 +249,16 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                         selectedId: hustlePlayerId,
                         onChanged: (id) => setState(() => hustlePlayerId = id),
                       ),
+                      const FifaDivider(),
+                      // Best Goal
+                      _AwardDropdown(
+                        emoji: '⚽',
+                        label: 'BEST GOAL',
+                        accentColor: AppTheme.accentGreen,
+                        players: participatingPlayers,
+                        selectedId: bestGoalPlayerId,
+                        onChanged: (id) => setState(() => bestGoalPlayerId = id),
+                      ),
                     ],
                   ),
           ),
@@ -278,6 +293,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     fieldLocation: fieldLocation ?? 'Other',
                     mvp: mvpPlayerId ?? '',
                     hustlePlayer: hustlePlayerId ?? '',
+                    bestGoalPlayer: bestGoalPlayerId ?? '',
                   );
                   await data.addMatch(match);
                   if (!mounted) return;
