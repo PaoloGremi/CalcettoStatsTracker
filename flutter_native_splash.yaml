@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────
+# flutter_native_splash configuration
+# Metti questo file nella root del progetto (accanto a pubspec.yaml)
+# Poi esegui: dart run flutter_native_splash:create
+# ─────────────────────────────────────────────────────────────
+
+flutter_native_splash:
+
+  # Sfondo nero — coerente con il tema FIFA scuro
+  color: "#080808"
+
+  # Anche in dark mode
+  color_dark: "#080808"
+
+  # Scudo dorato come immagine centrale dello splash nativo
+  image: assets/icons/logo-removebg.png
+  image_dark: assets/icons/logo-removebg.png
+
+  # Android 12+ supporta uno splash dedicato
+  android_12:
+    color: "#080808"
+    color_dark: "#080808"
+    image: assets/icons/logo-removebg.png
+    image_dark: assets/icons/logo-removebg.png
+    icon_background_color: "#080808"
+    icon_background_color_dark: "#080808"
+
+  android_gravity: center
+  ios_content_mode: center
+
+  # Nascondi status bar durante lo splash nativo
+  fullscreen: true
+
+  # Web (opzionale)
+  web: false
