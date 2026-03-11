@@ -235,7 +235,18 @@ class _PlayerRow extends StatelessWidget {
               fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: FifaBadge(player.role, color: AppTheme.accentBlue),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FifaBadge(player.role, color: switch (player.role) {
+                'P' => AppTheme.accentGold,
+                'D' => AppTheme.accentBlue,
+                'C' => AppTheme.accentGreen,
+                'A' => AppTheme.accentRed,
+                _   => AppTheme.textMuted,
+              }),
+            ],
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

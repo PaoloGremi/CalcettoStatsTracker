@@ -270,7 +270,13 @@ class _StatsScreenState extends State<StatsScreen> {
                               Row(
                                 children: [
                                   FifaBadge(player.role,
-                                      color: AppTheme.accentBlue),
+                                      color: switch (player.role) {
+                                        'P' => AppTheme.accentGold,
+                                        'D' => AppTheme.accentBlue,
+                                        'C' => AppTheme.accentGreen,
+                                        'A' => AppTheme.accentRed,
+                                        _   => AppTheme.textMuted,
+                                      }),
                                   const SizedBox(width: 6),
                                   Text('$games partite',
                                     style: const TextStyle(
