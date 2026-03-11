@@ -26,10 +26,24 @@ class CsvService {
   }
 
   String _toCsv(List<List<dynamic>> rows) =>
-      const ListToCsvConverter().convert(rows);
+      const ListToCsvConverter(
+        fieldDelimiter: ',',
+        textDelimiter: '"',
+        textEndDelimiter: '"',
+        eol: '\n',
+      ).convert(rows);
 
-  List<List<dynamic>> _fromCsv(String raw) =>
-      const CsvToListConverter(eol: '\n').convert(raw);
+  List<List<dynamic>> _fromCsv(String raw) {
+    // Normalizza i fine riga (Windows \r\n → \n, vecchio Mac \r → \n)
+    final normalized = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    return const CsvToListConverter(
+      fieldDelimiter: ',',
+      textDelimiter: '"',
+      textEndDelimiter: '"',
+      eol: '\n',
+      shouldParseNumbers: false, // legge tutto come stringa, evitiamo cast errati
+    ).convert(normalized);
+  }
 
   Future<File> _writeFile(String filename, String content) async {
     final dir = await _exportDir;
