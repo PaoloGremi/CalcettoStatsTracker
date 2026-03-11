@@ -20,6 +20,8 @@ dependencies:
   csv: ^6.0.0             # parsing e generazione CSV
   share_plus: ^10.0.0     # condivisione file (sheet, email, whatsapp...)
   file_picker: ^8.1.2     # selezione file CSV dal dispositivo per import
+  shared_preferences: ^2.5.4
+  flutter_native_splash: ^2.4.7
 
 
 dev_dependencies:

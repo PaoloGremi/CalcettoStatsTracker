@@ -26,10 +26,24 @@ class CsvService {
   }
 
   String _toCsv(List<List<dynamic>> rows) =>
-      const ListToCsvConverter().convert(rows);
+      const ListToCsvConverter(
+        fieldDelimiter: ',',
+        textDelimiter: '"',
+        textEndDelimiter: '"',
+        eol: '\n',
+      ).convert(rows);
 
-  List<List<dynamic>> _fromCsv(String raw) =>
-      const CsvToListConverter(eol: '\n').convert(raw);
+  List<List<dynamic>> _fromCsv(String raw) {
+    // Normalizza i fine riga (Windows \r\n → \n, vecchio Mac \r → \n)
+    final normalized = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    return const CsvToListConverter(
+      fieldDelimiter: ',',
+      textDelimiter: '"',
+      textEndDelimiter: '"',
+      eol: '\n',
+      shouldParseNumbers: false, // legge tutto come stringa, evitiamo cast errati
+    ).convert(normalized);
+  }
 
   Future<File> _writeFile(String filename, String content) async {
     final dir = await _exportDir;
@@ -64,7 +78,7 @@ class CsvService {
   Future<File> exportMatches() async {
     final matches = HiveBoxes.matchesBox.values.toList();
     final rows = <List<dynamic>>[
-      ['id', 'date', 'fieldLocation', 'scoreA', 'scoreB', 'teamA', 'teamB', 'mvp', 'hustlePlayer'],
+      ['id', 'date', 'fieldLocation', 'scoreA', 'scoreB', 'teamA', 'teamB', 'mvp', 'hustlePlayer', 'bestGoalPlayer'],
       ...matches.map((m) => [
             m.id,
             _dateFormat.format(m.date),
@@ -75,6 +89,7 @@ class CsvService {
             m.teamB.join('|'),
             m.mvp,
             m.hustlePlayer,
+            m.bestGoalPlayer,
           ]),
     ];
     return _writeFile('matches.csv', _toCsv(rows));
@@ -228,6 +243,7 @@ class CsvService {
           // ✅ Preserva i contatori già presenti, non azzerarli
           mvpCount: existing?.mvpCount ?? 0,
           hustleCount: existing?.hustleCount ?? 0,
+          bestGoalCount: existing?.bestGoalCount ?? 0,
         );
         await HiveBoxes.playersBox.put(player.id, player);
         imported++;
@@ -274,6 +290,7 @@ class CsvService {
         final teamB = row[6].toString().split('|').where((s) => s.isNotEmpty).toList();
         final mvp = row.length > 7 ? row[7].toString().trim() : '';
         final hustlePlayer = row.length > 8 ? row[8].toString().trim() : '';
+        final bestGoalPlayer = row.length > 9 ? row[9].toString().trim() : '';
 
         DateTime date;
         try {
@@ -292,6 +309,7 @@ class CsvService {
           fieldLocation: fieldLocation.isEmpty ? 'Other' : fieldLocation,
           mvp: mvp,
           hustlePlayer: hustlePlayer,
+          bestGoalPlayer: bestGoalPlayer,
         );
 
         // Importa voti dal box già esistente se la partita c'era
@@ -374,6 +392,7 @@ class CsvService {
     for (final player in HiveBoxes.playersBox.values) {
       player.mvpCount = 0;
       player.hustleCount = 0;
+      player.bestGoalCount = 0;
       await HiveBoxes.playersBox.put(player.id, player);
     }
 
@@ -390,6 +409,13 @@ class CsvService {
         final p = HiveBoxes.playersBox.get(match.hustlePlayer);
         if (p != null) {
           p.hustleCount = (p.hustleCount + 1).clamp(0, 9999);
+          await HiveBoxes.playersBox.put(p.id, p);
+        }
+      }
+      if (match.bestGoalPlayer.isNotEmpty) {
+        final p = HiveBoxes.playersBox.get(match.bestGoalPlayer);
+        if (p != null) {
+          p.bestGoalCount = (p.bestGoalCount + 1).clamp(0, 9999);
           await HiveBoxes.playersBox.put(p.id, p);
         }
       }

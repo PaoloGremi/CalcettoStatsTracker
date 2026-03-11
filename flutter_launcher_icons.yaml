@@ -1,0 +1,22 @@
+flutter_launcher_icons:
+  # Immagine sorgente — lo scudo dorato
+  image_path: "assets/icons/logo.png"
+
+  # Android
+  android: true
+  adaptive_icon_background: "#080808"
+  adaptive_icon_foreground: "assets/icons/logo.png"
+
+  # iOS
+  ios: true
+  remove_alpha_ios: true
+
+  # macOS ← sintassi corretta per v0.14.x
+  macos:
+    generate: true
+    image_path: "assets/icons/logo.png"
+
+platforms:
+  - android
+  - ios
+  - macos

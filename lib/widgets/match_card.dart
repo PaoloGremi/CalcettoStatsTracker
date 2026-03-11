@@ -55,14 +55,17 @@ class MatchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = DateFormat('EEE dd MMM yyyy', 'it_IT').format(match.date);
     final time = DateFormat('HH:mm').format(match.date);
-    final teamANames = match.teamA.map(_playerName).join(' · ');
-    final teamBNames = match.teamB.map(_playerName).join(' · ');
+    final teamANames = match.teamA.map(_playerName).toList();
+    final teamBNames = match.teamB.map(_playerName).toList();
     final accent = _accentColor();
     final mvpName = match.mvp.isNotEmpty
         ? (HiveBoxes.playersBox.get(match.mvp)?.name ?? match.mvp)
         : '';
     final hustleName = match.hustlePlayer.isNotEmpty
         ? (HiveBoxes.playersBox.get(match.hustlePlayer)?.name ?? match.hustlePlayer)
+        : '';
+    final bestGoalName = match.bestGoalPlayer.isNotEmpty
+        ? (HiveBoxes.playersBox.get(match.bestGoalPlayer)?.name ?? match.bestGoalPlayer)
         : '';
 
     return GestureDetector(
@@ -109,6 +112,7 @@ class MatchCard extends StatelessWidget {
               _FooterSection(
                 mvp: mvpName,
                 hustle: hustleName,
+                bestGoal: bestGoalName,
                 accent: accent,
                 match: match,
               ),
@@ -230,8 +234,8 @@ class _ScoreSection extends StatelessWidget {
   final int scoreB;
   final Color accent;
   final String resultLabel;
-  final String teamANames;
-  final String teamBNames;
+  final List<String> teamANames;
+  final List<String> teamBNames;
 
   const _ScoreSection({
     required this.scoreA,
@@ -252,7 +256,7 @@ class _ScoreSection extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Team A (sinistra)
+              // Team A (sinistra) — nomi uno sotto l'altro
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,18 +270,25 @@ class _ScoreSection extends StatelessWidget {
                         letterSpacing: 2.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      teamANames,
-                      style: const TextStyle(color: Color(0xFF555555), fontSize: 10),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    const SizedBox(height: 6),
+                    ...teamANames.map((name) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
                   ],
                 ),
               ),
 
-              // Punteggio ENORME al centro
+              // Punteggio al centro
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
@@ -300,7 +311,7 @@ class _ScoreSection extends StatelessWidget {
                 ),
               ),
 
-              // Team B (destra)
+              // Team B (destra) — nomi uno sotto l'altro allineati a destra
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -314,14 +325,21 @@ class _ScoreSection extends StatelessWidget {
                         letterSpacing: 2.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      teamBNames,
-                      style: const TextStyle(color: Color(0xFF555555), fontSize: 10),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                    ),
+                    const SizedBox(height: 6),
+                    ...teamBNames.map((name) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        name.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.end,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
                   ],
                 ),
               ),
@@ -399,12 +417,14 @@ class _ScoreBox extends StatelessWidget {
 class _FooterSection extends StatelessWidget {
   final String mvp;
   final String hustle;
+  final String bestGoal;
   final Color accent;
   final MatchModel match;
 
   const _FooterSection({
     required this.mvp,
     required this.hustle,
+    required this.bestGoal,
     required this.accent,
     required this.match,
   });
@@ -413,6 +433,8 @@ class _FooterSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasMvp = mvp.isNotEmpty;
     final hasHustle = hustle.isNotEmpty;
+    final hasBestGoal = bestGoal.isNotEmpty;
+    final hasAny = hasMvp || hasHustle || hasBestGoal;
 
     return Container(
       decoration: BoxDecoration(
@@ -427,14 +449,21 @@ class _FooterSection extends StatelessWidget {
           if (hasMvp)
             Expanded(child: _AwardBadge(emoji: '👑', label: 'MVP', name: mvp, color: const Color(0xFFFFD700))),
 
-          if (hasMvp && hasHustle)
+          if (hasMvp && (hasHustle || hasBestGoal))
             Container(width: 1, height: 34, color: Colors.white10,
-                margin: const EdgeInsets.symmetric(horizontal: 10)),
+                margin: const EdgeInsets.symmetric(horizontal: 8)),
 
           if (hasHustle)
             Expanded(child: _AwardBadge(emoji: '🔥', label: 'COMBATTIVO', name: hustle, color: const Color(0xFFFF6D00))),
 
-          if (!hasMvp && !hasHustle)
+          if (hasHustle && hasBestGoal)
+            Container(width: 1, height: 34, color: Colors.white10,
+                margin: const EdgeInsets.symmetric(horizontal: 8)),
+
+          if (hasBestGoal)
+            Expanded(child: _AwardBadge(emoji: '⚽', label: 'BEST GOAL', name: bestGoal, color: const Color(0xFF00E676))),
+
+          if (!hasAny)
             const Expanded(
               child: Text('Nessun premio assegnato',
                   style: TextStyle(color: Colors.white24, fontSize: 11)),

@@ -8,7 +8,6 @@ class MatchModel extends HiveObject {
   @HiveField(1)
   DateTime date;
 
-  // Liste di ID dei giocatori per ogni squadra
   @HiveField(2)
   List<String> teamA;
 
@@ -21,7 +20,6 @@ class MatchModel extends HiveObject {
   @HiveField(5)
   int scoreB;
 
-  // Mappa voti: key = playerId, value = voto (double)
   @HiveField(6)
   Map<String, double> votes;
 
@@ -31,11 +29,14 @@ class MatchModel extends HiveObject {
   @HiveField(8)
   String fieldLocation;
 
-  @HiveField(9)  // ✅ FIX: era 8 (duplicato)
+  @HiveField(9)
   String mvp;
 
-  @HiveField(10) // ✅ FIX: era 8 (duplicato)
+  @HiveField(10)
   String hustlePlayer;
+
+  @HiveField(11)
+  String bestGoalPlayer; // ✅ nuovo campo
 
   MatchModel({
     required this.id,
@@ -49,11 +50,11 @@ class MatchModel extends HiveObject {
     required this.fieldLocation,
     required this.mvp,
     required this.hustlePlayer,
+    this.bestGoalPlayer = '',
   })  : votes = votes ?? {},
         comments = comments ?? {};
 }
 
-// Adapter manuale per Hive
 class MatchModelAdapter extends TypeAdapter<MatchModel> {
   @override
   final int typeId = 1;
@@ -72,6 +73,12 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     final mvp = reader.readString();
     final hustlePlayer = reader.readString();
 
+    // ✅ retrocompatibile: '' se non presente nei dati vecchi
+    String bestGoalPlayer = '';
+    try {
+      bestGoalPlayer = reader.readString();
+    } catch (_) {}
+
     return MatchModel(
       id: id,
       date: DateTime.fromMillisecondsSinceEpoch(dateMillis),
@@ -84,6 +91,7 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
       fieldLocation: fieldLocation,
       mvp: mvp,
       hustlePlayer: hustlePlayer,
+      bestGoalPlayer: bestGoalPlayer,
     );
   }
 
@@ -100,5 +108,6 @@ class MatchModelAdapter extends TypeAdapter<MatchModel> {
     writer.writeString(obj.fieldLocation);
     writer.writeString(obj.mvp);
     writer.writeString(obj.hustlePlayer);
+    writer.writeString(obj.bestGoalPlayer);
   }
 }

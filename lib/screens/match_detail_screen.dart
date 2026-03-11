@@ -41,6 +41,7 @@ class MatchDetailScreen extends StatelessWidget {
         .format(match.date);
     final mvpName = _resolveName(match.mvp);
     final hustleName = _resolveName(match.hustlePlayer);
+    final bestGoalName = _resolveName(match.bestGoalPlayer);
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
@@ -92,7 +93,7 @@ class MatchDetailScreen extends StatelessWidget {
                 FifaBadge(_resultLabel(), color: accent),
 
                 // Premi
-                if (mvpName.isNotEmpty || hustleName.isNotEmpty) ...[
+                if (mvpName.isNotEmpty || hustleName.isNotEmpty || bestGoalName.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Container(height: 1, color: AppTheme.border),
                   const SizedBox(height: 14),
@@ -102,8 +103,9 @@ class MatchDetailScreen extends StatelessWidget {
                       if (mvpName.isNotEmpty)
                         _AwardChip('👑', 'MVP', mvpName, AppTheme.accentGold),
                       if (hustleName.isNotEmpty)
-                        _AwardChip('🔥', 'COMBATTIVO', hustleName,
-                            AppTheme.accentOrange),
+                        _AwardChip('🔥', 'COMBATTIVO', hustleName, AppTheme.accentOrange),
+                      if (bestGoalName.isNotEmpty)
+                        _AwardChip('⚽', 'BEST GOAL', bestGoalName, AppTheme.accentGreen),
                     ],
                   ),
                 ],
@@ -200,6 +202,7 @@ class _PlayerDetailTile extends StatelessWidget {
     final accent = voteColor(voto);
     final isMvp = match.mvp == playerId;
     final isHustle = match.hustlePlayer == playerId;
+    final isBestGoal = match.bestGoalPlayer == playerId;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -211,7 +214,9 @@ class _PlayerDetailTile extends StatelessWidget {
               ? AppTheme.accentGold.withOpacity(0.4)
               : isHustle
                   ? AppTheme.accentOrange.withOpacity(0.4)
-                  : AppTheme.border,
+                  : isBestGoal
+                      ? AppTheme.accentGreen.withOpacity(0.4)
+                      : AppTheme.border,
         ),
       ),
       child: Padding(
@@ -246,6 +251,10 @@ class _PlayerDetailTile extends StatelessWidget {
                       if (isHustle) ...[
                         const SizedBox(width: 4),
                         const Text('🔥', style: TextStyle(fontSize: 14)),
+                      ],
+                      if (isBestGoal) ...[
+                        const SizedBox(width: 4),
+                        const Text('⚽', style: TextStyle(fontSize: 14)),
                       ],
                     ],
                   ),
