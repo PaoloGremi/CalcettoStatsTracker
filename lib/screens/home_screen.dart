@@ -116,83 +116,41 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
 
-          // ── Hero card scudo FIFA ──────────────────────────────
+          // ── FIFA UT Card ──────────────────────────────────────
           Expanded(
             flex: 5,
-            child: LayoutBuilder(builder: (context, constraints) {
-              final w = constraints.maxWidth;
-              final h = constraints.maxHeight;
-              final shieldSize = (w * 0.85).clamp(0.0, h * 0.95);
-
-              return Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.hardEdge,
-                children: [
-                  // Sfondo stadio
-                  Positioned.fill(
-                    child: Image.asset(
-                      'assets/images/backgroundStadium.png',
-                      fit: BoxFit.cover,
-                    ),
+            child: Stack(
+              children: [
+                // Sfondo stadio
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/backgroundStadium.png',
+                    fit: BoxFit.cover,
                   ),
-                  // Overlay gradiente
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.2),
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Scudo centrato
-                  Center(
-                    child: SizedBox(
-                      width: shieldSize,
-                      height: shieldSize,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Immagine scudo
-                          Image.asset(
-                            'assets/shields/GoldShield.png',
-                            width: shieldSize,
-                            height: shieldSize,
-                            fit: BoxFit.contain,
-                          ),
-                          // Avatar giocatore principale
-                          Positioned(
-                            top: shieldSize * 0.08,
-                            child: SizedBox(
-                              width: shieldSize * 0.55,
-                              height: shieldSize * 0.55,
-                              child: _buildShieldAvatar(mainPlayer, shieldSize),
-                            ),
-                          ),
-                          // Stats FIFA
-                          Positioned(
-                            bottom: shieldSize * 0.08,
-                            child: FifaStats(
-                              vel: _settings.vel,
-                              tir: _settings.tir,
-                              pas: _settings.pas,
-                              dri: _settings.dri,
-                              dif: _settings.dif,
-                              fis: _settings.fis,
-                            ),
-                          ),
+                ),
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.35),
+                          Colors.black.withOpacity(0.75),
                         ],
                       ),
                     ),
                   ),
-                ],
-              );
-            }),
+                ),
+                Center(
+                  child: _FutCard(
+                    player: mainPlayer,
+                    settings: _settings,
+                    buildAvatar: _buildShieldAvatar,
+                  ),
+                ),
+              ],
+            ),
           ),
 
           // ── Info giocatore principale ─────────────────────────
@@ -653,4 +611,283 @@ class _AwardPill extends StatelessWidget {
       ],
     ),
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+// FIFA Ultimate Team Card
+// ─────────────────────────────────────────────────────────────
+class _FutCard extends StatelessWidget {
+  final dynamic player;
+  final AppSettings settings;
+  final Widget Function(dynamic, double) buildAvatar;
+
+  const _FutCard({
+    required this.player,
+    required this.settings,
+    required this.buildAvatar,
+  });
+
+  /// Overall rating: media delle 6 stat
+  int get _overall =>
+      ((settings.vel + settings.tir + settings.pas +
+              settings.dri + settings.dif + settings.fis) /
+          6)
+          .round();
+
+  /// Colore card in base all'overall
+  Color get _cardColor {
+    if (_overall >= 85) return const Color(0xFFFFD700); // oro
+    if (_overall >= 75) return const Color(0xFFC0C0C0); // argento
+    return const Color(0xFFCD7F32);                     // bronzo
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _cardColor;
+    final cardW = 200.0;
+    final cardH = 280.0;
+
+    return Container(
+      width: cardW,
+      height: cardH,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            c.withOpacity(0.25),
+            Colors.black.withOpacity(0.85),
+            c.withOpacity(0.15),
+          ],
+        ),
+        border: Border.all(color: c.withOpacity(0.7), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: c.withOpacity(0.45),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // Trama interna
+            Positioned.fill(
+              child: CustomPaint(painter: _CardPatternPainter(c)),
+            ),
+
+            // Contenuto
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                children: [
+
+                  // ── Riga superiore: rating + foto + ruolo ──────
+                  SizedBox(
+                    height: cardH * 0.52,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        // Colonna sinistra: overall + ruolo
+                        Column(
+                          children: [
+                            Text(
+                              '$_overall',
+                              style: TextStyle(
+                                color: c,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                height: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              player?.role ?? '—',
+                              style: TextStyle(
+                                color: c,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            // Numero maglia
+                            if (settings.jerseyNumber.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: c.withOpacity(0.5), width: 1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '#${settings.jerseyNumber}',
+                                  style: TextStyle(
+                                    color: c.withOpacity(0.85),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        // Foto centrata che fuoriesce
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 0),
+                            child: player == null
+                                ? Center(
+                                    child: Icon(Icons.person_rounded,
+                                        color: c.withOpacity(0.3), size: 80),
+                                  )
+                                : OverflowBox(
+                                    maxHeight: cardH * 0.56,
+                                    alignment: Alignment.topCenter,
+                                    child: _buildPlayerImage(c),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Linea divisoria
+                  Container(
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.transparent,
+                        c.withOpacity(0.6),
+                        Colors.transparent,
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Nome ──────────────────────────────────────
+                  Text(
+                    (player?.name ?? 'Nessun Giocatore').toUpperCase(),
+                    style: TextStyle(
+                      color: c,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Stats a 2 colonne ─────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _statCol(c, [
+                        (settings.vel, 'VEL'),
+                        (settings.tir, 'TIR'),
+                        (settings.pas, 'PAS'),
+                      ]),
+                      Container(
+                        width: 1,
+                        height: 52,
+                        margin: const EdgeInsets.symmetric(horizontal: 14),
+                        color: c.withOpacity(0.25),
+                      ),
+                      _statCol(c, [
+                        (settings.dri, 'DRI'),
+                        (settings.dif, 'DIF'),
+                        (settings.fis, 'FIS'),
+                      ]),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayerImage(Color c) {
+    if (player == null) return const SizedBox();
+    if (player.imagePath != null &&
+        player.imagePath!.isNotEmpty &&
+        File(player.imagePath!).existsSync()) {
+      return Image.file(
+        File(player.imagePath!),
+        fit: BoxFit.contain,
+        alignment: Alignment.topCenter,
+      );
+    }
+    // Icona asset
+    final icon = getPlayerIcon(player.icon);
+    if (icon.isAsset) {
+      return Image.asset(icon.assetPath!, fit: BoxFit.contain);
+    }
+    return Icon(icon.iconData ?? Icons.person_rounded,
+        color: c.withOpacity(0.6), size: 80);
+  }
+
+  Widget _statCol(Color c, List<(int, String)> stats) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: stats
+        .map((s) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 28,
+                    child: Text(
+                      '${s.$1}',
+                      style: TextStyle(
+                        color: c,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    s.$2,
+                    style: TextStyle(
+                      color: c.withOpacity(0.7),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ))
+        .toList(),
+  );
+}
+
+/// Trama geometrica di sfondo della card
+class _CardPatternPainter extends CustomPainter {
+  final Color color;
+  _CardPatternPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withOpacity(0.04)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    const spacing = 18.0;
+    for (double i = -size.height; i < size.width + size.height; i += spacing) {
+      canvas.drawLine(Offset(i, 0), Offset(i + size.height, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CardPatternPainter old) => old.color != color;
 }

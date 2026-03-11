@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
 import '../models/player.dart';
-import '../data/player_icons.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 
@@ -72,9 +71,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
     final data = Provider.of<DataService>(context, listen: false);
     final nameCtrl = TextEditingController();
     String? selectedRole;
-    String selectedIcon = 'person';
     String? pickedImagePath;
-    bool useGallery = false;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -100,7 +97,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                         source: ImageSource.gallery, imageQuality: 85, maxWidth: 512, maxHeight: 512);
                     if (picked != null) {
                       final copied = await _copyImageToAppDir(picked.path);
-                      setD(() { pickedImagePath = copied; useGallery = true; });
+                      setD(() => pickedImagePath = copied);
                     }
                   },
                   child: Stack(
@@ -113,7 +110,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                           color: AppTheme.surfaceAlt,
                           border: Border.all(color: AppTheme.accentGreen.withOpacity(0.4), width: 2),
                         ),
-                        child: useGallery && pickedImagePath != null
+                        child: pickedImagePath != null
                             ? ClipOval(child: Image.file(File(pickedImagePath!), fit: BoxFit.cover))
                             : const Icon(Icons.add_a_photo_rounded, color: AppTheme.textMuted, size: 28),
                       ),
@@ -126,30 +123,6 @@ class _PlayersScreenState extends State<PlayersScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (useGallery)
-                  TextButton(
-                    onPressed: () => setD(() { pickedImagePath = null; useGallery = false; }),
-                    child: const FifaLabel('Usa icona predefinita', color: AppTheme.textSecondary),
-                  ),
-                if (!useGallery) ...[
-                  DropdownButtonFormField<String>(
-                    value: selectedIcon,
-                    decoration: const InputDecoration(labelText: 'ICONA'),
-                    dropdownColor: AppTheme.surfaceAlt,
-                    items: availableIcons.map((icon) => DropdownMenuItem(
-                      value: icon.key,
-                      child: Row(children: [
-                        icon.isAsset
-                            ? Image.asset(icon.assetPath!, width: 24, height: 24)
-                            : Icon(icon.iconData, size: 24, color: AppTheme.textPrimary),
-                        const SizedBox(width: 8),
-                        Text(icon.key, style: const TextStyle(color: AppTheme.textPrimary)),
-                      ]),
-                    )).toList(),
-                    onChanged: (v) => setD(() => selectedIcon = v ?? selectedIcon),
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 TextField(
                   controller: nameCtrl,
                   style: const TextStyle(color: AppTheme.textPrimary),
@@ -191,8 +164,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
     );
 
     if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
-      await data.addPlayer(nameCtrl.text.trim(), selectedIcon,
-          role: selectedRole!, imagePath: useGallery ? pickedImagePath : null);
+      await data.addPlayer(nameCtrl.text.trim(), 'person',
+          role: selectedRole!, imagePath: pickedImagePath);
       setState(() {});
     }
   }
@@ -217,19 +190,7 @@ class _PlayerRow extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: GestureDetector(
-          onTap: () async {
-            final picked = await ImagePicker().pickImage(
-                source: ImageSource.gallery, imageQuality: 85, maxWidth: 512, maxHeight: 512);
-            if (picked != null) {
-              final copied = await copyImage(picked.path);
-              player.imagePath = copied;
-              await data.updatePlayer(player);
-              onChanged();
-            }
-          },
-          child: PlayerAvatar(player: player, radius: 22),
-        ),
+        leading: PlayerAvatar(player: player, radius: 22),
         title: Text(player.name.toUpperCase(),
           style: const TextStyle(color: AppTheme.textPrimary,
               fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
@@ -257,12 +218,7 @@ class _PlayerRow extends StatelessWidget {
               onPressed: () async {
                 final nameCtrl = TextEditingController(text: player.name);
                 String selectedRole = player.role;
-                // Fallback a 'person' se l'icona salvata non è nella lista
-                String selectedIcon = availableIcons.any((i) => i.key == player.icon)
-                    ? player.icon
-                    : 'person';
                 String? pickedImagePath = player.imagePath;
-                bool useGallery = player.imagePath != null;
 
                 final confirmed = await showDialog<bool>(
                   context: context,
@@ -292,10 +248,7 @@ class _PlayerRow extends StatelessWidget {
                                     maxHeight: 512);
                                 if (picked != null) {
                                   final copied = await copyImage(picked.path);
-                                  setD(() {
-                                    pickedImagePath = copied;
-                                    useGallery = true;
-                                  });
+                                  setD(() => pickedImagePath = copied);
                                 }
                               },
                               child: Stack(
@@ -310,14 +263,13 @@ class _PlayerRow extends StatelessWidget {
                                           color: AppTheme.accentGold.withOpacity(0.4),
                                           width: 2),
                                     ),
-                                    child: useGallery && pickedImagePath != null &&
+                                    child: pickedImagePath != null &&
                                             File(pickedImagePath!).existsSync()
                                         ? ClipOval(
                                             child: Image.file(
                                                 File(pickedImagePath!),
                                                 fit: BoxFit.cover))
-                                        : const Icon(Icons.add_a_photo_rounded,
-                                            color: AppTheme.textMuted, size: 28),
+                                        : ClipOval(child: PlayerAvatar(player: player, radius: 40)),
                                   ),
                                   Container(
                                     padding: const EdgeInsets.all(4),
@@ -330,43 +282,7 @@ class _PlayerRow extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            if (useGallery)
-                              TextButton(
-                                onPressed: () => setD(() {
-                                  pickedImagePath = null;
-                                  useGallery = false;
-                                }),
-                                child: const FifaLabel('Usa icona predefinita',
-                                    color: AppTheme.textSecondary),
-                              ),
-                            if (!useGallery) ...[
-                              DropdownButtonFormField<String>(
-                                value: selectedIcon,
-                                decoration: const InputDecoration(labelText: 'ICONA'),
-                                dropdownColor: AppTheme.surfaceAlt,
-                                items: availableIcons
-                                    .map((icon) => DropdownMenuItem(
-                                          value: icon.key,
-                                          child: Row(children: [
-                                            icon.isAsset
-                                                ? Image.asset(icon.assetPath!,
-                                                    width: 24, height: 24)
-                                                : Icon(icon.iconData,
-                                                    size: 24,
-                                                    color: AppTheme.textPrimary),
-                                            const SizedBox(width: 8),
-                                            Text(icon.key,
-                                                style: const TextStyle(
-                                                    color: AppTheme.textPrimary)),
-                                          ]),
-                                        ))
-                                    .toList(),
-                                onChanged: (v) =>
-                                    setD(() => selectedIcon = v ?? selectedIcon),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
+                            const SizedBox(height: 16),
                             TextField(
                               controller: nameCtrl,
                               style: const TextStyle(color: AppTheme.textPrimary),
@@ -432,8 +348,7 @@ class _PlayerRow extends StatelessWidget {
                 if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
                   player.name = nameCtrl.text.trim();
                   player.role = selectedRole;
-                  player.icon = selectedIcon;
-                  player.imagePath = useGallery ? pickedImagePath : null;
+                  player.imagePath = pickedImagePath;
                   await data.updatePlayer(player);
                   onChanged();
                 }
