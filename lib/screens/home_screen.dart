@@ -12,6 +12,7 @@ import 'stats_screen.dart';
 import 'backup_screen.dart';
 import '../data/player_icons.dart';
 import 'settings_screen.dart';
+import 'fields_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,6 +82,13 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const FifaLabel('Champions Calcetto Stats',
             color: AppTheme.textPrimary, fontSize: 12),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.campaign_rounded,
+                color: AppTheme.textSecondary, size: 22),
+            tooltip: 'Promo',
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const MatchPromoFormPage())),
+          ),
           IconButton(
             icon: const Icon(Icons.backup_rounded,
                 color: AppTheme.textSecondary, size: 22),
@@ -290,10 +298,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   .then((_) => setState(() {})),
             ),
             _NavBtn(
-              icon: Icons.campaign_rounded,
-              label: 'PROMO',
+              icon: Icons.stadium_rounded,
+              label: 'CAMPI',
               onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const MatchPromoFormPage())),
+                  MaterialPageRoute(builder: (_) => const FieldsScreen()))
+                  .then((_) => setState(() {})),
             ),
           ],
         ),

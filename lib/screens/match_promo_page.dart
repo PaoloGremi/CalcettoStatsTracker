@@ -1,13 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../data/hive_boxes.dart';
 import '../data/player_icons.dart';
 import '../models/player.dart';
+import '../models/field_model.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 
 class MatchPromoPage extends StatelessWidget {
   final String dataOra;
-  final String campo;
+  final String campo;        // legacy: key stringa per campi predefiniti
+  final FieldModel? fieldModel; // nuovo: campo da Hive (priorità su campo)
   final String prezzo;
   final String nGiocatori;
   final List<String> teamBlack;
@@ -16,7 +19,8 @@ class MatchPromoPage extends StatelessWidget {
   const MatchPromoPage({
     super.key,
     required this.dataOra,
-    required this.campo,
+    this.campo = '',
+    this.fieldModel,
     required this.prezzo,
     required this.nGiocatori,
     required this.teamBlack,
@@ -47,9 +51,17 @@ class MatchPromoPage extends StatelessWidget {
     'Other':        '',
   };
 
-  String get _bg => _backgrounds[campo] ?? 'assets/images/sfondoPalloneGenerico.png';
-  String get _locationLabel => _locationLabels[campo] ?? campo;
-  String get _locationAddress => _locationAddresses[campo] ?? '';
+  String get _bg => fieldModel != null
+      ? '' // segnale: usa File image, non asset
+      : (_backgrounds[campo] ?? 'assets/images/sfondoPalloneGenerico.png');
+
+  String get _locationLabel => fieldModel != null
+      ? fieldModel!.name
+      : (_locationLabels[campo] ?? campo);
+
+  String get _locationAddress => fieldModel != null
+      ? fieldModel!.address
+      : (_locationAddresses[campo] ?? '');
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +82,7 @@ class MatchPromoPage extends StatelessWidget {
             // ── HERO POSTER ───────────────────────────────────────
             _HeroPoster(
               bgAsset: _bg,
+              fieldImagePath: fieldModel?.imagePath,
               locationLabel: _locationLabel,
               locationAddress: _locationAddress,
               dataOra: dataOra,
@@ -140,20 +153,27 @@ class MatchPromoPage extends StatelessWidget {
 
 class _HeroPoster extends StatelessWidget {
   final String bgAsset, locationLabel, locationAddress, dataOra, nGiocatori, prezzo;
+  final String? fieldImagePath;
   const _HeroPoster({
     required this.bgAsset, required this.locationLabel, required this.locationAddress,
     required this.dataOra, required this.nGiocatori, required this.prezzo,
+    this.fieldImagePath,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasFileImage = fieldImagePath != null && File(fieldImagePath!).existsSync();
+
     return SizedBox(
       height: 260,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Foto campo
-          Image.asset(bgAsset, fit: BoxFit.cover),
+          // Foto campo: File se disponibile, altrimenti asset
+          if (hasFileImage)
+            Image.file(File(fieldImagePath!), fit: BoxFit.cover)
+          else
+            Image.asset(bgAsset, fit: BoxFit.cover),
 
           // Overlay con gradiente diagonale
           Container(
