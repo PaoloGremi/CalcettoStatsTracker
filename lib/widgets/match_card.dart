@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/match_model.dart';
+import '../models/field_model.dart';
 import '../data/hive_boxes.dart';
 import '../screens/match_detail_screen.dart';
 import '../services/data_service.dart';
@@ -10,17 +12,13 @@ class MatchCard extends StatelessWidget {
   final MatchModel match;
   const MatchCard({required this.match, super.key});
 
-  // ── Helpers location ─────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────
 
-  static const _backgrounds = {
-    'SanFrancesco': 'assets/images/campoSanFrancescoColorato.jpg',
-    'Montanaso':    'assets/images/montanaso.jpg',
-    'Faustina':     'assets/images/faustina.png',
-    'Pergola':      'assets/images/laPergola.jpg',
-    'Other':        'assets/images/sfondoPalloneGenerico.png',
-  };
+  /// Ritorna il FieldModel corrispondente a match.fieldLocation (che è l'ID).
+  /// Gestisce anche i vecchi ID testuali hardcoded per retrocompatibilità.
+  FieldModel? get _field => HiveBoxes.fieldsBox.get(match.fieldLocation);
 
-  static const _locationLabels = {
+  static const _legacyLabels = {
     'SanFrancesco': 'San Francesco',
     'Montanaso':    'Montanaso',
     'Faustina':     'Faustina Arena',
@@ -28,11 +26,30 @@ class MatchCard extends StatelessWidget {
     'Other':        'Campo Sportivo',
   };
 
-  String get _bg =>
-      _backgrounds[match.fieldLocation] ?? 'assets/images/sfondoPalloneGenerico.png';
+  static const _legacyBg = {
+    'SanFrancesco': 'assets/images/campoSanFrancescoColorato.jpg',
+    'Montanaso':    'assets/images/montanaso.jpg',
+    'Faustina':     'assets/images/faustina.png',
+    'Pergola':      'assets/images/laPergola.jpg',
+  };
 
-  String get _locationLabel =>
-      _locationLabels[match.fieldLocation] ?? match.fieldLocation;
+  String get _locationLabel {
+    final f = _field;
+    if (f != null) return f.name;
+    return _legacyLabels[match.fieldLocation] ?? match.fieldLocation;
+  }
+
+  /// Ritorna null se si deve usare l'asset di fallback, altrimenti il path del file.
+  String? get _fieldImageFilePath {
+    final f = _field;
+    if (f != null && f.imagePath != null && File(f.imagePath!).existsSync()) {
+      return f.imagePath;
+    }
+    return null;
+  }
+
+  String get _legacyAsset =>
+      _legacyBg[match.fieldLocation] ?? 'assets/images/sfondoPalloneGenerico.png';
 
   String _playerName(String id) =>
       HiveBoxes.playersBox.get(id)?.name ?? '?';
@@ -68,6 +85,8 @@ class MatchCard extends StatelessWidget {
         ? (HiveBoxes.playersBox.get(match.bestGoalPlayer)?.name ?? match.bestGoalPlayer)
         : '';
 
+    final fieldImagePath = _fieldImageFilePath;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -92,7 +111,8 @@ class MatchCard extends StatelessWidget {
             children: [
               // ── ZONA 1: Header campo ───────────────────────────
               _FieldHeader(
-                backgroundAsset: _bg,
+                fieldImagePath: fieldImagePath,
+                fallbackAsset: _legacyAsset,
                 locationLabel: _locationLabel,
                 date: date,
                 time: time,
@@ -129,13 +149,17 @@ class MatchCard extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 
 class _FieldHeader extends StatelessWidget {
-  final String backgroundAsset;
+  /// Path file locale (da FieldModel). Null se non disponibile.
+  final String? fieldImagePath;
+  /// Asset di fallback (vecchi campi hardcoded o generico).
+  final String fallbackAsset;
   final String locationLabel;
   final String date;
   final String time;
 
   const _FieldHeader({
-    required this.backgroundAsset,
+    required this.fieldImagePath,
+    required this.fallbackAsset,
     required this.locationLabel,
     required this.date,
     required this.time,
@@ -148,7 +172,12 @@ class _FieldHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(backgroundAsset, fit: BoxFit.cover),
+          // Sfondo: foto campo da file o asset legacy
+          fieldImagePath != null
+              ? Image.file(File(fieldImagePath!), fit: BoxFit.cover)
+              : Image.asset(fallbackAsset, fit: BoxFit.cover),
+
+          // Overlay scurito
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -161,12 +190,13 @@ class _FieldHeader extends StatelessWidget {
               ),
             ),
           ),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Campo
+                // Nome campo
                 Row(
                   children: [
                     const Icon(Icons.sports_soccer, color: Colors.white, size: 16),

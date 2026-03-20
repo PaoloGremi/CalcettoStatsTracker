@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../screens/match_promo_page.dart';
+import '../screens/fields_screen.dart';
 import '../services/data_service.dart';
 import '../models/player.dart';
 import '../widgets/player_avatar.dart';
@@ -18,7 +20,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
   final TextEditingController _prezzoCtrl = TextEditingController();
   final Map<String, bool> selectedA = {};
   final Map<String, bool> selectedB = {};
-  String? fieldLocation;
+  String? fieldId;
   DateTime? selectedDateTime;
   String? numberOfPlayers;
 
@@ -28,14 +30,6 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
     super.dispose();
   }
 
-  static const _locations = <Map<String, String>>[
-    {'value': 'SanFrancesco', 'label': 'San Francesco · Lodi'},
-    {'value': 'Montanaso',    'label': 'Campo Sportivo · Montanaso'},
-    {'value': 'Faustina',     'label': 'Faustina Arena · Lodi'},
-    {'value': 'Pergola',      'label': 'La Pergola · San Martino'},
-    {'value': 'Other',        'label': 'Altro Campo'},
-  ];
-
   static const _formats = ['3 vs 3', '4 vs 4', '5 vs 5', '6 vs 6', '8 vs 8', '9 vs 9', '11 vs 11'];
 
   @override
@@ -43,6 +37,15 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
     final data = Provider.of<DataService>(context);
     final players = data.getAllPlayers()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final allFields = data.getAllFields();
+
+    // Se il campo selezionato è stato eliminato, resetta
+    if (fieldId != null && !allFields.any((f) => f.id == fieldId)) {
+      fieldId = null;
+    }
+    final selectedField = fieldId != null
+        ? allFields.where((f) => f.id == fieldId).firstOrNull
+        : null;
 
     final teamAIds = selectedA.entries.where((e) => e.value).map((e) => e.key).toList();
     final teamBIds = selectedB.entries.where((e) => e.value).map((e) => e.key).toList();
@@ -107,23 +110,147 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
 
           // ── DETTAGLI PARTITA ──────────────────────────────────
           const FifaSectionHeader('Dettagli Partita'),
+          // Anteprima immagine campo selezionato
+          if (selectedField != null &&
+              selectedField.imagePath != null &&
+              File(selectedField.imagePath!).existsSync())
+            Container(
+              height: 100,
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.border),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.file(
+                File(selectedField.imagePath!),
+                fit: BoxFit.cover,
+                width: double.infinity,
+              ),
+            ),
           _FifaCard(
             child: Column(
               children: [
-                DropdownButtonFormField<String>(
-                  value: fieldLocation,
-                  dropdownColor: AppTheme.surfaceAlt,
-                  decoration: const InputDecoration(
-                    labelText: 'CAMPO',
-                    border: InputBorder.none, enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none, contentPadding: EdgeInsets.zero,
-                  ),
-                  items: _locations.map((loc) => DropdownMenuItem(
-                    value: loc['value'],
-                    child: Text(loc['label']!,
-                        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
-                  )).toList(),
-                  onChanged: (v) => setState(() => fieldLocation = v),
+                // ── Selettore campo ──────────────────────────────
+                Row(
+                  children: [
+                    Expanded(
+                      child: allFields.isEmpty
+                          ? GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const FieldsScreen()),
+                              ).then((_) => setState(() {})),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.stadium_rounded,
+                                      color: AppTheme.textMuted, size: 18),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Nessun campo — tocca + per aggiungerne uno',
+                                      style: TextStyle(
+                                          color: AppTheme.textMuted,
+                                          fontSize: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : DropdownButtonFormField<String>(
+                              value: fieldId,
+                              dropdownColor: AppTheme.surfaceAlt,
+                              decoration: const InputDecoration(
+                                labelText: 'CAMPO',
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              hint: const Text('— Nessuno —',
+                                  style: TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 13)),
+                              items: allFields
+                                  .map((f) => DropdownMenuItem(
+                                        value: f.id,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (f.imagePath != null &&
+                                                File(f.imagePath!)
+                                                    .existsSync())
+                                              Container(
+                                                width: 28,
+                                                height: 28,
+                                                margin: const EdgeInsets.only(
+                                                    right: 8),
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  image: DecorationImage(
+                                                    image: FileImage(
+                                                        File(f.imagePath!)),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              )
+                                            else
+                                              const Padding(
+                                                padding:
+                                                    EdgeInsets.only(right: 8),
+                                                child: Icon(
+                                                    Icons.stadium_rounded,
+                                                    color: AppTheme.textMuted,
+                                                    size: 20),
+                                              ),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(f.name,
+                                                    style: const TextStyle(
+                                                        color: AppTheme
+                                                            .textPrimary,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700)),
+                                                if (f.address.isNotEmpty)
+                                                  Text(f.address,
+                                                      style: const TextStyle(
+                                                          color: AppTheme
+                                                              .textMuted,
+                                                          fontSize: 10)),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setState(() => fieldId = v),
+                            ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const FieldsScreen()),
+                      ).then((_) => setState(() {})),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: AppTheme.accentGreen.withOpacity(0.35)),
+                        ),
+                        child: const Icon(Icons.add_location_alt_rounded,
+                            color: AppTheme.accentGreen, size: 18),
+                      ),
+                    ),
+                  ],
                 ),
                 const FifaDivider(),
                 DropdownButtonFormField<String>(
@@ -213,7 +340,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                     MaterialPageRoute(
                       builder: (_) => MatchPromoPage(
                         dataOra: formattedDate,
-                        campo: fieldLocation ?? 'Other',
+                        fieldModel: selectedField,
                         prezzo: _prezzoCtrl.text.isEmpty ? '—' : _prezzoCtrl.text,
                         nGiocatori: numberOfPlayers ?? '5 vs 5',
                         teamWhite: teamAIds,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/player.dart';
 import '../models/match_model.dart';
+import '../models/field_model.dart';
 import '../data/hive_boxes.dart';
 
 class DataService extends ChangeNotifier {
@@ -113,5 +114,35 @@ class DataService extends ChangeNotifier {
   /// Trova un giocatore per ID (mvp e hustlePlayer ora salvano l'ID, non il nome)
   Player? _findPlayerById(String playerId) {
     return HiveBoxes.playersBox.get(playerId);
+  }
+
+  // ── Fields ────────────────────────────────────────────────────
+
+  List<FieldModel> getAllFields() {
+    final list = HiveBoxes.fieldsBox.values.toList();
+    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return list;
+  }
+
+  Future<FieldModel> addField(String name, String address, {String? imagePath}) async {
+    final field = FieldModel(
+      id: _uuid.v4(),
+      name: name,
+      address: address,
+      imagePath: imagePath,
+    );
+    await HiveBoxes.fieldsBox.put(field.id, field);
+    notifyListeners();
+    return field;
+  }
+
+  Future<void> updateField(FieldModel field) async {
+    await HiveBoxes.fieldsBox.put(field.id, field);
+    notifyListeners();
+  }
+
+  Future<void> deleteField(String id) async {
+    await HiveBoxes.fieldsBox.delete(id);
+    notifyListeners();
   }
 }

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'data/hive_boxes.dart';
 import 'models/player.dart';
 import 'models/match_model.dart';
+import 'models/field_model.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/data_service.dart';
@@ -19,6 +20,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(PlayerAdapter());
   Hive.registerAdapter(MatchModelAdapter());
+  Hive.registerAdapter(FieldModelAdapter());
   await HiveBoxes.init();
 
   FlutterNativeSplash.remove(); // rimuove splash nativo, parte Flutter

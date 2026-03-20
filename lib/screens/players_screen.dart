@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
 import '../models/player.dart';
-import '../data/player_icons.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 
@@ -72,9 +71,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
     final data = Provider.of<DataService>(context, listen: false);
     final nameCtrl = TextEditingController();
     String? selectedRole;
-    String selectedIcon = 'person';
     String? pickedImagePath;
-    bool useGallery = false;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -87,7 +84,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
             side: const BorderSide(color: AppTheme.border),
           ),
           title: const FifaLabel('Nuovo Giocatore', color: AppTheme.accentGreen, fontSize: 12),
-          content: SingleChildScrollView(
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -98,7 +97,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                         source: ImageSource.gallery, imageQuality: 85, maxWidth: 512, maxHeight: 512);
                     if (picked != null) {
                       final copied = await _copyImageToAppDir(picked.path);
-                      setD(() { pickedImagePath = copied; useGallery = true; });
+                      setD(() => pickedImagePath = copied);
                     }
                   },
                   child: Stack(
@@ -111,7 +110,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                           color: AppTheme.surfaceAlt,
                           border: Border.all(color: AppTheme.accentGreen.withOpacity(0.4), width: 2),
                         ),
-                        child: useGallery && pickedImagePath != null
+                        child: pickedImagePath != null
                             ? ClipOval(child: Image.file(File(pickedImagePath!), fit: BoxFit.cover))
                             : const Icon(Icons.add_a_photo_rounded, color: AppTheme.textMuted, size: 28),
                       ),
@@ -124,30 +123,6 @@ class _PlayersScreenState extends State<PlayersScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (useGallery)
-                  TextButton(
-                    onPressed: () => setD(() { pickedImagePath = null; useGallery = false; }),
-                    child: const FifaLabel('Usa icona predefinita', color: AppTheme.textSecondary),
-                  ),
-                if (!useGallery) ...[
-                  DropdownButtonFormField<String>(
-                    value: selectedIcon,
-                    decoration: const InputDecoration(labelText: 'ICONA'),
-                    dropdownColor: AppTheme.surfaceAlt,
-                    items: availableIcons.map((icon) => DropdownMenuItem(
-                      value: icon.key,
-                      child: Row(children: [
-                        icon.isAsset
-                            ? Image.asset(icon.assetPath!, width: 24, height: 24)
-                            : Icon(icon.iconData, size: 24, color: AppTheme.textPrimary),
-                        const SizedBox(width: 8),
-                        Text(icon.key, style: const TextStyle(color: AppTheme.textPrimary)),
-                      ]),
-                    )).toList(),
-                    onChanged: (v) => setD(() => selectedIcon = v ?? selectedIcon),
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 TextField(
                   controller: nameCtrl,
                   style: const TextStyle(color: AppTheme.textPrimary),
@@ -169,6 +144,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 ),
               ],
             ),
+            ),
           ),
           actions: [
             TextButton(
@@ -188,8 +164,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
     );
 
     if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
-      await data.addPlayer(nameCtrl.text.trim(), selectedIcon,
-          role: selectedRole!, imagePath: useGallery ? pickedImagePath : null);
+      await data.addPlayer(nameCtrl.text.trim(), 'person',
+          role: selectedRole!, imagePath: pickedImagePath);
       setState(() {});
     }
   }
@@ -214,25 +190,24 @@ class _PlayerRow extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: GestureDetector(
-          onTap: () async {
-            final picked = await ImagePicker().pickImage(
-                source: ImageSource.gallery, imageQuality: 85, maxWidth: 512, maxHeight: 512);
-            if (picked != null) {
-              final copied = await copyImage(picked.path);
-              player.imagePath = copied;
-              await data.updatePlayer(player);
-              onChanged();
-            }
-          },
-          child: PlayerAvatar(player: player, radius: 22),
-        ),
+        leading: PlayerAvatar(player: player, radius: 22),
         title: Text(player.name.toUpperCase(),
           style: const TextStyle(color: AppTheme.textPrimary,
               fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: FifaBadge(player.role, color: AppTheme.accentBlue),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FifaBadge(player.role, color: switch (player.role) {
+                'P' => AppTheme.accentGold,
+                'D' => AppTheme.accentBlue,
+                'C' => AppTheme.accentGreen,
+                'A' => AppTheme.accentRed,
+                _   => AppTheme.textMuted,
+              }),
+            ],
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -241,26 +216,139 @@ class _PlayerRow extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.edit_rounded, color: AppTheme.textSecondary, size: 20),
               onPressed: () async {
-                final ctrl = TextEditingController(text: player.name);
-                final res = await showDialog<String>(
+                final nameCtrl = TextEditingController(text: player.name);
+                String selectedRole = player.role;
+                String? pickedImagePath = player.imagePath;
+
+                final confirmed = await showDialog<bool>(
                   context: context,
-                  builder: (_) => AlertDialog(
-                    backgroundColor: AppTheme.surface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: AppTheme.border)),
-                    title: const FifaLabel('Modifica Nome', color: AppTheme.accentGreen, fontSize: 11),
-                    content: TextField(controller: ctrl,
-                        style: const TextStyle(color: AppTheme.textPrimary)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context),
-                          child: const FifaLabel('Annulla', color: AppTheme.textSecondary)),
-                      ElevatedButton(onPressed: () => Navigator.pop(context, ctrl.text),
-                          child: const Text('SALVA')),
-                    ],
+                  barrierDismissible: false,
+                  builder: (ctx) => StatefulBuilder(
+                    builder: (ctx, setD) => AlertDialog(
+                      backgroundColor: AppTheme.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppTheme.border),
+                      ),
+                      title: const FifaLabel('Modifica Giocatore',
+                          color: AppTheme.accentGold, fontSize: 11),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Avatar picker
+                            GestureDetector(
+                              onTap: () async {
+                                final picked = await ImagePicker().pickImage(
+                                    source: ImageSource.gallery,
+                                    imageQuality: 85,
+                                    maxWidth: 512,
+                                    maxHeight: 512);
+                                if (picked != null) {
+                                  final copied = await copyImage(picked.path);
+                                  setD(() => pickedImagePath = copied);
+                                }
+                              },
+                              child: Stack(
+                                alignment: Alignment.bottomRight,
+                                children: [
+                                  Container(
+                                    width: 80, height: 80,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppTheme.surfaceAlt,
+                                      border: Border.all(
+                                          color: AppTheme.accentGold.withOpacity(0.4),
+                                          width: 2),
+                                    ),
+                                    child: pickedImagePath != null &&
+                                            File(pickedImagePath!).existsSync()
+                                        ? ClipOval(
+                                            child: Image.file(
+                                                File(pickedImagePath!),
+                                                fit: BoxFit.cover))
+                                        : ClipOval(child: PlayerAvatar(player: player, radius: 40)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppTheme.accentGold),
+                                    child: const Icon(Icons.edit,
+                                        size: 12, color: Colors.black),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: nameCtrl,
+                              style: const TextStyle(color: AppTheme.textPrimary),
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(labelText: 'NOME'),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              value: selectedRole,
+                              decoration: const InputDecoration(labelText: 'RUOLO'),
+                              dropdownColor: AppTheme.surfaceAlt,
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'P',
+                                    child: Text('P — Portiere',
+                                        style: TextStyle(
+                                            color: AppTheme.textPrimary))),
+                                DropdownMenuItem(
+                                    value: 'D',
+                                    child: Text('D — Difensore',
+                                        style: TextStyle(
+                                            color: AppTheme.textPrimary))),
+                                DropdownMenuItem(
+                                    value: 'C',
+                                    child: Text('C — Centrocampista',
+                                        style: TextStyle(
+                                            color: AppTheme.textPrimary))),
+                                DropdownMenuItem(
+                                    value: 'A',
+                                    child: Text('A — Attaccante',
+                                        style: TextStyle(
+                                            color: AppTheme.textPrimary))),
+                              ],
+                              onChanged: (v) =>
+                                  setD(() => selectedRole = v ?? selectedRole),
+                            ),
+                          ],
+                        ),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const FifaLabel('Annulla',
+                              color: AppTheme.textSecondary),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentGold,
+                            foregroundColor: Colors.black,
+                          ),
+                          onPressed: () {
+                            if (nameCtrl.text.trim().isEmpty) return;
+                            Navigator.pop(ctx, true);
+                          },
+                          child: const Text('SALVA'),
+                        ),
+                      ],
+                    ),
                   ),
                 );
-                if (res != null && res.trim().isNotEmpty) {
-                  player.name = res.trim();
+
+                if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
+                  player.name = nameCtrl.text.trim();
+                  player.role = selectedRole;
+                  player.imagePath = pickedImagePath;
                   await data.updatePlayer(player);
                   onChanged();
                 }
