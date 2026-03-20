@@ -14,21 +14,30 @@ class VoteScreen extends StatefulWidget {
 
 class _VoteScreenState extends State<VoteScreen> {
   late final Map<String, TextEditingController> _commentControllers;
+  late final Map<String, TextEditingController> _goalControllers; // ✅
 
   @override
   void initState() {
     super.initState();
     final allPlayers = [...widget.match.teamA, ...widget.match.teamB];
     _commentControllers = {};
+    _goalControllers = {};
     for (final id in allPlayers) {
       if (!widget.match.votes.containsKey(id)) widget.match.votes[id] = 5.0;
+      if (!widget.match.goals.containsKey(id)) widget.match.goals[id] = 0;
       _commentControllers[id] = TextEditingController(text: widget.match.comments[id] ?? '');
+      // ✅ mostra 0 se non ci sono gol, altrimenti il valore salvato
+      final savedGoals = widget.match.goals[id] ?? 0;
+      _goalControllers[id] = TextEditingController(
+        text: savedGoals > 0 ? '$savedGoals' : '',
+      );
     }
   }
 
   @override
   void dispose() {
     for (final c in _commentControllers.values) c.dispose();
+    for (final c in _goalControllers.values) c.dispose(); // ✅
     super.dispose();
   }
 
@@ -37,6 +46,102 @@ class _VoteScreenState extends State<VoteScreen> {
     if (v >= 6.5) return AppTheme.accentGold;
     if (v >= 5) return AppTheme.accentOrange;
     return AppTheme.accentRed;
+  }
+
+  // ✅ Widget contatore gol con pulsanti + / -
+  Widget _buildGoalCounter(String id) {
+    final goals = widget.match.goals[id] ?? 0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Icona pallone
+        const Text('⚽', style: TextStyle(fontSize: 14)),
+        const SizedBox(width: 8),
+        // Bottone -
+        GestureDetector(
+          onTap: () {
+            if (goals > 0) {
+              setState(() {
+                widget.match.goals[id] = goals - 1;
+                final newVal = goals - 1;
+                _goalControllers[id]!.text = newVal > 0 ? '$newVal' : '';
+              });
+            }
+          },
+          child: Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: goals > 0
+                  ? AppTheme.accentRed.withOpacity(0.15)
+                  : AppTheme.surfaceAlt,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: goals > 0
+                    ? AppTheme.accentRed.withOpacity(0.4)
+                    : AppTheme.border,
+              ),
+            ),
+            child: Icon(
+              Icons.remove_rounded,
+              size: 16,
+              color: goals > 0 ? AppTheme.accentRed : AppTheme.textMuted,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Valore gol (editabile a mano)
+        SizedBox(
+          width: 36,
+          child: TextField(
+            controller: _goalControllers[id],
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: goals > 0 ? AppTheme.accentGreen : AppTheme.textMuted,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+            decoration: const InputDecoration(
+              hintText: '0',
+              hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 18),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (text) {
+              final val = int.tryParse(text) ?? 0;
+              setState(() => widget.match.goals[id] = val.clamp(0, 99));
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Bottone +
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              final newVal = goals + 1;
+              widget.match.goals[id] = newVal;
+              _goalControllers[id]!.text = '$newVal';
+            });
+          },
+          child: Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: AppTheme.accentGreen.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: AppTheme.accentGreen.withOpacity(0.4)),
+            ),
+            child: const Icon(
+              Icons.add_rounded,
+              size: 16,
+              color: AppTheme.accentGreen,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildTeamSection(String teamLabel, List<String> playerIds, Color sectionAccent) {
@@ -73,6 +178,9 @@ class _VoteScreenState extends State<VoteScreen> {
                           style: const TextStyle(color: AppTheme.textPrimary,
                               fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
                       ),
+                      // ✅ Contatore gol
+                      _buildGoalCounter(id),
+                      const SizedBox(width: 10),
                       // Voto badge
                       Container(
                         width: 52, height: 52,
@@ -96,7 +204,7 @@ class _VoteScreenState extends State<VoteScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Slider
+                  // Slider voto
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: accent,
@@ -175,7 +283,7 @@ class _VoteScreenState extends State<VoteScreen> {
             await widget.match.save();
             if (mounted) Navigator.pop(context);
           },
-          child: const Text('SALVA VOTI E COMMENTI'),
+          child: const Text('SALVA VOTI, GOL E COMMENTI'),
         ),
       ),
     );

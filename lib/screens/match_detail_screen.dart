@@ -28,7 +28,6 @@ class MatchDetailScreen extends StatelessWidget {
     return 'Pareggio';
   }
 
-  /// Risolve il nome da un ID giocatore (mvp/hustle ora sono ID)
   String _resolveName(String playerId) {
     if (playerId.isEmpty) return '';
     return HiveBoxes.playersBox.get(playerId)?.name ?? playerId;
@@ -199,6 +198,7 @@ class _PlayerDetailTile extends StatelessWidget {
     final role = player?.role ?? '';
     final voto = match.votes[playerId] ?? 0.0;
     final commento = match.comments[playerId] ?? '';
+    final goals = match.goals[playerId] ?? 0; // ✅
     final accent = voteColor(voto);
     final isMvp = match.mvp == playerId;
     final isHustle = match.hustlePlayer == playerId;
@@ -243,7 +243,6 @@ class _PlayerDetailTile extends StatelessWidget {
                             letterSpacing: 1.2)),
                       const SizedBox(width: 6),
                       FifaBadge(role, color: AppTheme.accentBlue),
-                      // ✅ Mostra se è MVP o Combattivo di questa partita
                       if (isMvp) ...[
                         const SizedBox(width: 4),
                         const Text('👑', style: TextStyle(fontSize: 14)),
@@ -258,6 +257,24 @@ class _PlayerDetailTile extends StatelessWidget {
                       ],
                     ],
                   ),
+                  // ✅ Gol segnati in questa partita
+                  if (goals > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Text('⚽', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 4),
+                        Text(
+                          goals == 1 ? '1 gol' : '$goals gol',
+                          style: const TextStyle(
+                            color: AppTheme.accentGreen,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (commento.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text('"$commento"',

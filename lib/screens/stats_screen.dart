@@ -5,7 +5,7 @@ import '../models/player.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 
-enum _SortMode { avgVote, mvp, hustle, bestGoal }
+enum _SortMode { avgVote, mvp, hustle, bestGoal, goals } // ✅ aggiunto goals
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -22,6 +22,7 @@ class _StatsScreenState extends State<StatsScreen> {
     {'value': _SortMode.mvp,      'label': 'MVP',               'emoji': '👑'},
     {'value': _SortMode.hustle,   'label': 'Più Combattivo',    'emoji': '🔥'},
     {'value': _SortMode.bestGoal, 'label': 'Best Goal',         'emoji': '⚽'},
+    {'value': _SortMode.goals,    'label': 'Gol Segnati',       'emoji': '🥅'}, // ✅
   ];
 
   Color _voteColor(double avg) {
@@ -37,19 +38,20 @@ class _StatsScreenState extends State<StatsScreen> {
       case _SortMode.mvp:      return AppTheme.accentGold;
       case _SortMode.hustle:   return AppTheme.accentOrange;
       case _SortMode.bestGoal: return AppTheme.accentGreen;
+      case _SortMode.goals:    return AppTheme.accentRed; // ✅
     }
   }
 
   String _modeEmoji() => (_modes.firstWhere((m) => m['value'] == _mode)['emoji'] as String);
   String _modeLabel() => (_modes.firstWhere((m) => m['value'] == _mode)['label'] as String);
 
-  /// Valore di sort per il giocatore in base alla modalità corrente
   num _sortValue(Player player, Map<String, Map<String, dynamic>> stats) {
     switch (_mode) {
       case _SortMode.avgVote:  return stats[player.id]!['avgVote'] as double;
       case _SortMode.mvp:      return player.mvpCount;
       case _SortMode.hustle:   return player.hustleCount;
       case _SortMode.bestGoal: return player.bestGoalCount;
+      case _SortMode.goals:    return player.totalGoals; // ✅
     }
   }
 
@@ -112,12 +114,10 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
             child: Row(
               children: [
-                // Label
                 Container(width: 3, height: 18, color: accent,
                     margin: const EdgeInsets.only(right: 10)),
                 FifaLabel('Classifica per', color: AppTheme.textSecondary, fontSize: 10),
                 const SizedBox(width: 12),
-                // Dropdown
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -190,40 +190,43 @@ class _StatsScreenState extends State<StatsScreen> {
               itemCount: sorted.length,
               itemBuilder: (context, i) {
                 final player = sorted[i];
-                final s = stats[player.id]!;
-                final avg = s['avgVote'] as double;
-                final games = s['games'] as int;
                 final rank = i + 1;
+                final isFirst = i == 0;
+                final games = stats[player.id]!['games'] as int;
+                final avgVote = stats[player.id]!['avgVote'] as double;
+                final isEmpty = _sortValue(player, stats) == 0;
 
-                // Valore primario da mostrare nel box a destra
-                final primaryValue = _sortValue(player, stats);
-                // Nessun valore rilevante per la modalità corrente
-                final isEmpty = primaryValue == 0;
+                final boxColor = switch (_mode) {
+                  _SortMode.avgVote  => _voteColor(avgVote),
+                  _SortMode.mvp      => AppTheme.accentGold,
+                  _SortMode.hustle   => AppTheme.accentOrange,
+                  _SortMode.bestGoal => AppTheme.accentGreen,
+                  _SortMode.goals    => AppTheme.accentRed, // ✅
+                };
 
-                // Colore del box in base alla modalità
-                final boxColor = _mode == _SortMode.avgVote
-                    ? _voteColor(avg)
-                    : accent;
+                final boxMain = switch (_mode) {
+                  _SortMode.avgVote  => avgVote.toStringAsFixed(1),
+                  _SortMode.mvp      => '${player.mvpCount}',
+                  _SortMode.hustle   => '${player.hustleCount}',
+                  _SortMode.bestGoal => '${player.bestGoalCount}',
+                  _SortMode.goals    => '${player.totalGoals}', // ✅
+                };
 
-                // Testo del box
-                final boxMain = _mode == _SortMode.avgVote
-                    ? avg.toStringAsFixed(1)
-                    : primaryValue.toString();
-                final boxSub = _mode == _SortMode.avgVote
-                    ? 'AVG'
-                    : _modeEmoji();
+                final boxSub = switch (_mode) {
+                  _SortMode.avgVote  => 'MEDIA',
+                  _SortMode.mvp      => '👑',
+                  _SortMode.hustle   => '🔥',
+                  _SortMode.bestGoal => '⚽',
+                  _SortMode.goals    => '🥅', // ✅
+                };
 
-                // Bordo dorato solo per il primo se ha almeno 1 premio/voto
-                final isFirst = rank == 1 && !isEmpty;
-
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.only(bottom: 10),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isFirst
+                      color: isFirst && !isEmpty
                           ? boxColor.withOpacity(0.5)
                           : AppTheme.border,
                       width: isFirst ? 1.5 : 1,
@@ -284,10 +287,11 @@ class _StatsScreenState extends State<StatsScreen> {
                                         fontSize: 11)),
                                 ],
                               ),
-                              // Badge premi secondari
+                              // Badge premi secondari + gol
                               if (player.mvpCount > 0 ||
                                   player.hustleCount > 0 ||
-                                  player.bestGoalCount > 0) ...[
+                                  player.bestGoalCount > 0 ||
+                                  player.totalGoals > 0) ...[
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
@@ -305,11 +309,19 @@ class _StatsScreenState extends State<StatsScreen> {
                                           highlight: _mode == _SortMode.hustle),
                                       const SizedBox(width: 5),
                                     ],
-                                    if (player.bestGoalCount > 0)
+                                    if (player.bestGoalCount > 0) ...[
                                       _AwardCounter(emoji: '⚽',
                                           count: player.bestGoalCount,
                                           color: AppTheme.accentGreen,
                                           highlight: _mode == _SortMode.bestGoal),
+                                      const SizedBox(width: 5),
+                                    ],
+                                    // ✅ Gol totali
+                                    if (player.totalGoals > 0)
+                                      _AwardCounter(emoji: '🥅',
+                                          count: player.totalGoals,
+                                          color: AppTheme.accentRed,
+                                          highlight: _mode == _SortMode.goals),
                                   ],
                                 ),
                               ],

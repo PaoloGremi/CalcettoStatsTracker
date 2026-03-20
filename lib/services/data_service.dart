@@ -37,6 +37,7 @@ class DataService extends ChangeNotifier {
       match.teamA.remove(id);
       match.teamB.remove(id);
       match.votes.remove(id);
+      match.goals.remove(id); // ✅ rimuovi anche i gol
       await match.save();
     }
     notifyListeners();
@@ -52,16 +53,12 @@ class DataService extends ChangeNotifier {
 
   Future<MatchModel> addMatch(MatchModel match) async {
     await HiveBoxes.matchesBox.put(match.id, match);
-
-    // ✅ Aggiorna contatori MVP e Combattivo sul giocatore
     await _updateAwardCounters(match, delta: 1);
-
     notifyListeners();
     return match;
   }
 
   Future<void> updateMatch(MatchModel match) async {
-    // Se la partita esiste già, prima sottrai i vecchi award, poi aggiungi i nuovi
     final existing = HiveBoxes.matchesBox.get(match.id);
     if (existing != null) {
       await _updateAwardCounters(existing, delta: -1);
@@ -74,14 +71,13 @@ class DataService extends ChangeNotifier {
   Future<void> deleteMatch(String id) async {
     final match = HiveBoxes.matchesBox.get(id);
     if (match != null) {
-      // ✅ Sottrai i contatori prima di eliminare
       await _updateAwardCounters(match, delta: -1);
     }
     await HiveBoxes.matchesBox.delete(id);
     notifyListeners();
   }
 
-  /// Aggiunge o sottrae (+1 / -1) mvpCount e hustleCount ai giocatori coinvolti.
+  /// Aggiunge o sottrae (+1 / -1) i contatori ai giocatori coinvolti.
   Future<void> _updateAwardCounters(MatchModel match, {required int delta}) async {
     // MVP
     if (match.mvp.isNotEmpty) {
@@ -109,9 +105,17 @@ class DataService extends ChangeNotifier {
         await HiveBoxes.playersBox.put(bestGoalPlayer.id, bestGoalPlayer);
       }
     }
+
+    // ✅ Gol: aggiorna totalGoals per ogni giocatore presente nella mappa goals
+    for (final entry in match.goals.entries) {
+      final player = _findPlayerById(entry.key);
+      if (player != null) {
+        player.totalGoals = (player.totalGoals + entry.value * delta).clamp(0, 99999);
+        await HiveBoxes.playersBox.put(player.id, player);
+      }
+    }
   }
 
-  /// Trova un giocatore per ID (mvp e hustlePlayer ora salvano l'ID, non il nome)
   Player? _findPlayerById(String playerId) {
     return HiveBoxes.playersBox.get(playerId);
   }
