@@ -53,6 +53,15 @@ class CsvService {
   }
 
   // ─────────────────────────────────────────────────────────────
+  // HELPER — cerca un Player per UUID (campo id), non per chiave Hive.
+  // Necessario perché Player estende HiveObject e la chiave Hive
+  // è un indice numerico autogenerato, non l'UUID del campo id.
+  // ─────────────────────────────────────────────────────────────
+
+  Player? _playerById(String id) =>
+      HiveBoxes.playersBox.values.where((p) => p.id == id).firstOrNull;
+
+  // ─────────────────────────────────────────────────────────────
   // EXPORT — GIOCATORI
   // ─────────────────────────────────────────────────────────────
 
@@ -108,7 +117,8 @@ class CsvService {
     for (final m in matches) {
       final allPlayerIds = {...m.teamA, ...m.teamB};
       for (final pid in allPlayerIds) {
-        final player = HiveBoxes.playersBox.get(pid);
+        // FIX: usa _playerById per cercare per UUID, non per chiave Hive
+        final player = _playerById(pid);
         final playerName = player?.name ?? 'Sconosciuto';
         final vote = m.votes[pid] ?? '';
         final comment = m.comments[pid] ?? '';
@@ -232,20 +242,33 @@ class CsvService {
 
         if (name.isEmpty) { skipped++; continue; }
 
-        // Se il giocatore esiste già (stesso id) aggiorna, preservando i contatori
-        final existing = HiveBoxes.playersBox.get(id);
-        final player = Player(
-          id: existing?.id ?? id,
-          name: name,
-          role: role,
-          icon: icon.isEmpty ? 'person' : icon,
-          imagePath: imagePath.isEmpty ? null : imagePath,
-          // ✅ Preserva i contatori già presenti, non azzerarli
-          mvpCount: existing?.mvpCount ?? 0,
-          hustleCount: existing?.hustleCount ?? 0,
-          bestGoalCount: existing?.bestGoalCount ?? 0,
-        );
-        await HiveBoxes.playersBox.put(player.id, player);
+        // FIX: cerca per UUID nel campo id, non con get() che usa la chiave Hive
+        // numerica autogenerata. HiveObject non usa l'id come chiave Hive.
+        final existing = _playerById(id);
+
+        if (existing != null) {
+          // Aggiorna in-place usando save() che conosce la chiave Hive reale
+          existing.id = id;
+          existing.name = name;
+          existing.role = role;
+          existing.icon = icon.isEmpty ? 'person' : icon;
+          existing.imagePath = imagePath.isEmpty ? null : imagePath;
+          // I contatori (mvpCount, hustleCount, bestGoalCount) vengono preservati
+          await existing.save();
+        } else {
+          // Nuovo giocatore: add() lascia a Hive la gestione della chiave numerica
+          final player = Player(
+            id: id,
+            name: name,
+            role: role,
+            icon: icon.isEmpty ? 'person' : icon,
+            imagePath: imagePath.isEmpty ? null : imagePath,
+            mvpCount: 0,
+            hustleCount: 0,
+            bestGoalCount: 0,
+          );
+          await HiveBoxes.playersBox.add(player);
+        }
         imported++;
       } catch (_) {
         skipped++;
@@ -388,35 +411,35 @@ class CsvService {
   // ─────────────────────────────────────────────────────────────
 
   Future<void> _recalculateAwardCounters() async {
-    // Azzera tutti i contatori
+    // Azzera tutti i contatori usando save() per rispettare la chiave Hive
     for (final player in HiveBoxes.playersBox.values) {
       player.mvpCount = 0;
       player.hustleCount = 0;
       player.bestGoalCount = 0;
-      await HiveBoxes.playersBox.put(player.id, player);
+      await player.save();
     }
 
-    // Riconta da tutti i match
+    // FIX: usa _playerById per cercare per UUID, non get() con chiave Hive
     for (final match in HiveBoxes.matchesBox.values) {
       if (match.mvp.isNotEmpty) {
-        final p = HiveBoxes.playersBox.get(match.mvp);
+        final p = _playerById(match.mvp);
         if (p != null) {
           p.mvpCount = (p.mvpCount + 1).clamp(0, 9999);
-          await HiveBoxes.playersBox.put(p.id, p);
+          await p.save();
         }
       }
       if (match.hustlePlayer.isNotEmpty) {
-        final p = HiveBoxes.playersBox.get(match.hustlePlayer);
+        final p = _playerById(match.hustlePlayer);
         if (p != null) {
           p.hustleCount = (p.hustleCount + 1).clamp(0, 9999);
-          await HiveBoxes.playersBox.put(p.id, p);
+          await p.save();
         }
       }
       if (match.bestGoalPlayer.isNotEmpty) {
-        final p = HiveBoxes.playersBox.get(match.bestGoalPlayer);
+        final p = _playerById(match.bestGoalPlayer);
         if (p != null) {
           p.bestGoalCount = (p.bestGoalCount + 1).clamp(0, 9999);
-          await HiveBoxes.playersBox.put(p.id, p);
+          await p.save();
         }
       }
     }
