@@ -73,7 +73,7 @@ class _BackupScreenState extends State<BackupScreen> {
               _ActionCard(
                 icon: Icons.file_download_rounded,
                 title: 'Esporta tutto',
-                subtitle: 'Genera tutti e 4 i CSV e condividili',
+                subtitle: 'Genera tutti e 5 i CSV e condividili',
                 color: Colors.green,
                 onTap: () => _run(() => _csvService.exportAll()),
               ),
@@ -85,6 +85,17 @@ class _BackupScreenState extends State<BackupScreen> {
                 color: Colors.blue,
                 onTap: () => _run(() async {
                   final f = await _csvService.exportPlayers();
+                  _showSnack('✅ Salvato: ${f.path.split('/').last}');
+                }),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.stadium_rounded,
+                title: 'Esporta Campi',
+                subtitle: 'fields.csv — nome, indirizzo',
+                color: Colors.blue,
+                onTap: () => _run(() async {
+                  final f = await _csvService.exportFields();
                   _showSnack('✅ Salvato: ${f.path.split('/').last}');
                 }),
               ),
@@ -160,6 +171,17 @@ class _BackupScreenState extends State<BackupScreen> {
                 onTap: () => _run(() async {
                   final result = await _csvService.importPlayers();
                   await _showImportResult(result, 'Giocatori');
+                }),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.stadium_rounded,
+                title: 'Importa Campi',
+                subtitle: 'Seleziona fields.csv dal tuo dispositivo',
+                color: Colors.orange,
+                onTap: () => _run(() async {
+                  final result = await _csvService.importFields();
+                  await _showImportResult(result, 'Campi');
                 }),
               ),
               const SizedBox(height: 10),

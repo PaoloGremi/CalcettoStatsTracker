@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import '../services/data_service.dart';
 
 class VoteScreen extends StatefulWidget {
   final MatchModel match;
@@ -14,29 +16,147 @@ class VoteScreen extends StatefulWidget {
 
 class _VoteScreenState extends State<VoteScreen> {
   late final Map<String, TextEditingController> _commentControllers;
+  late final Map<String, TextEditingController> _goalControllers;
 
   @override
   void initState() {
     super.initState();
     final allPlayers = [...widget.match.teamA, ...widget.match.teamB];
     _commentControllers = {};
+    _goalControllers = {};
     for (final id in allPlayers) {
       if (!widget.match.votes.containsKey(id)) widget.match.votes[id] = 5.0;
+      if (!widget.match.goals.containsKey(id)) widget.match.goals[id] = 0;
       _commentControllers[id] = TextEditingController(text: widget.match.comments[id] ?? '');
+      final savedGoals = widget.match.goals[id] ?? 0;
+      _goalControllers[id] = TextEditingController(
+        text: savedGoals > 0 ? '$savedGoals' : '',
+      );
     }
   }
 
   @override
   void dispose() {
     for (final c in _commentControllers.values) c.dispose();
+    for (final c in _goalControllers.values) c.dispose();
     super.dispose();
   }
+
+  // ✅ Totale gol della partita (scoreA + scoreB)
+  int get _matchTotalGoals => widget.match.scoreA + widget.match.scoreB;
+
+  // ✅ Gol gia' assegnati ai giocatori
+  int get _assignedGoals =>
+      widget.match.goals.values.fold(0, (sum, g) => sum + g);
+
+  // ✅ Gol ancora disponibili
+  int get _remainingGoals => (_matchTotalGoals - _assignedGoals).clamp(0, 99);
 
   Color _voteColor(double v) {
     if (v >= 8) return AppTheme.accentGreen;
     if (v >= 6.5) return AppTheme.accentGold;
     if (v >= 5) return AppTheme.accentOrange;
     return AppTheme.accentRed;
+  }
+
+  Widget _buildGoalCounter(String id) {
+    final goals = widget.match.goals[id] ?? 0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('🥅', style: TextStyle(fontSize: 14)),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: () {
+            if (goals > 0) {
+              setState(() {
+                widget.match.goals[id] = goals - 1;
+                final newVal = goals - 1;
+                _goalControllers[id]!.text = newVal > 0 ? '$newVal' : '';
+              });
+            }
+          },
+          child: Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: goals > 0 ? AppTheme.accentRed.withOpacity(0.15) : AppTheme.surfaceAlt,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: goals > 0 ? AppTheme.accentRed.withOpacity(0.4) : AppTheme.border,
+              ),
+            ),
+            child: Icon(Icons.remove_rounded, size: 16,
+                color: goals > 0 ? AppTheme.accentRed : AppTheme.textMuted),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 36,
+          child: TextField(
+            controller: _goalControllers[id],
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: goals > 0 ? AppTheme.accentGreen : AppTheme.textMuted,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+            decoration: const InputDecoration(
+              hintText: '0',
+              hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 18),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (text) {
+              final val = int.tryParse(text) ?? 0;
+              // ✅ non superare il totale gol della partita
+              final currentOther = _assignedGoals - (widget.match.goals[id] ?? 0);
+              final maxAllowed = _matchTotalGoals - currentOther;
+              setState(() => widget.match.goals[id] = val.clamp(0, maxAllowed));
+              // correggi il testo se il valore e' stato clampato
+              final clamped = val.clamp(0, maxAllowed);
+              if (clamped != val) {
+                _goalControllers[id]!.text = clamped > 0 ? '$clamped' : '';
+                _goalControllers[id]!.selection = TextSelection.collapsed(
+                    offset: _goalControllers[id]!.text.length);
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: () {
+            // ✅ blocca se non ci sono gol disponibili
+            if (_remainingGoals <= 0) return;
+            setState(() {
+              final newVal = goals + 1;
+              widget.match.goals[id] = newVal;
+              _goalControllers[id]!.text = '$newVal';
+            });
+          },
+          child: Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: _remainingGoals > 0
+                  ? AppTheme.accentGreen.withOpacity(0.15)
+                  : AppTheme.surfaceAlt,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _remainingGoals > 0
+                    ? AppTheme.accentGreen.withOpacity(0.4)
+                    : AppTheme.border,
+              ),
+            ),
+            child: Icon(Icons.add_rounded, size: 16,
+                color: _remainingGoals > 0
+                    ? AppTheme.accentGreen
+                    : AppTheme.textMuted),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildTeamSection(String teamLabel, List<String> playerIds, Color sectionAccent) {
@@ -62,7 +182,6 @@ class _VoteScreenState extends State<VoteScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header giocatore
                   Row(
                     children: [
                       if (player != null) PlayerAvatar(player: player, radius: 20),
@@ -73,7 +192,8 @@ class _VoteScreenState extends State<VoteScreen> {
                           style: const TextStyle(color: AppTheme.textPrimary,
                               fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
                       ),
-                      // Voto badge
+                      _buildGoalCounter(id),
+                      const SizedBox(width: 10),
                       Container(
                         width: 52, height: 52,
                         decoration: BoxDecoration(
@@ -96,7 +216,6 @@ class _VoteScreenState extends State<VoteScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Slider
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: accent,
@@ -112,7 +231,6 @@ class _VoteScreenState extends State<VoteScreen> {
                       onChanged: (val) => setState(() => widget.match.votes[id] = val),
                     ),
                   ),
-                  // Labels slider
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Row(
@@ -125,7 +243,6 @@ class _VoteScreenState extends State<VoteScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Commento
                   TextField(
                     controller: _commentControllers[id],
                     onChanged: (text) => widget.match.comments[id] = text,
@@ -160,6 +277,82 @@ class _VoteScreenState extends State<VoteScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
+          // ✅ Indicatore gol assegnati / totali
+          if (_matchTotalGoals > 0) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _remainingGoals == 0
+                      ? AppTheme.accentGreen.withOpacity(0.4)
+                      : AppTheme.accentGold.withOpacity(0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text('🥅', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FifaLabel('Gol assegnati',
+                            color: AppTheme.textSecondary, fontSize: 9),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$_assignedGoals / $_matchTotalGoals',
+                          style: TextStyle(
+                            color: _remainingGoals == 0
+                                ? AppTheme.accentGreen
+                                : AppTheme.accentGold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_remainingGoals > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGold.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accentGold.withOpacity(0.35)),
+                      ),
+                      child: Text(
+                        '$_remainingGoals rimasti',
+                        style: const TextStyle(
+                          color: AppTheme.accentGold,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accentGreen.withOpacity(0.35)),
+                      ),
+                      child: const Text(
+                        'Completo ✓',
+                        style: TextStyle(
+                          color: AppTheme.accentGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           _buildTeamSection('Squadra Bianca', widget.match.teamA, AppTheme.accentBlue),
           _buildTeamSection('Squadra Colorata', widget.match.teamB, AppTheme.accentOrange),
         ],
@@ -172,10 +365,12 @@ class _VoteScreenState extends State<VoteScreen> {
         ),
         child: ElevatedButton(
           onPressed: () async {
-            await widget.match.save();
+            // ✅ updateMatch aggiorna anche totalGoals sui giocatori
+            final dataService = Provider.of<DataService>(context, listen: false);
+            await dataService.updateMatch(widget.match);
             if (mounted) Navigator.pop(context);
           },
-          child: const Text('SALVA VOTI E COMMENTI'),
+          child: const Text('SALVA VOTI, GOL E COMMENTI'),
         ),
       ),
     );

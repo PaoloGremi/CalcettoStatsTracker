@@ -20,13 +20,16 @@ class Player extends HiveObject {
   String? imagePath;
 
   @HiveField(5)
-  int mvpCount;      // ✅ quante volte MVP
+  int mvpCount;      // quante volte MVP
 
   @HiveField(6)
-  int hustleCount;   // ✅ quante volte Combattivo
+  int hustleCount;   // quante volte Combattivo
 
   @HiveField(7)
-  int bestGoalCount; // ✅ quante volte Best Goal
+  int bestGoalCount; // quante volte Best Goal
+
+  @HiveField(8)
+  int totalGoals;    // ✅ gol totali segnati in tutte le partite
 
   Player({
     required this.id,
@@ -37,6 +40,7 @@ class Player extends HiveObject {
     this.mvpCount = 0,
     this.hustleCount = 0,
     this.bestGoalCount = 0,
+    this.totalGoals = 0,
   });
 }
 
@@ -79,6 +83,13 @@ class PlayerAdapter extends TypeAdapter<Player> {
       if (raw is int) bestGoalCount = raw;
     } catch (_) {}
 
+    // ✅ totalGoals — retrocompatibile (0 se non presente)
+    int totalGoals = 0;
+    try {
+      final raw = reader.read();
+      if (raw is int) totalGoals = raw;
+    } catch (_) {}
+
     return Player(
       id: id,
       name: name,
@@ -88,6 +99,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
       mvpCount: mvpCount,
       hustleCount: hustleCount,
       bestGoalCount: bestGoalCount,
+      totalGoals: totalGoals,
     );
   }
 
@@ -101,5 +113,6 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.write(obj.mvpCount);
     writer.write(obj.hustleCount);
     writer.write(obj.bestGoalCount);
+    writer.write(obj.totalGoals); // ✅
   }
 }
