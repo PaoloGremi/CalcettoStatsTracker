@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import '../services/data_service.dart';
 
 class VoteScreen extends StatefulWidget {
   final MatchModel match;
@@ -14,7 +16,7 @@ class VoteScreen extends StatefulWidget {
 
 class _VoteScreenState extends State<VoteScreen> {
   late final Map<String, TextEditingController> _commentControllers;
-  late final Map<String, TextEditingController> _goalControllers; // ✅
+  late final Map<String, TextEditingController> _goalControllers;
 
   @override
   void initState() {
@@ -26,7 +28,6 @@ class _VoteScreenState extends State<VoteScreen> {
       if (!widget.match.votes.containsKey(id)) widget.match.votes[id] = 5.0;
       if (!widget.match.goals.containsKey(id)) widget.match.goals[id] = 0;
       _commentControllers[id] = TextEditingController(text: widget.match.comments[id] ?? '');
-      // ✅ mostra 0 se non ci sono gol, altrimenti il valore salvato
       final savedGoals = widget.match.goals[id] ?? 0;
       _goalControllers[id] = TextEditingController(
         text: savedGoals > 0 ? '$savedGoals' : '',
@@ -37,7 +38,7 @@ class _VoteScreenState extends State<VoteScreen> {
   @override
   void dispose() {
     for (final c in _commentControllers.values) c.dispose();
-    for (final c in _goalControllers.values) c.dispose(); // ✅
+    for (final c in _goalControllers.values) c.dispose();
     super.dispose();
   }
 
@@ -48,16 +49,13 @@ class _VoteScreenState extends State<VoteScreen> {
     return AppTheme.accentRed;
   }
 
-  // ✅ Widget contatore gol con pulsanti + / -
   Widget _buildGoalCounter(String id) {
     final goals = widget.match.goals[id] ?? 0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Icona pallone
-        const Text('⚽', style: TextStyle(fontSize: 14)),
+        const Text('🥅', style: TextStyle(fontSize: 14)),
         const SizedBox(width: 8),
-        // Bottone -
         GestureDetector(
           onTap: () {
             if (goals > 0) {
@@ -71,25 +69,17 @@ class _VoteScreenState extends State<VoteScreen> {
           child: Container(
             width: 28, height: 28,
             decoration: BoxDecoration(
-              color: goals > 0
-                  ? AppTheme.accentRed.withOpacity(0.15)
-                  : AppTheme.surfaceAlt,
+              color: goals > 0 ? AppTheme.accentRed.withOpacity(0.15) : AppTheme.surfaceAlt,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: goals > 0
-                    ? AppTheme.accentRed.withOpacity(0.4)
-                    : AppTheme.border,
+                color: goals > 0 ? AppTheme.accentRed.withOpacity(0.4) : AppTheme.border,
               ),
             ),
-            child: Icon(
-              Icons.remove_rounded,
-              size: 16,
-              color: goals > 0 ? AppTheme.accentRed : AppTheme.textMuted,
-            ),
+            child: Icon(Icons.remove_rounded, size: 16,
+                color: goals > 0 ? AppTheme.accentRed : AppTheme.textMuted),
           ),
         ),
         const SizedBox(width: 8),
-        // Valore gol (editabile a mano)
         SizedBox(
           width: 36,
           child: TextField(
@@ -116,7 +106,6 @@ class _VoteScreenState extends State<VoteScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        // Bottone +
         GestureDetector(
           onTap: () {
             setState(() {
@@ -130,14 +119,9 @@ class _VoteScreenState extends State<VoteScreen> {
             decoration: BoxDecoration(
               color: AppTheme.accentGreen.withOpacity(0.15),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: AppTheme.accentGreen.withOpacity(0.4)),
+              border: Border.all(color: AppTheme.accentGreen.withOpacity(0.4)),
             ),
-            child: const Icon(
-              Icons.add_rounded,
-              size: 16,
-              color: AppTheme.accentGreen,
-            ),
+            child: const Icon(Icons.add_rounded, size: 16, color: AppTheme.accentGreen),
           ),
         ),
       ],
@@ -167,7 +151,6 @@ class _VoteScreenState extends State<VoteScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header giocatore
                   Row(
                     children: [
                       if (player != null) PlayerAvatar(player: player, radius: 20),
@@ -178,10 +161,8 @@ class _VoteScreenState extends State<VoteScreen> {
                           style: const TextStyle(color: AppTheme.textPrimary,
                               fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
                       ),
-                      // ✅ Contatore gol
                       _buildGoalCounter(id),
                       const SizedBox(width: 10),
-                      // Voto badge
                       Container(
                         width: 52, height: 52,
                         decoration: BoxDecoration(
@@ -204,7 +185,6 @@ class _VoteScreenState extends State<VoteScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Slider voto
                   SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: accent,
@@ -220,7 +200,6 @@ class _VoteScreenState extends State<VoteScreen> {
                       onChanged: (val) => setState(() => widget.match.votes[id] = val),
                     ),
                   ),
-                  // Labels slider
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Row(
@@ -233,7 +212,6 @@ class _VoteScreenState extends State<VoteScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Commento
                   TextField(
                     controller: _commentControllers[id],
                     onChanged: (text) => widget.match.comments[id] = text,
@@ -280,7 +258,9 @@ class _VoteScreenState extends State<VoteScreen> {
         ),
         child: ElevatedButton(
           onPressed: () async {
-            await widget.match.save();
+            // ✅ updateMatch aggiorna anche totalGoals sui giocatori
+            final dataService = Provider.of<DataService>(context, listen: false);
+            await dataService.updateMatch(widget.match);
             if (mounted) Navigator.pop(context);
           },
           child: const Text('SALVA VOTI, GOL E COMMENTI'),

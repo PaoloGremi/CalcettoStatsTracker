@@ -262,7 +262,7 @@ class _PlayerDetailTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Text('⚽', style: TextStyle(fontSize: 12)),
+                        const Text('🥅', style: TextStyle(fontSize: 12)),
                         const SizedBox(width: 4),
                         Text(
                           goals == 1 ? '1 gol' : '$goals gol',

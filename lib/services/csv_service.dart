@@ -87,7 +87,7 @@ class CsvService {
   Future<File> exportMatches() async {
     final matches = HiveBoxes.matchesBox.values.toList();
     final rows = <List<dynamic>>[
-      ['id', 'date', 'fieldLocation', 'scoreA', 'scoreB', 'teamA', 'teamB', 'mvp', 'hustlePlayer', 'bestGoalPlayer'],
+      ['id', 'date', 'fieldLocation', 'scoreA', 'scoreB', 'teamA', 'teamB', 'mvp', 'hustlePlayer', 'bestGoalPlayer', 'goals'],
       ...matches.map((m) => [
             m.id,
             _dateFormat.format(m.date),
@@ -99,6 +99,11 @@ class CsvService {
             m.mvp,
             m.hustlePlayer,
             m.bestGoalPlayer,
+            // ✅ gol: formato "playerId:gol|playerId:gol" (solo chi ha segnato)
+            m.goals.entries
+                .where((e) => e.value > 0)
+                .map((e) => "${e.key}:${e.value}")
+                .join('|'),
           ]),
     ];
     return _writeFile('matches.csv', _toCsv(rows));
@@ -111,7 +116,7 @@ class CsvService {
   Future<File> exportVotes() async {
     final matches = HiveBoxes.matchesBox.values.toList();
     final rows = <List<dynamic>>[
-      ['matchId', 'matchDate', 'playerId', 'playerName', 'vote', 'comment'],
+      ['matchId', 'matchDate', 'playerId', 'playerName', 'vote', 'comment', 'goals'],
     ];
 
     for (final m in matches) {
@@ -122,6 +127,7 @@ class CsvService {
         final playerName = player?.name ?? 'Sconosciuto';
         final vote = m.votes[pid] ?? '';
         final comment = m.comments[pid] ?? '';
+        final goals = m.goals[pid] ?? 0; // ✅
         rows.add([
           m.id,
           _dateFormat.format(m.date),
@@ -129,6 +135,7 @@ class CsvService {
           playerName,
           vote,
           comment,
+          goals, // ✅
         ]);
       }
     }
@@ -146,7 +153,7 @@ class CsvService {
     players.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     final rows = <List<dynamic>>[
-      ['playerId', 'playerName', 'role', 'gamesPlayed', 'votesReceived', 'avgVote', 'bestVote', 'worstVote'],
+      ['playerId', 'playerName', 'role', 'gamesPlayed', 'votesReceived', 'avgVote', 'bestVote', 'worstVote', 'totalGoals'],
     ];
 
     for (final player in players) {
@@ -180,6 +187,7 @@ class CsvService {
         avgVote.toStringAsFixed(2),
         votesCount > 0 ? bestVote.toStringAsFixed(1) : '',
         votesCount > 0 ? worstVote.toStringAsFixed(1) : '',
+        player.totalGoals, // ✅
       ]);
     }
 
@@ -314,6 +322,21 @@ class CsvService {
         final mvp = row.length > 7 ? row[7].toString().trim() : '';
         final hustlePlayer = row.length > 8 ? row[8].toString().trim() : '';
         final bestGoalPlayer = row.length > 9 ? row[9].toString().trim() : '';
+        // ✅ gol: parse "playerId:N|playerId:N"
+        final Map<String, int> goals = {};
+        if (row.length > 10) {
+          final goalsStr = row[10].toString().trim();
+          if (goalsStr.isNotEmpty) {
+            for (final part in goalsStr.split('|')) {
+              final kv = part.split(':');
+              if (kv.length == 2) {
+                final pid = kv[0].trim();
+                final g = int.tryParse(kv[1].trim()) ?? 0;
+                if (pid.isNotEmpty && g > 0) goals[pid] = g;
+              }
+            }
+          }
+        }
 
         DateTime date;
         try {
@@ -333,6 +356,7 @@ class CsvService {
           mvp: mvp,
           hustlePlayer: hustlePlayer,
           bestGoalPlayer: bestGoalPlayer,
+          goals: goals, // ✅
         );
 
         // Importa voti dal box già esistente se la partita c'era
@@ -416,6 +440,7 @@ class CsvService {
       player.mvpCount = 0;
       player.hustleCount = 0;
       player.bestGoalCount = 0;
+      player.totalGoals = 0; // ✅
       await player.save();
     }
 
@@ -439,6 +464,14 @@ class CsvService {
         final p = _playerById(match.bestGoalPlayer);
         if (p != null) {
           p.bestGoalCount = (p.bestGoalCount + 1).clamp(0, 9999);
+          await p.save();
+        }
+      }
+      // ✅ Ricalcola totalGoals da goals map di ogni match
+      for (final entry in match.goals.entries) {
+        final p = _playerById(entry.key);
+        if (p != null) {
+          p.totalGoals = (p.totalGoals + entry.value).clamp(0, 99999);
           await p.save();
         }
       }
