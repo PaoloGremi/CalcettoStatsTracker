@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/hive_boxes.dart';
+import '../models/field_model.dart';
 import '../models/match_model.dart';
 import '../models/player.dart';
 
@@ -58,8 +59,8 @@ class CsvService {
   // è un indice numerico autogenerato, non l'UUID del campo id.
   // ─────────────────────────────────────────────────────────────
 
-  Player? _playerById(String id) =>
-      HiveBoxes.playersBox.values.where((p) => p.id == id).firstOrNull;
+  // ✅ Con put(id) come chiave Hive, get(id) funziona direttamente
+  Player? _playerById(String id) => HiveBoxes.playersBox.get(id);
 
   // ─────────────────────────────────────────────────────────────
   // EXPORT — GIOCATORI
@@ -78,6 +79,24 @@ class CsvService {
           ]),
     ];
     return _writeFile('players.csv', _toCsv(rows));
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // EXPORT — CAMPI
+  // ─────────────────────────────────────────────────────────────
+
+  Future<File> exportFields() async {
+    final fields = HiveBoxes.fieldsBox.values.toList();
+    final rows = <List<dynamic>>[
+      ['id', 'name', 'address', 'imagePath'],
+      ...fields.map((f) => [
+            f.id,
+            f.name,
+            f.address,
+            f.imagePath ?? '',
+          ]),
+    ];
+    return _writeFile('fields.csv', _toCsv(rows));
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -200,13 +219,15 @@ class CsvService {
 
   Future<void> exportAll() async {
     final playersFile = await exportPlayers();
+    final fieldsFile  = await exportFields(); // ✅
     final matchesFile = await exportMatches();
-    final votesFile = await exportVotes();
-    final statsFile = await exportStats();
+    final votesFile   = await exportVotes();
+    final statsFile   = await exportStats();
 
     await Share.shareXFiles(
       [
         XFile(playersFile.path),
+        XFile(fieldsFile.path),
         XFile(matchesFile.path),
         XFile(votesFile.path),
         XFile(statsFile.path),
@@ -264,7 +285,8 @@ class CsvService {
           // I contatori (mvpCount, hustleCount, bestGoalCount) vengono preservati
           await existing.save();
         } else {
-          // Nuovo giocatore: add() lascia a Hive la gestione della chiave numerica
+          // ✅ put(id, player) usa l'UUID come chiave Hive
+          // cosi' HiveBoxes.playersBox.get(uuid) funziona correttamente
           final player = Player(
             id: id,
             name: name,
@@ -275,7 +297,64 @@ class CsvService {
             hustleCount: 0,
             bestGoalCount: 0,
           );
-          await HiveBoxes.playersBox.add(player);
+          await HiveBoxes.playersBox.put(id, player);
+        }
+        imported++;
+      } catch (_) {
+        skipped++;
+      }
+    }
+
+    return ImportResult.success(imported: imported, skipped: skipped);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // IMPORT — CAMPI
+  // ─────────────────────────────────────────────────────────────
+
+  Future<ImportResult> importFields() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      dialogTitle: 'Seleziona fields.csv',
+    );
+    if (result == null || result.files.single.path == null) {
+      return ImportResult.cancelled();
+    }
+
+    final raw = await File(result.files.single.path!).readAsString();
+    final rows = _fromCsv(raw);
+    if (rows.length < 2) return ImportResult.error('File vuoto o non valido');
+
+    int imported = 0;
+    int skipped = 0;
+
+    for (int i = 1; i < rows.length; i++) {
+      final row = rows[i];
+      if (row.length < 3) { skipped++; continue; }
+
+      try {
+        final id      = row[0].toString().trim();
+        final name    = row[1].toString().trim();
+        final address = row[2].toString().trim();
+        final imagePath = row.length > 3 ? row[3].toString().trim() : '';
+
+        if (name.isEmpty) { skipped++; continue; }
+
+        final existing = HiveBoxes.fieldsBox.get(id);
+        if (existing != null) {
+          existing.name      = name;
+          existing.address   = address;
+          existing.imagePath = imagePath.isEmpty ? null : imagePath;
+          await existing.save();
+        } else {
+          final field = FieldModel(
+            id: id.isEmpty ? _uuid.v4() : id,
+            name: name,
+            address: address,
+            imagePath: imagePath.isEmpty ? null : imagePath,
+          );
+          await HiveBoxes.fieldsBox.put(field.id, field);
         }
         imported++;
       } catch (_) {
