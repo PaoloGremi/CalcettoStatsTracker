@@ -42,6 +42,16 @@ class _VoteScreenState extends State<VoteScreen> {
     super.dispose();
   }
 
+  // ✅ Totale gol della partita (scoreA + scoreB)
+  int get _matchTotalGoals => widget.match.scoreA + widget.match.scoreB;
+
+  // ✅ Gol gia' assegnati ai giocatori
+  int get _assignedGoals =>
+      widget.match.goals.values.fold(0, (sum, g) => sum + g);
+
+  // ✅ Gol ancora disponibili
+  int get _remainingGoals => (_matchTotalGoals - _assignedGoals).clamp(0, 99);
+
   Color _voteColor(double v) {
     if (v >= 8) return AppTheme.accentGreen;
     if (v >= 6.5) return AppTheme.accentGold;
@@ -101,13 +111,25 @@ class _VoteScreenState extends State<VoteScreen> {
             ),
             onChanged: (text) {
               final val = int.tryParse(text) ?? 0;
-              setState(() => widget.match.goals[id] = val.clamp(0, 99));
+              // ✅ non superare il totale gol della partita
+              final currentOther = _assignedGoals - (widget.match.goals[id] ?? 0);
+              final maxAllowed = _matchTotalGoals - currentOther;
+              setState(() => widget.match.goals[id] = val.clamp(0, maxAllowed));
+              // correggi il testo se il valore e' stato clampato
+              final clamped = val.clamp(0, maxAllowed);
+              if (clamped != val) {
+                _goalControllers[id]!.text = clamped > 0 ? '$clamped' : '';
+                _goalControllers[id]!.selection = TextSelection.collapsed(
+                    offset: _goalControllers[id]!.text.length);
+              }
             },
           ),
         ),
         const SizedBox(width: 8),
         GestureDetector(
           onTap: () {
+            // ✅ blocca se non ci sono gol disponibili
+            if (_remainingGoals <= 0) return;
             setState(() {
               final newVal = goals + 1;
               widget.match.goals[id] = newVal;
@@ -117,11 +139,20 @@ class _VoteScreenState extends State<VoteScreen> {
           child: Container(
             width: 28, height: 28,
             decoration: BoxDecoration(
-              color: AppTheme.accentGreen.withOpacity(0.15),
+              color: _remainingGoals > 0
+                  ? AppTheme.accentGreen.withOpacity(0.15)
+                  : AppTheme.surfaceAlt,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.accentGreen.withOpacity(0.4)),
+              border: Border.all(
+                color: _remainingGoals > 0
+                    ? AppTheme.accentGreen.withOpacity(0.4)
+                    : AppTheme.border,
+              ),
             ),
-            child: const Icon(Icons.add_rounded, size: 16, color: AppTheme.accentGreen),
+            child: Icon(Icons.add_rounded, size: 16,
+                color: _remainingGoals > 0
+                    ? AppTheme.accentGreen
+                    : AppTheme.textMuted),
           ),
         ),
       ],
@@ -246,6 +277,82 @@ class _VoteScreenState extends State<VoteScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
+          // ✅ Indicatore gol assegnati / totali
+          if (_matchTotalGoals > 0) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _remainingGoals == 0
+                      ? AppTheme.accentGreen.withOpacity(0.4)
+                      : AppTheme.accentGold.withOpacity(0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text('🥅', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FifaLabel('Gol assegnati',
+                            color: AppTheme.textSecondary, fontSize: 9),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$_assignedGoals / $_matchTotalGoals',
+                          style: TextStyle(
+                            color: _remainingGoals == 0
+                                ? AppTheme.accentGreen
+                                : AppTheme.accentGold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_remainingGoals > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGold.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accentGold.withOpacity(0.35)),
+                      ),
+                      child: Text(
+                        '$_remainingGoals rimasti',
+                        style: const TextStyle(
+                          color: AppTheme.accentGold,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accentGreen.withOpacity(0.35)),
+                      ),
+                      child: const Text(
+                        'Completo ✓',
+                        style: TextStyle(
+                          color: AppTheme.accentGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           _buildTeamSection('Squadra Bianca', widget.match.teamA, AppTheme.accentBlue),
           _buildTeamSection('Squadra Colorata', widget.match.teamB, AppTheme.accentOrange),
         ],
