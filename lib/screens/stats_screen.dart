@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'player_stats_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
 import '../models/player.dart';
@@ -220,7 +221,15 @@ class _StatsScreenState extends State<StatsScreen> {
                   _SortMode.goals    => '🥅', // ✅
                 };
 
-                return Container(
+                return InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PlayerStatsScreen(player: player),
+                    ),
+                  ),
+                  child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
@@ -376,6 +385,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       ],
                     ),
                   ),
+                ),
                 );
               },
             ),
