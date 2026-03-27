@@ -6,6 +6,7 @@ import '../models/match_model.dart';
 import '../models/field_model.dart';
 import '../data/hive_boxes.dart';
 import '../screens/match_detail_screen.dart';
+import '../screens/edit_match_screen.dart';
 import '../services/data_service.dart';
 
 class MatchCard extends StatelessWidget {
@@ -498,6 +499,27 @@ class _FooterSection extends StatelessWidget {
               child: Text('Nessun premio assegnato',
                   style: TextStyle(color: Colors.white24, fontSize: 11)),
             ),
+
+          const SizedBox(width: 8),
+
+          // Bottone modifica
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => EditMatchScreen(match: match)),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.withOpacity(0.25)),
+              ),
+              child: const Icon(Icons.edit_rounded,
+                  color: Colors.amber, size: 20),
+            ),
+          ),
 
           const SizedBox(width: 8),
 
