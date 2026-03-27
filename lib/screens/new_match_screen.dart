@@ -579,85 +579,365 @@ class _ScoreInput extends StatelessWidget {
   );
 }
 
-class _TeamSelector extends StatelessWidget {
+class _TeamSelector extends StatefulWidget {
   final List<Player> players;
   final Map<String, bool> selected;
   final Color accent;
   final void Function(String, bool) onToggle;
-  const _TeamSelector(
-      {required this.players,
-      required this.selected,
-      required this.accent,
-      required this.onToggle});
+  const _TeamSelector({
+    required this.players,
+    required this.selected,
+    required this.accent,
+    required this.onToggle,
+  });
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: AppTheme.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppTheme.border),
-    ),
-    child: Column(
-      children: players.asMap().entries.map((entry) {
-        final i = entry.key;
-        final p = entry.value;
-        final isSelected = selected[p.id] ?? false;
-        return Column(
+  State<_TeamSelector> createState() => _TeamSelectorState();
+}
+
+class _TeamSelectorState extends State<_TeamSelector> {
+  void _openPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PlayerPickerSheet(
+        players: widget.players,
+        selected: widget.selected,
+        accent: widget.accent,
+        onToggle: (id, val) {
+          widget.onToggle(id, val);
+          setState(() {});
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedPlayers = widget.players
+        .where((p) => widget.selected[p.id] == true)
+        .toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Bottone apri selezione ────────────────────────────
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _openPicker,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              child: Row(
+                children: [
+                  Icon(Icons.group_add_rounded, color: widget.accent, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      selectedPlayers.isEmpty
+                          ? 'Seleziona giocatori…'
+                          : '${selectedPlayers.length} giocator${selectedPlayers.length == 1 ? 'e' : 'i'} selezionat${selectedPlayers.length == 1 ? 'o' : 'i'}',
+                      style: TextStyle(
+                        color: selectedPlayers.isEmpty
+                            ? AppTheme.textMuted
+                            : AppTheme.textPrimary,
+                        fontSize: 13,
+                        fontWeight: selectedPlayers.isEmpty
+                            ? FontWeight.normal
+                            : FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.expand_more_rounded, color: widget.accent, size: 22),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Chips giocatori selezionati ───────────────────────
+          if (selectedPlayers.isNotEmpty) ...[
+            Container(height: 1, color: AppTheme.border,
+                margin: const EdgeInsets.symmetric(horizontal: 14)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: selectedPlayers.map((p) => GestureDetector(
+                  onTap: () {
+                    widget.onToggle(p.id, false);
+                    setState(() {});
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: widget.accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: widget.accent.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PlayerAvatar(player: p, radius: 10),
+                        const SizedBox(width: 6),
+                        Text(
+                          p.name.toUpperCase(),
+                          style: TextStyle(
+                            color: widget.accent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.close_rounded, size: 12, color: widget.accent),
+                      ],
+                    ),
+                  ),
+                )).toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bottom sheet con ricerca e lista giocatori
+// ─────────────────────────────────────────────────────────────
+class _PlayerPickerSheet extends StatefulWidget {
+  final List<Player> players;
+  final Map<String, bool> selected;
+  final Color accent;
+  final void Function(String, bool) onToggle;
+
+  const _PlayerPickerSheet({
+    required this.players,
+    required this.selected,
+    required this.accent,
+    required this.onToggle,
+  });
+
+  @override
+  State<_PlayerPickerSheet> createState() => _PlayerPickerSheetState();
+}
+
+class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.players
+        .where((p) => p.name.toLowerCase().contains(_query.toLowerCase()))
+        .toList();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scrollController) => Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
           children: [
-            InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => onToggle(p.id, !isSelected),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
-                child: Row(
-                  children: [
-                    PlayerAvatar(player: p, radius: 18),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        p.name.toUpperCase(),
-                        style: TextStyle(
-                          color: isSelected
-                              ? AppTheme.textPrimary
-                              : AppTheme.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
+            // ── Handle ───────────────────────────────────────────
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 4),
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // ── Titolo ───────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.group_rounded, color: widget.accent, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Seleziona giocatori',
+                    style: TextStyle(
+                      color: widget.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: widget.accent.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${widget.selected.values.where((v) => v).length} sel.',
+                      style: TextStyle(
+                        color: widget.accent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    FifaBadge(p.role,
-                        color: isSelected ? accent : AppTheme.textMuted),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 22, height: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isSelected ? accent : Colors.transparent,
-                        border: Border.all(
-                          color: isSelected ? accent : AppTheme.border,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: isSelected
-                          ? const Icon(Icons.check_rounded,
-                              size: 14, color: Colors.black)
-                          : null,
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Barra di ricerca ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.bg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: TextField(
+                  controller: _searchCtrl,
+                  autofocus: true,
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Cerca giocatore…',
+                    hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search_rounded,
+                        color: AppTheme.textMuted, size: 18),
+                    suffixIcon: _query.isNotEmpty
+                        ? GestureDetector(
+                            onTap: () {
+                              _searchCtrl.clear();
+                              setState(() => _query = '');
+                            },
+                            child: const Icon(Icons.close_rounded,
+                                color: AppTheme.textMuted, size: 16),
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
                 ),
               ),
             ),
-            if (i < players.length - 1)
-              Container(
-                height: 1,
-                color: AppTheme.border,
-                margin: const EdgeInsets.symmetric(horizontal: 14),
+
+            Container(height: 1, color: AppTheme.border),
+
+            // ── Lista giocatori ───────────────────────────────────
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nessun giocatore trovato',
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                      ),
+                    )
+                  : ListView.separated(
+                      controller: scrollController,
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => Container(
+                        height: 1,
+                        color: AppTheme.border,
+                        margin: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      itemBuilder: (_, i) {
+                        final p = filtered[i];
+                        final isSelected = widget.selected[p.id] ?? false;
+                        return InkWell(
+                          onTap: () {
+                            widget.onToggle(p.id, !isSelected);
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 11),
+                            child: Row(
+                              children: [
+                                PlayerAvatar(player: p, radius: 18),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    p.name.toUpperCase(),
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? AppTheme.textPrimary
+                                          : AppTheme.textSecondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ),
+                                FifaBadge(p.role,
+                                    color: isSelected
+                                        ? widget.accent
+                                        : AppTheme.textMuted),
+                                const SizedBox(width: 10),
+                                Container(
+                                  width: 22, height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isSelected
+                                        ? widget.accent
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? widget.accent
+                                          : AppTheme.border,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(Icons.check_rounded,
+                                          size: 14, color: Colors.black)
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+
+            // ── Bottone chiudi ────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppTheme.border)),
               ),
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.accent,
+                  foregroundColor: Colors.black,
+                ),
+                child: const Text('CONFERMA'),
+              ),
+            ),
           ],
-        );
-      }).toList(),
-    ),
-  );
+        ),
+      ),
+    );
+  }
 }
