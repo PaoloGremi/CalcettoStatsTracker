@@ -52,7 +52,7 @@ class _StatsScreenState extends State<StatsScreen> {
       case _SortMode.mvp:      return player.mvpCount;
       case _SortMode.hustle:   return player.hustleCount;
       case _SortMode.bestGoal: return player.bestGoalCount;
-      case _SortMode.goals:    return player.totalGoals; // ✅
+      case _SortMode.goals:    return stats[player.id]!['goals'] as int; // ✅ calcolato dalle partite
     }
   }
 
@@ -77,10 +77,16 @@ class _StatsScreenState extends State<StatsScreen> {
           }
         }
       }
+      // ✅ calcola gol totali direttamente dalle partite (fonte di verità)
+      int goalsFromMatches = 0;
+      for (final match in matches) {
+        goalsFromMatches += match.goals[player.id] ?? 0;
+      }
       stats[player.id] = {
         'games': gamesPlayed,
         'avgVote': votesCount > 0 ? totalVotes / votesCount : 0.0,
         'votes': votesCount,
+        'goals': goalsFromMatches, // ✅
       };
     }
 
@@ -210,7 +216,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   _SortMode.mvp      => '${player.mvpCount}',
                   _SortMode.hustle   => '${player.hustleCount}',
                   _SortMode.bestGoal => '${player.bestGoalCount}',
-                  _SortMode.goals    => '${player.totalGoals}', // ✅
+                  _SortMode.goals    => '${(stats[player.id]!["goals"] as int)}', // ✅
                 };
 
                 final boxSub = switch (_mode) {
@@ -300,7 +306,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               if (player.mvpCount > 0 ||
                                   player.hustleCount > 0 ||
                                   player.bestGoalCount > 0 ||
-                                  player.totalGoals > 0) ...[
+                                  (stats[player.id]!['goals'] as int) > 0) ...[
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
@@ -325,10 +331,10 @@ class _StatsScreenState extends State<StatsScreen> {
                                           highlight: _mode == _SortMode.bestGoal),
                                       const SizedBox(width: 5),
                                     ],
-                                    // ✅ Gol totali
-                                    if (player.totalGoals > 0)
+                                    // ✅ Gol totali calcolati dalle partite
+                                    if ((stats[player.id]!['goals'] as int) > 0)
                                       _AwardCounter(emoji: '🥅',
-                                          count: player.totalGoals,
+                                          count: stats[player.id]!['goals'] as int,
                                           color: AppTheme.accentRed,
                                           highlight: _mode == _SortMode.goals),
                                   ],
