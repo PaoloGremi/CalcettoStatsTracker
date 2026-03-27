@@ -65,6 +65,65 @@ class PlayerStatsScreen extends StatelessWidget {
       else losses++;
     }
 
+    // ── Statistiche aggiuntive ────────────────────────────────
+    // Media gol a partita
+    final avgGoals = totalGames > 0 ? totalGoals / totalGames : 0.0;
+
+    // % partecipazione (partite in cui ha ricevuto un voto)
+    final participationPct = totalGames > 0 ? (votedGames / totalGames * 100).round() : 0;
+
+    // Striscia corrente (ultima serie consecutiva V/P/S)
+    String currentStreak = '—';
+    if (matches.isNotEmpty) {
+      final lastResult = () {
+        final m = matches.last;
+        final inTeamA = m.teamA.contains(player.id);
+        final ps = inTeamA ? m.scoreA : m.scoreB;
+        final os = inTeamA ? m.scoreB : m.scoreA;
+        if (ps > os) return 'V';
+        if (ps == os) return 'P';
+        return 'S';
+      }();
+      int streakCount = 0;
+      for (int i = matches.length - 1; i >= 0; i--) {
+        final m = matches[i];
+        final inTeamA = m.teamA.contains(player.id);
+        final ps = inTeamA ? m.scoreA : m.scoreB;
+        final os = inTeamA ? m.scoreB : m.scoreA;
+        final r = ps > os ? 'V' : (ps == os ? 'P' : 'S');
+        if (r == lastResult) streakCount++;
+        else break;
+      }
+      currentStreak = '$streakCount$lastResult';
+    }
+
+    // Partite consecutive senza sconfitta (striscia migliore)
+    int bestUnbeaten = 0, currentUnbeaten = 0;
+    for (final m in matches) {
+      final inTeamA = m.teamA.contains(player.id);
+      final ps = inTeamA ? m.scoreA : m.scoreB;
+      final os = inTeamA ? m.scoreB : m.scoreA;
+      if (ps >= os) {
+        currentUnbeaten++;
+        if (currentUnbeaten > bestUnbeaten) bestUnbeaten = currentUnbeaten;
+      } else {
+        currentUnbeaten = 0;
+      }
+    }
+
+    // Partite con almeno un gol segnato
+    final gamesWithGoal = goalPoints.where((s) => s.y > 0).length;
+
+    // Voto più frequente (moda)
+    final voteFreq = <double, int>{};
+    for (final s in votePoints) {
+      voteFreq[s.y] = (voteFreq[s.y] ?? 0) + 1;
+    }
+    double? modeVote;
+    if (voteFreq.isNotEmpty) {
+      modeVote = voteFreq.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    }
+
     // ── Partite per mese ─────────────────────────────────────
     // Mappa "yyyy-MM" -> conteggio partite
     final matchesByMonth = <String, int>{};
@@ -73,6 +132,63 @@ class PlayerStatsScreen extends StatelessWidget {
       matchesByMonth[key] = (matchesByMonth[key] ?? 0) + 1;
     }
     final sortedMonthKeys = matchesByMonth.keys.toList()..sort();
+
+    // ── Distribuzione voti (istogramma) ──────────────────────
+    // Raggruppa i voti in bucket: 1-2, 3-4, 5-6, 7-8, 9-10
+    final voteDistribution = <String, int>{
+      '1-2': 0, '3-4': 0, '5-6': 0, '7-8': 0, '9-10': 0,
+    };
+    for (final s in votePoints) {
+      final v = s.y;
+      if (v <= 2) voteDistribution['1-2'] = voteDistribution['1-2']! + 1;
+      else if (v <= 4) voteDistribution['3-4'] = voteDistribution['3-4']! + 1;
+      else if (v <= 6) voteDistribution['5-6'] = voteDistribution['5-6']! + 1;
+      else if (v <= 8) voteDistribution['7-8'] = voteDistribution['7-8']! + 1;
+      else voteDistribution['9-10'] = voteDistribution['9-10']! + 1;
+    }
+
+    // ── Voto medio per mese ───────────────────────────────────
+    final votesByMonth = <String, List<double>>{};
+    for (int i = 0; i < matches.length; i++) {
+      final m = matches[i];
+      final vote = m.votes[player.id];
+      if (vote != null) {
+        final key = DateFormat('yyyy-MM').format(m.date);
+        votesByMonth.putIfAbsent(key, () => []).add(vote);
+      }
+    }
+    final avgVoteByMonth = <String, double>{};
+    for (final entry in votesByMonth.entries) {
+      avgVoteByMonth[entry.key] =
+          entry.value.reduce((a, b) => a + b) / entry.value.length;
+    }
+    final sortedVoteMonthKeys = avgVoteByMonth.keys.toList()..sort();
+
+    // ── Gol cumulativi nel tempo ──────────────────────────────
+    final cumulativeGoalPoints = <FlSpot>[];
+    int cumGoals = 0;
+    for (int i = 0; i < matches.length; i++) {
+      cumGoals += (matches[i].goals[player.id] ?? 0);
+      cumulativeGoalPoints.add(FlSpot(i.toDouble(), cumGoals.toDouble()));
+    }
+
+    // ── Voto medio per risultato (V/P/S) ─────────────────────
+    final votesByResult = <String, List<double>>{'V': [], 'P': [], 'S': []};
+    for (final m in matches) {
+      final vote = m.votes[player.id];
+      if (vote == null) continue;
+      final inTeamA = m.teamA.contains(player.id);
+      final ps = inTeamA ? m.scoreA : m.scoreB;
+      final os = inTeamA ? m.scoreB : m.scoreA;
+      if (ps > os) votesByResult['V']!.add(vote);
+      else if (ps == os) votesByResult['P']!.add(vote);
+      else votesByResult['S']!.add(vote);
+    }
+    double _avg(List<double> list) =>
+        list.isEmpty ? 0.0 : list.reduce((a, b) => a + b) / list.length;
+    final avgVoteWin  = _avg(votesByResult['V']!);
+    final avgVoteDraw = _avg(votesByResult['P']!);
+    final avgVoteLoss = _avg(votesByResult['S']!);
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
@@ -171,6 +287,63 @@ class PlayerStatsScreen extends StatelessWidget {
                     _StatBox(label: 'MVP', value: '${player.mvpCount}',
                         color: AppTheme.accentGold,
                         emoji: '👑'),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // ── Terza riga statistiche ────────────────────────
+                Row(
+                  children: [
+                    _StatBox(
+                      label: 'MEDIA GOL',
+                      value: totalGames > 0 ? avgGoals.toStringAsFixed(2) : '—',
+                      color: AppTheme.accentRed,
+                      emoji: '⚽',
+                    ),
+                    const SizedBox(width: 8),
+                    _StatBox(
+                      label: 'PARTITE GOL',
+                      value: '$gamesWithGoal',
+                      color: AppTheme.accentOrange,
+                      emoji: '🎯',
+                    ),
+                    const SizedBox(width: 8),
+                    _StatBox(
+                      label: 'PARTECIPAZ.',
+                      value: '$participationPct%',
+                      color: AppTheme.accentBlue,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // ── Quarta riga statistiche ───────────────────────
+                Row(
+                  children: [
+                    _StatBox(
+                      label: 'STRISCIA',
+                      value: currentStreak,
+                      color: currentStreak.endsWith('V')
+                          ? AppTheme.accentGreen
+                          : currentStreak.endsWith('S')
+                              ? AppTheme.accentRed
+                              : AppTheme.accentGold,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatBox(
+                      label: 'IMBATTUTO',
+                      value: '$bestUnbeaten',
+                      color: AppTheme.accentGreen,
+                      emoji: '🛡️',
+                    ),
+                    const SizedBox(width: 8),
+                    _StatBox(
+                      label: 'VOTO MODALE',
+                      value: modeVote != null ? modeVote.toStringAsFixed(1) : '—',
+                      color: AppTheme.accentGold,
+                    ),
                   ],
                 ),
 
@@ -583,6 +756,398 @@ class PlayerStatsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                 ],
 
+                // ── Grafico: Distribuzione Voti ──────────────────
+                if (votePoints.length >= 3) ...[
+                  const FifaSectionHeader('Distribuzione Voti',
+                      accent: AppTheme.accentGold),
+                  _ChartCard(
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: (voteDistribution.values.reduce((a, b) => a > b ? a : b) + 1).toDouble(),
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 1,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: AppTheme.border, strokeWidth: 1),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 1,
+                              reservedSize: 24,
+                              getTitlesWidget: (v, _) {
+                                if (v != v.floorToDouble()) return const SizedBox();
+                                return Text(v.toInt().toString(),
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 10));
+                              },
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              getTitlesWidget: (v, _) {
+                                final labels = ['1-2','3-4','5-6','7-8','9-10'];
+                                final i = v.toInt();
+                                if (i < 0 || i >= labels.length) return const SizedBox();
+                                return Text(labels[i],
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 9));
+                              },
+                            ),
+                          ),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        barGroups: voteDistribution.entries.toList().asMap().entries.map((e) {
+                          final i = e.key;
+                          final count = e.value.value;
+                          // colore caldo per i voti alti
+                          final colors = [
+                            AppTheme.accentRed,
+                            AppTheme.accentOrange,
+                            AppTheme.accentGold,
+                            AppTheme.accentGreen,
+                            AppTheme.accentBlue,
+                          ];
+                          return BarChartGroupData(
+                            x: i,
+                            barRods: [
+                              BarChartRodData(
+                                toY: count.toDouble(),
+                                color: colors[i],
+                                width: 32,
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(6)),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                        barTouchData: BarTouchData(
+                          touchTooltipData: BarTouchTooltipData(
+                            getTooltipItem: (group, _, rod, __) {
+                              final labels = ['1-2','3-4','5-6','7-8','9-10'];
+                              return BarTooltipItem(
+                                'Voto ${labels[group.x]}\n${rod.toY.toInt()} volte',
+                                const TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Grafico: Voto Medio per Mese ─────────────────
+                if (sortedVoteMonthKeys.length >= 2) ...[
+                  const FifaSectionHeader('Voto Medio per Mese',
+                      accent: AppTheme.accentGold),
+                  _ChartCard(
+                    child: LineChart(
+                      LineChartData(
+                        minY: 1,
+                        maxY: 10,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 2,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: AppTheme.border, strokeWidth: 1),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 2,
+                              reservedSize: 28,
+                              getTitlesWidget: (v, _) => Text(
+                                v.toInt().toString(),
+                                style: const TextStyle(
+                                    color: AppTheme.textMuted, fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              getTitlesWidget: (v, _) {
+                                final i = v.toInt();
+                                if (i < 0 || i >= sortedVoteMonthKeys.length) return const SizedBox();
+                                final step = (sortedVoteMonthKeys.length / 4).ceil().clamp(1, 99);
+                                if (i % step != 0) return const SizedBox();
+                                final parts = sortedVoteMonthKeys[i].split('-');
+                                final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+                                return Text(
+                                  DateFormat('MMM yy', 'it_IT').format(dt),
+                                  style: const TextStyle(
+                                      color: AppTheme.textMuted, fontSize: 9),
+                                );
+                              },
+                            ),
+                          ),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: sortedVoteMonthKeys.asMap().entries.map((e) =>
+                                FlSpot(e.key.toDouble(), avgVoteByMonth[e.value]!)).toList(),
+                            isCurved: true,
+                            color: AppTheme.accentGold,
+                            barWidth: 2.5,
+                            dotData: FlDotData(
+                              show: true,
+                              getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
+                                radius: 4,
+                                color: AppTheme.accentGold,
+                                strokeWidth: 1.5,
+                                strokeColor: AppTheme.bg,
+                              ),
+                            ),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: AppTheme.accentGold.withOpacity(0.08),
+                            ),
+                          ),
+                        ],
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (spots) => spots.map((s) {
+                              final i = s.x.toInt();
+                              if (i < 0 || i >= sortedVoteMonthKeys.length) return null;
+                              final parts = sortedVoteMonthKeys[i].split('-');
+                              final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+                              final label = DateFormat('MMM yyyy', 'it_IT').format(dt);
+                              return LineTooltipItem(
+                                '$label\n${s.y.toStringAsFixed(1)}',
+                                const TextStyle(
+                                    color: AppTheme.accentGold,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Grafico: Gol Cumulativi nel Tempo ────────────
+                if (totalGoals > 0 && cumulativeGoalPoints.length >= 2) ...[
+                  const FifaSectionHeader('Gol Cumulativi',
+                      accent: AppTheme.accentRed),
+                  _ChartCard(
+                    child: LineChart(
+                      LineChartData(
+                        minY: 0,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: AppTheme.border, strokeWidth: 1),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 28,
+                              getTitlesWidget: (v, _) {
+                                if (v != v.floorToDouble()) return const SizedBox();
+                                return Text(v.toInt().toString(),
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 10));
+                              },
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              getTitlesWidget: (v, _) {
+                                final i = v.toInt();
+                                if (i < 0 || i >= dateLabels.length) return const SizedBox();
+                                final step = (matches.length / 5).ceil().clamp(1, 99);
+                                if (i % step != 0) return const SizedBox();
+                                return Text(dateLabels[i],
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 9));
+                              },
+                            ),
+                          ),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: cumulativeGoalPoints,
+                            isCurved: false,
+                            color: AppTheme.accentRed,
+                            barWidth: 2.5,
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: AppTheme.accentRed.withOpacity(0.1),
+                            ),
+                          ),
+                        ],
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (spots) => spots.map((s) {
+                              final i = s.x.toInt();
+                              final date = i < dateLabels.length ? dateLabels[i] : '';
+                              return LineTooltipItem(
+                                '$date\n${s.y.toInt()} gol totali',
+                                const TextStyle(
+                                    color: AppTheme.accentRed,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Grafico: Voto Medio per Risultato ────────────
+                if (votePoints.isNotEmpty && (votesByResult['V']!.isNotEmpty || votesByResult['S']!.isNotEmpty)) ...[
+                  const FifaSectionHeader('Voto per Risultato',
+                      accent: AppTheme.accentBlue),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 160,
+                          child: BarChart(
+                            BarChartData(
+                              alignment: BarChartAlignment.spaceAround,
+                              minY: 0,
+                              maxY: 10,
+                              gridData: FlGridData(
+                                show: true,
+                                drawVerticalLine: false,
+                                horizontalInterval: 2,
+                                getDrawingHorizontalLine: (_) => FlLine(
+                                    color: AppTheme.border, strokeWidth: 1),
+                              ),
+                              borderData: FlBorderData(show: false),
+                              titlesData: FlTitlesData(
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    interval: 2,
+                                    reservedSize: 28,
+                                    getTitlesWidget: (v, _) => Text(
+                                      v.toInt().toString(),
+                                      style: const TextStyle(
+                                          color: AppTheme.textMuted, fontSize: 10),
+                                    ),
+                                  ),
+                                ),
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 22,
+                                    getTitlesWidget: (v, _) {
+                                      const labels = ['Vittorie', 'Pareggi', 'Sconfitte'];
+                                      final i = v.toInt();
+                                      if (i < 0 || i >= labels.length) return const SizedBox();
+                                      return Text(labels[i],
+                                          style: const TextStyle(
+                                              color: AppTheme.textMuted, fontSize: 9));
+                                    },
+                                  ),
+                                ),
+                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                              ),
+                              barGroups: [
+                                BarChartGroupData(x: 0, barRods: [
+                                  BarChartRodData(
+                                    toY: avgVoteWin,
+                                    color: AppTheme.accentGreen,
+                                    width: 36,
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                  ),
+                                ]),
+                                BarChartGroupData(x: 1, barRods: [
+                                  BarChartRodData(
+                                    toY: avgVoteDraw,
+                                    color: AppTheme.accentGold,
+                                    width: 36,
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                  ),
+                                ]),
+                                BarChartGroupData(x: 2, barRods: [
+                                  BarChartRodData(
+                                    toY: avgVoteLoss,
+                                    color: AppTheme.accentRed,
+                                    width: 36,
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                  ),
+                                ]),
+                              ],
+                              barTouchData: BarTouchData(
+                                touchTooltipData: BarTouchTooltipData(
+                                  getTooltipItem: (group, _, rod, __) {
+                                    const labels = ['Vittorie', 'Pareggi', 'Sconfitte'];
+                                    final avg = rod.toY;
+                                    if (avg == 0) return null;
+                                    return BarTooltipItem(
+                                      '${labels[group.x]}\n${avg.toStringAsFixed(1)}',
+                                      const TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Legenda con valori
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _ResultAvgBadge(label: 'Vittorie', avg: avgVoteWin,
+                                color: AppTheme.accentGreen, count: votesByResult['V']!.length),
+                            _ResultAvgBadge(label: 'Pareggi', avg: avgVoteDraw,
+                                color: AppTheme.accentGold, count: votesByResult['P']!.length),
+                            _ResultAvgBadge(label: 'Sconfitte', avg: avgVoteLoss,
+                                color: AppTheme.accentRed, count: votesByResult['S']!.length),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
                 // ── Messaggio se non ci sono abbastanza dati ──────
                 if (votePoints.length < 2 && totalGoals == 0)
                   Container(
@@ -720,5 +1285,37 @@ class _ChartCard extends StatelessWidget {
           border: Border.all(color: AppTheme.border),
         ),
         child: child,
+      );
+}
+
+class _ResultAvgBadge extends StatelessWidget {
+  final String label;
+  final double avg;
+  final Color color;
+  final int count;
+
+  const _ResultAvgBadge({
+    required this.label,
+    required this.avg,
+    required this.color,
+    required this.count,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          Text(
+            avg > 0 ? avg.toStringAsFixed(1) : '—',
+            style: TextStyle(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FifaLabel(label, color: color.withOpacity(0.7), fontSize: 8),
+          const SizedBox(height: 1),
+          FifaLabel('($count partite)', color: AppTheme.textMuted, fontSize: 8),
+        ],
       );
 }
