@@ -2,9 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 import '../models/match_model.dart';
-import '../models/field_model.dart';
 import '../models/player.dart';
 import '../services/data_service.dart';
 import '../widgets/player_avatar.dart';
@@ -12,25 +10,47 @@ import '../theme/app_theme.dart';
 import 'vote_screen.dart';
 import 'fields_screen.dart';
 
-class NewMatchScreen extends StatefulWidget {
-  const NewMatchScreen({super.key});
+class EditMatchScreen extends StatefulWidget {
+  final MatchModel match;
+  const EditMatchScreen({required this.match, super.key});
 
   @override
-  State<NewMatchScreen> createState() => _NewMatchScreenState();
+  State<EditMatchScreen> createState() => _EditMatchScreenState();
 }
 
-class _NewMatchScreenState extends State<NewMatchScreen> {
-  final Map<String, bool> selectedA = {};
-  final Map<String, bool> selectedB = {};
-  int scoreA = 0;
-  int scoreB = 0;
-  String? fieldId; // ID del FieldModel selezionato
-  DateTime? selectedDateTime;
-  String? mvpPlayerId;
-  String? hustlePlayerId;
-  String? bestGoalPlayerId;
-  final TextEditingController _scoreACtrl = TextEditingController();
-  final TextEditingController _scoreBCtrl = TextEditingController();
+class _EditMatchScreenState extends State<EditMatchScreen> {
+  late final Map<String, bool> selectedA;
+  late final Map<String, bool> selectedB;
+  late int scoreA;
+  late int scoreB;
+  late String? fieldId;
+  late DateTime selectedDateTime;
+  late String? mvpPlayerId;
+  late String? hustlePlayerId;
+  late String? bestGoalPlayerId;
+  late final TextEditingController _scoreACtrl;
+  late final TextEditingController _scoreBCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.match;
+    // Pre-popola squadre
+    selectedA = {for (final id in m.teamA) id: true};
+    selectedB = {for (final id in m.teamB) id: true};
+    // Pre-popola punteggio
+    scoreA = m.scoreA;
+    scoreB = m.scoreB;
+    _scoreACtrl = TextEditingController(text: m.scoreA > 0 ? '${m.scoreA}' : '');
+    _scoreBCtrl = TextEditingController(text: m.scoreB > 0 ? '${m.scoreB}' : '');
+    // Pre-popola campo e data
+    fieldId = m.fieldLocation.isNotEmpty ? m.fieldLocation : null;
+    selectedDateTime = m.date;
+    // Pre-popola premi
+    mvpPlayerId = m.mvp.isNotEmpty ? m.mvp : null;
+    hustlePlayerId = m.hustlePlayer.isNotEmpty ? m.hustlePlayer : null;
+    bestGoalPlayerId = m.bestGoalPlayer.isNotEmpty ? m.bestGoalPlayer : null;
+  }
 
   @override
   void dispose() {
@@ -39,7 +59,6 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     super.dispose();
   }
 
-  /// Restituisce la lista di Player selezionati (teamA + teamB uniti)
   List<Player> _selectedPlayers(List<Player> allPlayers) {
     final selectedIds = {
       ...selectedA.entries.where((e) => e.value).map((e) => e.key),
@@ -69,7 +88,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     final canSave = teamAIds.isNotEmpty && teamBIds.isNotEmpty;
     final participatingPlayers = _selectedPlayers(allPlayers);
 
-    // Se MVP/Hustle selezionati non sono più nella partita, resetta
+    // Se MVP/Hustle/BestGoal non sono più nella partita, resetta
     if (mvpPlayerId != null &&
         !participatingPlayers.any((p) => p.id == mvpPlayerId)) {
       mvpPlayerId = null;
@@ -86,7 +105,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Nuova Partita', color: AppTheme.textPrimary, fontSize: 13),
+        title: const FifaLabel('Modifica Partita', color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppTheme.border),
@@ -98,7 +117,6 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
 
           // ── CAMPO ─────────────────────────────────────────────
           const FifaSectionHeader('Campo'),
-          // Anteprima immagine campo selezionato
           if (selectedField != null &&
               selectedField.imagePath != null &&
               File(selectedField.imagePath!).existsSync())
@@ -210,7 +228,6 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                         ),
                 ),
                 const SizedBox(width: 8),
-                // Bottone gestione campi
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
@@ -243,13 +260,14 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               onTap: () async {
                 final date = await showDatePicker(
                   context: context,
-                  initialDate: DateTime.now(),
+                  initialDate: selectedDateTime,
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2100),
                 );
                 if (date == null || !mounted) return;
                 final time = await showTimePicker(
-                    context: context, initialTime: TimeOfDay.now());
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(selectedDateTime));
                 if (time == null) return;
                 setState(() {
                   selectedDateTime = DateTime(
@@ -262,18 +280,12 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                       color: AppTheme.accentGreen, size: 20),
                   const SizedBox(width: 12),
                   Text(
-                    selectedDateTime != null
-                        ? DateFormat('EEE dd MMM yyyy · HH:mm', 'it_IT')
-                            .format(selectedDateTime!)
-                        : 'Seleziona data e ora',
-                    style: TextStyle(
-                      color: selectedDateTime != null
-                          ? AppTheme.textPrimary
-                          : AppTheme.textMuted,
+                    DateFormat('EEE dd MMM yyyy · HH:mm', 'it_IT')
+                        .format(selectedDateTime),
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
                       fontSize: 13,
-                      fontWeight: selectedDateTime != null
-                          ? FontWeight.w700
-                          : FontWeight.normal,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const Spacer(),
@@ -346,13 +358,11 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       'Seleziona i giocatori prima di assegnare i premi',
-                      style: TextStyle(
-                          color: AppTheme.textMuted, fontSize: 12),
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
                     ),
                   )
                 : Column(
                     children: [
-                      // MVP
                       _AwardDropdown(
                         emoji: '👑',
                         label: 'MVP DELLA PARTITA',
@@ -362,7 +372,6 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                         onChanged: (id) => setState(() => mvpPlayerId = id),
                       ),
                       const FifaDivider(),
-                      // Combattivo
                       _AwardDropdown(
                         emoji: '🔥',
                         label: 'GIOCATORE PIÙ COMBATTIVO',
@@ -372,7 +381,6 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                         onChanged: (id) => setState(() => hustlePlayerId = id),
                       ),
                       const FifaDivider(),
-                      // Best Goal
                       _AwardDropdown(
                         emoji: '⚽',
                         label: 'BEST GOAL',
@@ -397,44 +405,96 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
           border: Border(
             top: BorderSide(
               color: canSave
-                  ? AppTheme.accentGreen.withOpacity(0.3)
+                  ? AppTheme.accentGold.withOpacity(0.3)
                   : AppTheme.border,
             ),
           ),
         ),
-        child: ElevatedButton(
-          onPressed: canSave
-              ? () async {
-                  final match = MatchModel(
-                    id: const Uuid().v4(),
-                    date: selectedDateTime ?? DateTime.now(),
-                    teamA: teamAIds,
-                    teamB: teamBIds,
-                    scoreA: scoreA,
-                    scoreB: scoreB,
-                    fieldLocation: fieldId ?? '',
-                    mvp: mvpPlayerId ?? '',
-                    hustlePlayer: hustlePlayerId ?? '',
-                    bestGoalPlayer: bestGoalPlayerId ?? '',
-                  );
-                  await data.addMatch(match);
-                  if (!mounted) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => VoteScreen(match: match)),
-                  ).then((_) => Navigator.pop(context));
-                }
-              : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-                canSave ? AppTheme.accentGreen : AppTheme.border,
-            foregroundColor:
-                canSave ? Colors.black : AppTheme.textMuted,
-          ),
-          child: Text(canSave
-              ? 'SALVA E VOTA GIOCATORI'
-              : 'SELEZIONA ALMENO 1 GIOCATORE PER SQUADRA'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Bottone salva e rivota
+            ElevatedButton(
+              onPressed: canSave
+                  ? () async {
+                      final updated = MatchModel(
+                        id: widget.match.id,
+                        date: selectedDateTime,
+                        teamA: teamAIds,
+                        teamB: teamBIds,
+                        scoreA: scoreA,
+                        scoreB: scoreB,
+                        votes: widget.match.votes,
+                        comments: widget.match.comments,
+                        goals: widget.match.goals,
+                        fieldLocation: fieldId ?? '',
+                        mvp: mvpPlayerId ?? '',
+                        hustlePlayer: hustlePlayerId ?? '',
+                        bestGoalPlayer: bestGoalPlayerId ?? '',
+                      );
+                      await data.updateMatch(updated);
+                      if (!mounted) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => VoteScreen(match: updated)),
+                      ).then((_) => Navigator.pop(context));
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: canSave ? AppTheme.accentGold : AppTheme.border,
+                foregroundColor: canSave ? Colors.black : AppTheme.textMuted,
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.how_to_vote_rounded, size: 18),
+                  SizedBox(width: 8),
+                  Text('SALVA E RIVOTA GIOCATORI'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Bottone salva senza revotare
+            OutlinedButton(
+              onPressed: canSave
+                  ? () async {
+                      final updated = MatchModel(
+                        id: widget.match.id,
+                        date: selectedDateTime,
+                        teamA: teamAIds,
+                        teamB: teamBIds,
+                        scoreA: scoreA,
+                        scoreB: scoreB,
+                        votes: widget.match.votes,
+                        comments: widget.match.comments,
+                        goals: widget.match.goals,
+                        fieldLocation: fieldId ?? '',
+                        mvp: mvpPlayerId ?? '',
+                        hustlePlayer: hustlePlayerId ?? '',
+                        bestGoalPlayer: bestGoalPlayerId ?? '',
+                      );
+                      await data.updateMatch(updated);
+                      if (!mounted) return;
+                      Navigator.pop(context);
+                    }
+                  : null,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: canSave ? AppTheme.textPrimary : AppTheme.textMuted,
+                side: BorderSide(
+                  color: canSave ? AppTheme.border : AppTheme.border,
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.save_rounded, size: 18),
+                  SizedBox(width: 8),
+                  Text('SALVA SENZA REVOTARE'),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -442,7 +502,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Dropdown per assegnare MVP / Combattivo
+// Dropdown per assegnare MVP / Combattivo / Best Goal
 // ─────────────────────────────────────────────────────────────
 
 class _AwardDropdown extends StatelessWidget {
@@ -488,13 +548,11 @@ class _AwardDropdown extends StatelessWidget {
             hint: const Text('— Nessuno —',
                 style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
             items: [
-              // Opzione "nessuno"
               const DropdownMenuItem<String>(
                 value: null,
                 child: Text('— Nessuno —',
                     style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
               ),
-              // Un item per ogni giocatore partecipante
               ...players.map((p) => DropdownMenuItem<String>(
                 value: p.id,
                 child: Row(
@@ -628,7 +686,6 @@ class _TeamSelectorState extends State<_TeamSelector> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Bottone apri selezione ────────────────────────────
           InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: _openPicker,
@@ -659,8 +716,6 @@ class _TeamSelectorState extends State<_TeamSelector> {
               ),
             ),
           ),
-
-          // ── Chips giocatori selezionati ───────────────────────
           if (selectedPlayers.isNotEmpty) ...[
             Container(height: 1, color: AppTheme.border,
                 margin: const EdgeInsets.symmetric(horizontal: 14)),
@@ -758,7 +813,6 @@ class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
         ),
         child: Column(
           children: [
-            // ── Handle ───────────────────────────────────────────
             Container(
               margin: const EdgeInsets.only(top: 10, bottom: 4),
               width: 36, height: 4,
@@ -767,8 +821,6 @@ class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // ── Titolo ───────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
@@ -803,8 +855,6 @@ class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
                 ],
               ),
             ),
-
-            // ── Barra di ricerca ─────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Container(
@@ -839,10 +889,7 @@ class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
                 ),
               ),
             ),
-
             Container(height: 1, color: AppTheme.border),
-
-            // ── Lista giocatori ───────────────────────────────────
             Expanded(
               child: filtered.isEmpty
                   ? const Center(
@@ -919,8 +966,6 @@ class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
                       },
                     ),
             ),
-
-            // ── Bottone chiudi ────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
               decoration: const BoxDecoration(
