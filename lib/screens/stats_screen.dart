@@ -199,6 +199,15 @@ class _StatsScreenState extends State<StatsScreen> {
                 final player = sorted[i];
                 final rank = i + 1;
                 final isFirst = i == 0;
+                final isSecond = i == 1;
+                final isThird = i == 2;
+                const podiumGold   = Color(0xFFFFD700);
+                const podiumSilver = Color(0xFFB8B8B8);
+                const podiumBronze = Color(0xFFCD7F32);
+                final podiumColor = isFirst ? podiumGold
+                    : isSecond ? podiumSilver
+                    : isThird  ? podiumBronze
+                    : null;
                 final games = stats[player.id]!['games'] as int;
                 final avgVote = stats[player.id]!['avgVote'] as double;
                 final isEmpty = _sortValue(player, stats) == 0;
@@ -238,17 +247,29 @@ class _StatsScreenState extends State<StatsScreen> {
                   child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    gradient: podiumColor != null && !isEmpty
+                        ? LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              podiumColor.withOpacity(isFirst ? 0.18 : 0.10),
+                              podiumColor.withOpacity(0.04),
+                            ],
+                          )
+                        : null,
+                    color: podiumColor == null || isEmpty ? AppTheme.surface : null,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isFirst && !isEmpty
-                          ? boxColor.withOpacity(0.5)
+                      color: podiumColor != null && !isEmpty
+                          ? podiumColor.withOpacity(isFirst ? 0.6 : 0.4)
                           : AppTheme.border,
-                      width: isFirst ? 1.5 : 1,
+                      width: podiumColor != null ? 1.5 : 1,
                     ),
-                    boxShadow: isFirst
-                        ? [BoxShadow(color: boxColor.withOpacity(0.12),
-                            blurRadius: 16)]
+                    boxShadow: podiumColor != null && !isEmpty
+                        ? [BoxShadow(
+                            color: podiumColor.withOpacity(isFirst ? 0.20 : 0.10),
+                            blurRadius: isFirst ? 20 : 10,
+                          )]
                         : null,
                   ),
                   child: Padding(
@@ -259,10 +280,11 @@ class _StatsScreenState extends State<StatsScreen> {
                         // Rank
                         SizedBox(
                           width: 28,
-                          child: Text('#$rank',
+                          child: Text(
+                            isFirst ? '🥇' : isSecond ? '🥈' : isThird ? '🥉' : '#$rank',
                             style: TextStyle(
-                              color: isFirst ? boxColor : AppTheme.textMuted,
-                              fontSize: isFirst ? 14 : 11,
+                              color: podiumColor ?? AppTheme.textMuted,
+                              fontSize: podiumColor != null ? 20 : 11,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1,
                             ),
