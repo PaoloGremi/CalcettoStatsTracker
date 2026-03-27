@@ -25,6 +25,9 @@ class PlayerStatsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final matches = _playerMatches();
 
+    // Totale partite registrate nel sistema (non solo quelle del giocatore)
+    final totalRegisteredMatches = HiveBoxes.matchesBox.length;
+
     // Prepara i dati per i grafici
     final votePoints = <FlSpot>[];
     final goalPoints = <FlSpot>[];
@@ -69,8 +72,10 @@ class PlayerStatsScreen extends StatelessWidget {
     // Media gol a partita
     final avgGoals = totalGames > 0 ? totalGoals / totalGames : 0.0;
 
-    // % partecipazione (partite in cui ha ricevuto un voto)
-    final participationPct = totalGames > 0 ? (votedGames / totalGames * 100).round() : 0;
+    // % partecipazione (partite giocate dal giocatore / tutte le partite registrate)
+    final participationPct = totalRegisteredMatches > 0
+        ? (totalGames / totalRegisteredMatches * 100).round()
+        : 0;
 
     // Striscia corrente (ultima serie consecutiva V/P/S)
     String currentStreak = '—';
