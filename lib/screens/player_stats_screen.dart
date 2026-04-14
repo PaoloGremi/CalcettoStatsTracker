@@ -267,7 +267,7 @@ class PlayerStatsScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     _StatBox(
                         label: 'VOTO MEDIO',
-                        value: votedGames > 0 ? avgVote.toStringAsFixed(1) : '—',
+                        value: votedGames > 0 ? avgVote.toStringAsFixed(2) : '—',
                         color: AppTheme.accentGold),
                     const SizedBox(width: 8),
                     _StatBox(label: 'GOL TOTALI', value: '$totalGoals',
