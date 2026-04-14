@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -21,6 +22,7 @@ class _AiCoachPageState extends State<AiCoachPage> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
+  // ⚠️  _ChatMessage ora è mutabile (content non è più final)
   final List<_ChatMessage> _messages = [];
   bool _loading = false;
   String? _apiKey;
@@ -29,7 +31,7 @@ class _AiCoachPageState extends State<AiCoachPage> {
   void initState() {
     super.initState();
     _checkApiKey();
-    _messages.add(const _ChatMessage(
+    _messages.add(_ChatMessage(
       role: 'assistant',
       content:
           '⚽ Ciao! Sono il tuo Coach AI. Ho analizzato i dati della squadra. Come posso aiutarti oggi?',
@@ -63,13 +65,11 @@ class _AiCoachPageState extends State<AiCoachPage> {
       playerBuffer.writeln('Nessun giocatore registrato.');
     } else {
       for (var p in players) {
-        // Filtra le partite a cui ha partecipato il giocatore
         final pMatches = matches
             .where((m) => m.teamA.contains(p.id) || m.teamB.contains(p.id))
             .toList();
         final totalGames = pMatches.length;
 
-        // Calcolo Win Rate basato sui punteggi scoreA/scoreB
         int wins = 0;
         for (var m in pMatches) {
           final inTeamA = m.teamA.contains(p.id);
@@ -79,7 +79,6 @@ class _AiCoachPageState extends State<AiCoachPage> {
         final winRate =
             totalGames > 0 ? (wins / totalGames * 100).toStringAsFixed(0) : '0';
 
-        // Media Voti
         final allVotes = pMatches
             .map((m) => m.votes[p.id])
             .where((v) => v != null)
@@ -90,7 +89,6 @@ class _AiCoachPageState extends State<AiCoachPage> {
                 .toStringAsFixed(2)
             : 'N/A';
 
-        // Costruzione della riga analitica per l'AI
         playerBuffer.writeln('- ${p.name} [Ruolo: ${p.role}]: '
             'Media Voto: $avgVote, '
             'Gol Totali: ${p.totalGoals}, '
@@ -154,7 +152,7 @@ CONSIDERAZIONI FINALI:
 
 ---
 
-#### 2. Se viene richiesta un’ANALISI o DOMANDA GENERICA:
+#### 2. Se viene richiesta un'ANALISI o DOMANDA GENERICA:
 - Rispondi in modo chiaro e sintetico.
 - Usa i dati per supportare le risposte.
 - NON inventare informazioni mancanti.
@@ -169,7 +167,7 @@ CONSIDERAZIONI FINALI:
 - NON mostrare calcoli o ragionamenti interni
 - NON inventare dati
 - Sii sintetico ma informativo
-- Adatta la risposta alla richiesta dell’utente
+- Adatta la risposta alla richiesta dell'utente
 
 ---
 
@@ -178,14 +176,20 @@ ${playerBuffer.toString()}
 ''';
   }
 
+  // ──────────────────────────────────────────────
+  // INVIO MESSAGGIO CON STREAMING
+  // ──────────────────────────────────────────────
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _loading || _apiKey == null) return;
 
     final ds = Provider.of<DataService>(context, listen: false);
 
+    // Aggiunge il messaggio utente e il placeholder della risposta AI
+    final assistantMessage = _ChatMessage(role: 'assistant', content: '');
     setState(() {
       _messages.add(_ChatMessage(role: 'user', content: text));
+      _messages.add(assistantMessage);
       _loading = true;
     });
     _messageController.clear();
@@ -194,48 +198,98 @@ ${playerBuffer.toString()}
     try {
       final systemPrompt = _buildSystemPrompt(ds);
 
+      // Esclude l'ultimo messaggio (placeholder vuoto) dalla history inviata
+      final history = _messages.sublist(0, _messages.length - 1);
       final apiMessages = [
         {'role': 'system', 'content': systemPrompt},
-        ..._messages.map((m) => {'role': m.role, 'content': m.content}),
+        ...history
+            .where((m) => m.role == 'user' || m.role == 'assistant')
+            .map((m) => {'role': m.role, 'content': m.content}),
       ];
 
-      // Debug console per verificare i dati inviati
       print("---------- PROMPT INVIATO ----------");
       print(systemPrompt);
       print("------------------------------------");
 
-      final response = await http.post(
+      // ── Richiesta HTTP con streaming ──────────────────
+      final request = http.Request(
+        'POST',
         Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o-mini',
-          'messages': apiMessages,
-          'temperature': 0.7,
-        }),
       );
+      request.headers.addAll({
+        'Authorization': 'Bearer $_apiKey',
+        'Content-Type': 'application/json',
+      });
+      request.body = jsonEncode({
+        'model': 'gpt-4o-mini',
+        'messages': apiMessages,
+        'temperature': 0.7,
+        'stream': true, // <-- abilita lo streaming SSE
+      });
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        final reply = data['choices'][0]['message']['content'];
-        setState(() {
-          _messages.add(_ChatMessage(role: 'assistant', content: reply.trim()));
-        });
-      } else {
-        _showError("Errore API: ${response.statusCode}");
+      final streamedResponse = await http.Client().send(request);
+
+      if (streamedResponse.statusCode != 200) {
+        _showError("Errore API: ${streamedResponse.statusCode}");
+        return;
+      }
+
+      // ── Lettura chunk SSE ─────────────────────────────
+      final responseBuffer = StringBuffer(); // testo accumulato della risposta
+      String lineBuffer = '';               // frammento di riga incompleta
+
+      await for (final chunk
+          in streamedResponse.stream.transform(utf8.decoder)) {
+        // Aggiunge il chunk al buffer di riga e processa solo le righe complete
+        lineBuffer += chunk;
+
+        while (lineBuffer.contains('\n')) {
+          final newlineIndex = lineBuffer.indexOf('\n');
+          final line = lineBuffer.substring(0, newlineIndex).trim();
+          lineBuffer = lineBuffer.substring(newlineIndex + 1);
+
+          if (!line.startsWith('data: ')) continue;
+
+          final jsonStr = line.substring(6); // rimuove "data: "
+          if (jsonStr == '[DONE]') break;
+
+          try {
+            final data = jsonDecode(jsonStr);
+            final delta =
+                data['choices'][0]['delta']['content'] as String? ?? '';
+            if (delta.isEmpty) continue;
+
+            responseBuffer.write(delta);
+
+            // Aggiorna il messaggio in-place e ridisegna
+            if (mounted) {
+              setState(() => assistantMessage.content = responseBuffer.toString());
+              _scrollToBottom();
+            }
+          } catch (_) {
+            // Chunk parziale o malformato: ignorato
+          }
+        }
+      }
+
+      // Se per qualsiasi motivo non è arrivato niente
+      if (responseBuffer.isEmpty) {
+        setState(() => assistantMessage.content = '(nessuna risposta)');
       }
     } catch (e) {
-      _showError("Errore di connessione.");
+      _showError("Errore di connessione: $e");
     }
 
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
     _scrollToBottom();
   }
 
   void _showError(String message) {
     setState(() {
+      // Rimuove il placeholder vuoto prima di aggiungere l'errore
+      if (_messages.isNotEmpty && _messages.last.content.isEmpty) {
+        _messages.removeLast();
+      }
       _messages.add(_ChatMessage(role: 'error', content: message));
       _loading = false;
     });
@@ -263,7 +317,10 @@ ${playerBuffer.toString()}
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length + (_loading ? 1 : 0),
+              // Il _TypingIndicator appare solo se sta caricando
+              // E il messaggio AI è ancora vuoto
+              itemCount: _messages.length +
+                  (_loading && _messages.last.content.isEmpty ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == _messages.length) return const _TypingIndicator();
                 return _MessageBubble(message: _messages[index]);
@@ -306,10 +363,11 @@ ${playerBuffer.toString()}
 // CLASSI DI SUPPORTO UI
 // ──────────────────────────────────────────────
 
+// ⚠️ content è ora var (non final) per supportare l'aggiornamento in streaming
 class _ChatMessage {
   final String role;
-  final String content;
-  const _ChatMessage({required this.role, required this.content});
+  String content; // <-- mutabile
+  _ChatMessage({required this.role, required this.content});
 }
 
 class _MessageBubble extends StatelessWidget {
