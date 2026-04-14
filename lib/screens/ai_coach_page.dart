@@ -68,6 +68,10 @@ class _AiCoachPageState extends State<AiCoachPage> {
         final pMatches = matches
             .where((m) => m.teamA.contains(p.id) || m.teamB.contains(p.id))
             .toList();
+
+        // Ordiniamo per data decrescente (le ultime partite per prime)
+        pMatches.sort((a, b) => b.date.compareTo(a.date));
+
         final totalGames = pMatches.length;
 
         int wins = 0;
@@ -89,12 +93,24 @@ class _AiCoachPageState extends State<AiCoachPage> {
                 .toStringAsFixed(2)
             : 'N/A';
 
+        // 3. RECUPERO ULTIMI 3 COMMENTI
+        final lastComments = pMatches
+            .map((m) => m.comments[p.id])
+            .where((c) => c != null && c.isNotEmpty)
+            .take(3) // Prendi i primi 3 dopo l'ordinamento decrescente
+            .toList();
+
+        final commentsString = lastComments.isNotEmpty 
+            ? lastComments.join(' | ') 
+            : 'Nessun commento recente';
+
         playerBuffer.writeln('- ${p.name} [Ruolo: ${p.role}]: '
             'Media Voto: $avgVote, '
             'Gol Totali: ${p.totalGoals}, '
             'MVP: ${p.mvpCount}, '
             'Combattivo: ${p.hustleCount}, '
             'Gol più bello: ${p.bestGoalCount}, '
+            'Feedback recenti: "$commentsString" '
             'Win Rate: $winRate% ($totalGames partite).');
       }
     }
@@ -118,7 +134,9 @@ METRICHE DI VALUTAZIONE (uso interno):
 1. Media Voto → qualità costante
 2. Gol Totali → capacità realizzativa
 3. Premi (MVP, Combattivo, Gol Bello) → impatto e leadership
-4. Win Rate → contributo alle vittorie
+4. Pagella delle ultime 3 partite
+5. Win Rate → contributo alle vittorie
+
 
 ---
 
