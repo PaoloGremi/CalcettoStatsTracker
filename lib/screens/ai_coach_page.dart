@@ -16,7 +16,6 @@ class _FifaColors {
   static const green = Color(0xFF00D46A); // verde erba luminoso
   static const greenDark = Color(0xFF008F48); // verde campo scuro
   static const gold = Color(0xFFF5C518); // oro FIFA
-  static const goldDark = Color(0xFFB8890E);
   static const userBubble = Color(0xFF1A3A5C); // blu maglia
   static const aiBubble = Color(0xFF162035);
   static const errorBg = Color(0xFF3A0A0A);
@@ -368,10 +367,16 @@ class _FifaAppBar extends StatelessWidget {
         opacity: fadeAnim,
         child: Row(
           children: [
+            // --- TASTO BACK ---
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new,
+                  color: _FifaColors.textPrimary, size: 20),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
             // Badge rotondo verde
             Container(
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _FifaColors.greenDark,
