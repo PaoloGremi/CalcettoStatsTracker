@@ -137,20 +137,13 @@ class _AiCoachPageState extends State<AiCoachPage> with TickerProviderStateMixin
         final avgVote = allVotes.isNotEmpty
             ? (allVotes.reduce((a, b) => a + b) / allVotes.length).toStringAsFixed(2)
             : 'N/A';
-        final lastComments = pMatches
-            .map((m) => m.comments[p.id])
-            .where((c) => c != null && c.isNotEmpty)
-            .take(3)
-            .toList();
-        final commentsString =
-            lastComments.isNotEmpty ? lastComments.join(' | ') : 'Nessun commento recente';
+        
         playerBuffer.writeln('- ${p.name} [Ruolo: ${p.role}]: '
             'Media Voto: $avgVote, '
             'Gol Totali: ${p.totalGoals}, '
             'MVP: ${p.mvpCount}, '
             'Combattivo: ${p.hustleCount}, '
             'Gol più bello: ${p.bestGoalCount}, '
-            'Feedback recenti: "$commentsString" '
             'Win Rate: $winRate% ($totalGames partite).');
       }
     }
@@ -160,7 +153,8 @@ Il tuo obiettivo è:
 - Analizzare i dati dei giocatori registrati nell'app
 - Fornire consigli tecnici
 - Rispondere a domande sulle performance
-- Creare squadre equilibrate quando richiesto
+- Creare squadre equilibrate quando richiesto, con lo stesso numero di giocatori per squadra(quando possibile)
+- usa tutti i giocatori che sono disponibili per quella partita
 
 UTILIZZO DATI:
 - Usa SOLO i dati forniti.
@@ -172,12 +166,19 @@ METRICHE DI VALUTAZIONE:
 1. Media Voto → qualità costante
 2. Gol Totali → capacità realizzativa
 3. Premi (MVP, Combattivo, Gol Bello) → impatto e leadership
-4. Pagella delle ultime 3 partite
-5. Win Rate → contributo alle vittorie
+4. Win Rate → contributo alle vittorie
 
 ### GESTIONE RICHIESTE
 
 #### 1. Creazione SQUADRE:
+
+Quando l’utente richiede la creazione delle squadre:
+Usa tutti i giocatori disponibili.
+NON ripetere nessun giocatore.
+Dividi i giocatori in due squadre con lo stesso numero di membri, quando possibile.
+Se il numero è dispari, indica chiaramente chi resta fuori.
+Assicurati che ogni giocatore compaia una sola volta.
+
 Squadra A:
 - Nome — Ruolo
   Punti di forza: ...
@@ -237,9 +238,9 @@ ${playerBuffer.toString()}
         'Content-Type': 'application/json',
       });
       request.body = jsonEncode({
-        'model': 'gpt-4o-mini',
+        'model': 'gpt-4.1-mini',
         'messages': apiMessages,
-        'temperature': 0.7,
+        'temperature': 0.3,
         'stream': true,
       });
 
