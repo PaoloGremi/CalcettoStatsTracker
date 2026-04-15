@@ -10,44 +10,44 @@ import 'package:calcetto_tracker/screens/api_key_setup_page.dart';
 
 // ─── Palette FIFA-style ───────────────────────────────────────────────────────
 class _FifaColors {
-  static const bgDeep    = Color(0xFF0A0E1A);   // sfondo principale, blu notte
-  static const bgCard    = Color(0xFF111827);   // card messaggi
-  static const bgInput   = Color(0xFF1C2536);   // input bar
-  static const green     = Color(0xFF00D46A);   // verde erba luminoso
-  static const greenDark = Color(0xFF008F48);   // verde campo scuro
-  static const gold      = Color(0xFFF5C518);   // oro FIFA
-  static const goldDark  = Color(0xFFB8890E);
-  static const userBubble= Color(0xFF1A3A5C);   // blu maglia
-  static const aiBubble  = Color(0xFF162035);
-  static const errorBg   = Color(0xFF3A0A0A);
-  static const textPrimary   = Color(0xFFF0F4FF);
+  static const bgDeep = Color(0xFF0A0E1A); // sfondo principale, blu notte
+  static const bgCard = Color(0xFF111827); // card messaggi
+  static const bgInput = Color(0xFF1C2536); // input bar
+  static const green = Color(0xFF00D46A); // verde erba luminoso
+  static const greenDark = Color(0xFF008F48); // verde campo scuro
+  static const gold = Color(0xFFF5C518); // oro FIFA
+  static const goldDark = Color(0xFFB8890E);
+  static const userBubble = Color(0xFF1A3A5C); // blu maglia
+  static const aiBubble = Color(0xFF162035);
+  static const errorBg = Color(0xFF3A0A0A);
+  static const textPrimary = Color(0xFFF0F4FF);
   static const textSecondary = Color(0xFF8A95B0);
-  static const divider   = Color(0xFF1E2D45);
+  static const divider = Color(0xFF1E2D45);
 }
 
 // ─── Theme helper ─────────────────────────────────────────────────────────────
 ThemeData fifaTheme() => ThemeData(
-  brightness: Brightness.dark,
-  scaffoldBackgroundColor: _FifaColors.bgDeep,
-  fontFamily: 'Roboto',
-  colorScheme: const ColorScheme.dark(
-    primary: _FifaColors.green,
-    secondary: _FifaColors.gold,
-    surface: _FifaColors.bgCard,
-  ),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Colors.transparent,
-    elevation: 0,
-    titleTextStyle: TextStyle(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: _FifaColors.bgDeep,
       fontFamily: 'Roboto',
-      fontWeight: FontWeight.w900,
-      fontSize: 18,
-      letterSpacing: 2.5,
-      color: _FifaColors.textPrimary,
-    ),
-    iconTheme: IconThemeData(color: _FifaColors.textPrimary),
-  ),
-);
+      colorScheme: const ColorScheme.dark(
+        primary: _FifaColors.green,
+        secondary: _FifaColors.gold,
+        surface: _FifaColors.bgCard,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Roboto',
+          fontWeight: FontWeight.w900,
+          fontSize: 18,
+          letterSpacing: 2.5,
+          color: _FifaColors.textPrimary,
+        ),
+        iconTheme: IconThemeData(color: _FifaColors.textPrimary),
+      ),
+    );
 
 // ─── Widget principale ────────────────────────────────────────────────────────
 class AiCoachPage extends StatefulWidget {
@@ -57,30 +57,33 @@ class AiCoachPage extends StatefulWidget {
   State<AiCoachPage> createState() => _AiCoachPageState();
 }
 
-class _AiCoachPageState extends State<AiCoachPage> with TickerProviderStateMixin {
-  final _storage          = const FlutterSecureStorage();
+class _AiCoachPageState extends State<AiCoachPage>
+    with TickerProviderStateMixin {
+  final _storage = const FlutterSecureStorage();
   final _messageController = TextEditingController();
-  final _scrollController  = ScrollController();
+  final _scrollController = ScrollController();
   final List<_ChatMessage> _messages = [];
 
-  bool    _loading = false;
+  bool _loading = false;
   String? _apiKey;
 
   late final AnimationController _headerAnim;
-  late final Animation<double>   _headerFade;
+  late final Animation<double> _headerFade;
 
   @override
   void initState() {
     super.initState();
 
-    _headerAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _headerAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 800));
     _headerFade = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
     _headerAnim.forward();
 
     _checkApiKey();
     _messages.add(_ChatMessage(
       role: 'assistant',
-      content: '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati della squadra. Come posso aiutarti oggi?',
+      content:
+          '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati della squadra. Come posso aiutarti oggi?',
     ));
   }
 
@@ -126,18 +129,18 @@ class _AiCoachPageState extends State<AiCoachPage> with TickerProviderStateMixin
           if (inTeamA && m.scoreA > m.scoreB) wins++;
           if (!inTeamA && m.scoreB > m.scoreA) wins++;
         }
-        final winRate = totalGames > 0
-            ? (wins / totalGames * 100).toStringAsFixed(0)
-            : '0';
+        final winRate =
+            totalGames > 0 ? (wins / totalGames * 100).toStringAsFixed(0) : '0';
         final allVotes = pMatches
             .map((m) => m.votes[p.id])
             .where((v) => v != null)
             .cast<double>()
             .toList();
         final avgVote = allVotes.isNotEmpty
-            ? (allVotes.reduce((a, b) => a + b) / allVotes.length).toStringAsFixed(2)
+            ? (allVotes.reduce((a, b) => a + b) / allVotes.length)
+                .toStringAsFixed(2)
             : 'N/A';
-        
+
         playerBuffer.writeln('- ${p.name} [Ruolo: ${p.role}]: '
             'Media Voto: $avgVote, '
             'Gol Totali: ${p.totalGoals}, '
@@ -253,7 +256,8 @@ ${playerBuffer.toString()}
       final responseBuffer = StringBuffer();
       String lineBuffer = '';
 
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk
+          in streamedResponse.stream.transform(utf8.decoder)) {
         lineBuffer += chunk;
         while (lineBuffer.contains('\n')) {
           final newlineIndex = lineBuffer.indexOf('\n');
@@ -264,11 +268,13 @@ ${playerBuffer.toString()}
           if (jsonStr == '[DONE]') break;
           try {
             final data = jsonDecode(jsonStr);
-            final delta = data['choices'][0]['delta']['content'] as String? ?? '';
+            final delta =
+                data['choices'][0]['delta']['content'] as String? ?? '';
             if (delta.isEmpty) continue;
             responseBuffer.write(delta);
             if (mounted) {
-              setState(() => assistantMessage.content = responseBuffer.toString());
+              setState(
+                  () => assistantMessage.content = responseBuffer.toString());
               _scrollToBottom();
             }
           } catch (_) {}
@@ -322,11 +328,13 @@ ${playerBuffer.toString()}
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: _messages.length +
                     (_loading && _messages.last.content.isEmpty ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (index == _messages.length) return const _TypingIndicator();
+                  if (index == _messages.length)
+                    return const _TypingIndicator();
                   return _MessageBubble(message: _messages[index]);
                 },
               ),
@@ -360,7 +368,7 @@ class _FifaAppBar extends StatelessWidget {
         opacity: fadeAnim,
         child: Row(
           children: [
-            // Badge rotondo verde con icona
+            // Badge rotondo verde
             Container(
               width: 44,
               height: 44,
@@ -370,13 +378,12 @@ class _FifaAppBar extends StatelessWidget {
                 border: Border.all(color: _FifaColors.green, width: 2),
               ),
               child: const Center(
-                child: Text('⚽', style: TextStyle(fontSize: 20)),
-              ),
+                  child: Text('⚽', style: TextStyle(fontSize: 20))),
             ),
             const SizedBox(width: 14),
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'COACH AI',
                   style: TextStyle(
@@ -399,6 +406,24 @@ class _FifaAppBar extends StatelessWidget {
               ],
             ),
             const Spacer(),
+            // --- NUOVO TASTO IMPOSTAZIONI ---
+            IconButton(
+              icon: const Icon(Icons.settings_outlined,
+                  color: _FifaColors.textSecondary, size: 20),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ApiKeySetupPage()),
+                ).then((_) {
+                  // Quando si torna indietro, ricarichiamo la chiave nel caso sia cambiata
+                  final state =
+                      context.findAncestorStateOfType<_AiCoachPageState>();
+                  state?._checkApiKey();
+                });
+              },
+            ),
+            // --------------------------------
+            const SizedBox(width: 8),
             // Pill "LIVE"
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -410,11 +435,10 @@ class _FifaAppBar extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 6, height: 6,
+                    width: 6,
+                    height: 6,
                     decoration: const BoxDecoration(
-                      color: _FifaColors.green,
-                      shape: BoxShape.circle,
-                    ),
+                        color: _FifaColors.green, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 5),
                   const Text(
@@ -462,7 +486,7 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUser  = message.role == 'user';
+    final isUser = message.role == 'user';
     final isError = message.role == 'error';
 
     return Padding(
@@ -515,9 +539,8 @@ class _MessageBubble extends StatelessWidget {
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color: isError
-                      ? Colors.red.shade300
-                      : _FifaColors.textPrimary,
+                  color:
+                      isError ? Colors.red.shade300 : _FifaColors.textPrimary,
                   fontSize: 14.5,
                   height: 1.5,
                 ),
@@ -547,11 +570,11 @@ class _Avatar extends StatelessWidget {
       height: 30,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isUser
-            ? _FifaColors.userBubble
-            : _FifaColors.greenDark,
+        color: isUser ? _FifaColors.userBubble : _FifaColors.greenDark,
         border: Border.all(
-          color: isUser ? _FifaColors.gold.withOpacity(0.5) : _FifaColors.green.withOpacity(0.6),
+          color: isUser
+              ? _FifaColors.gold.withOpacity(0.5)
+              : _FifaColors.green.withOpacity(0.6),
           width: 1.5,
         ),
       ),
@@ -576,12 +599,13 @@ class _TypingIndicator extends StatefulWidget {
 class _TypingIndicatorState extends State<_TypingIndicator>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  late final Animation<double>   _anim;
+  late final Animation<double> _anim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
       ..repeat(reverse: true);
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
@@ -662,7 +686,8 @@ class _InputBar extends StatelessWidget {
     final bottom = MediaQuery.of(context).padding.bottom;
     return Container(
       padding: EdgeInsets.only(
-        left: 16, right: 12,
+        left: 16,
+        right: 12,
         top: 12,
         bottom: bottom + 12,
       ),
@@ -695,7 +720,8 @@ class _InputBar extends StatelessWidget {
                     fontSize: 14,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 18, vertical: 12,
+                    horizontal: 18,
+                    vertical: 12,
                   ),
                   border: InputBorder.none,
                   prefixIcon: const Padding(
