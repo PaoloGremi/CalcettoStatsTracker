@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../data/hive_boxes.dart';
-import '../data/player_icons.dart';
 import '../models/player.dart';
 import '../models/field_model.dart';
 import '../widgets/player_avatar.dart';

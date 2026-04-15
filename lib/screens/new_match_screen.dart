@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../models/match_model.dart';
-import '../models/field_model.dart';
 import '../models/player.dart';
 import '../services/data_service.dart';
 import '../widgets/player_avatar.dart';
