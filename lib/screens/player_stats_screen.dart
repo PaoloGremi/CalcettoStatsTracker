@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -1639,23 +1641,20 @@ class _FieldStatsCard extends StatelessWidget {
     // Aggrega dati per campo
     final fieldData = <String, _FieldStat>{};
     for (final m in matches) {
-      // ✅ Dopo — risolve il nome dal box dei campi
       final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
-      final loc = field?.name ??
-          (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
-      fieldData.putIfAbsent(loc, () => _FieldStat());
+      final loc = field?.name ?? (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
+      final imagePath = field?.imagePath;
+
+      fieldData.putIfAbsent(loc, () => _FieldStat(imagePath: imagePath));
       final stat = fieldData[loc]!;
       stat.games++;
 
       final inTeamA = m.teamA.contains(playerId);
       final ps = inTeamA ? m.scoreA : m.scoreB;
       final os = inTeamA ? m.scoreB : m.scoreA;
-      if (ps > os)
-        stat.wins++;
-      else if (ps == os)
-        stat.draws++;
-      else
-        stat.losses++;
+      if (ps > os) stat.wins++;
+      else if (ps == os) stat.draws++;
+      else stat.losses++;
 
       final vote = m.votes[playerId];
       if (vote != null) {
@@ -1665,105 +1664,160 @@ class _FieldStatsCard extends StatelessWidget {
       stat.goals += m.goals[playerId] ?? 0;
     }
 
-    // Ordina per numero partite decrescente
     final sorted = fieldData.entries.toList()
       ..sort((a, b) => b.value.games.compareTo(a.value.games));
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        children: sorted.asMap().entries.map((entry) {
-          final i = entry.key;
-          final loc = entry.value.key;
-          final stat = entry.value.value;
-          final avg =
-              stat.votesCount > 0 ? stat.totalVotes / stat.votesCount : null;
-          final isLast = i == sorted.length - 1;
+    return Column(
+      children: sorted.map((entry) {
+        final loc = entry.key;
+        final stat = entry.value;
+        final avg = stat.votesCount > 0
+            ? stat.totalVotes / stat.votesCount
+            : null;
+        final hasImage = stat.imagePath != null &&
+            File(stat.imagePath!).existsSync();
 
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              border: isLast
-                  ? null
-                  : const Border(bottom: BorderSide(color: AppTheme.border)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nome campo + partite
-                Row(
+        final winsColor = stat.wins > stat.losses
+            ? AppTheme.accentGreen
+            : stat.losses > stat.wins
+                ? AppTheme.accentRed
+                : AppTheme.accentGold;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          height: 130,
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.border),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ── Sfondo immagine campo ──────────────────────────
+              if (hasImage)
+                Image.file(
+                  File(stat.imagePath!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(),
+                ),
+
+              // ── Overlay scuro (sempre, più intenso senza immagine) ──
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: hasImage
+                        ? [
+                            Colors.black.withOpacity(0.45),
+                            Colors.black.withOpacity(0.72),
+                          ]
+                        : [
+                            AppTheme.surface,
+                            AppTheme.surface,
+                          ],
+                  ),
+                ),
+              ),
+
+              // ── Contenuto ─────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('🏟️', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        loc,
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                    // Nome campo + partite
+                    Row(
+                      children: [
+                        const Text('🏟️', style: TextStyle(fontSize: 14)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            loc,
+                            style: TextStyle(
+                              color: hasImage
+                                  ? Colors.white
+                                  : AppTheme.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                              shadows: hasImage
+                                  ? [const Shadow(blurRadius: 4, color: Colors.black54)]
+                                  : null,
+                            ),
+                          ),
                         ),
-                      ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(hasImage ? 0.35 : 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${stat.games} ${stat.games == 1 ? 'partita' : 'partite'}',
+                            style: TextStyle(
+                              color: hasImage ? Colors.white70 : AppTheme.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '${stat.games} ${stat.games == 1 ? 'partita' : 'partite'}',
-                      style: const TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 11,
-                      ),
+
+                    // Metriche
+                    Row(
+                      children: [
+                        _FieldMetric(
+                          label: 'V/P/S',
+                          value: '${stat.wins}/${stat.draws}/${stat.losses}',
+                          color: hasImage ? Colors.white : winsColor,
+                          valueColor: hasImage ? winsColor : null,
+                          hasImage: hasImage,
+                        ),
+                        const SizedBox(width: 20),
+                        _FieldMetric(
+                          label: 'Voto medio',
+                          value: avg != null ? avg.toStringAsFixed(1) : '—',
+                          color: hasImage
+                              ? Colors.white
+                              : avg == null
+                                  ? AppTheme.textMuted
+                                  : avg >= 7.0
+                                      ? AppTheme.accentGreen
+                                      : avg >= 5.5
+                                          ? AppTheme.accentGold
+                                          : AppTheme.accentRed,
+                          hasImage: hasImage,
+                        ),
+                        const SizedBox(width: 20),
+                        _FieldMetric(
+                          label: 'Gol',
+                          value: '${stat.goals}',
+                          color: hasImage
+                              ? Colors.white
+                              : stat.goals > 0
+                                  ? AppTheme.accentRed
+                                  : AppTheme.textMuted,
+                          hasImage: hasImage,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                // Metriche in riga
-                Row(
-                  children: [
-                    _FieldMetric(
-                      label: 'V/P/S',
-                      value: '${stat.wins}/${stat.draws}/${stat.losses}',
-                      color: stat.wins > stat.losses
-                          ? AppTheme.accentGreen
-                          : stat.losses > stat.wins
-                              ? AppTheme.accentRed
-                              : AppTheme.accentGold,
-                    ),
-                    const SizedBox(width: 12),
-                    _FieldMetric(
-                      label: 'Voto medio',
-                      value: avg != null ? avg.toStringAsFixed(1) : '—',
-                      color: avg == null
-                          ? AppTheme.textMuted
-                          : avg >= 7.0
-                              ? AppTheme.accentGreen
-                              : avg >= 5.5
-                                  ? AppTheme.accentGold
-                                  : AppTheme.accentRed,
-                    ),
-                    const SizedBox(width: 12),
-                    _FieldMetric(
-                      label: 'Gol',
-                      value: '${stat.goals}',
-                      color: stat.goals > 0
-                          ? AppTheme.accentRed
-                          : AppTheme.textMuted,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
-
 class _FieldStat {
+  final String? imagePath;    // ← aggiunto
   int games = 0;
   int wins = 0;
   int draws = 0;
@@ -1771,17 +1825,23 @@ class _FieldStat {
   double totalVotes = 0;
   int votesCount = 0;
   int goals = 0;
+
+  _FieldStat({this.imagePath});  // ← aggiunto
 }
 
 class _FieldMetric extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final Color? valueColor;   // ← opzionale: colore separato per il valore
+  final bool hasImage;       // ← per aggiungere shadow
 
   const _FieldMetric({
     required this.label,
     required this.value,
     required this.color,
+    this.valueColor,
+    this.hasImage = false,
   });
 
   @override
@@ -1791,17 +1851,23 @@ class _FieldMetric extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              color: color,
+              color: valueColor ?? color,
               fontSize: 15,
               fontWeight: FontWeight.w900,
+              shadows: hasImage
+                  ? [const Shadow(blurRadius: 4, color: Colors.black87)]
+                  : null,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              color: AppTheme.textMuted,
+            style: TextStyle(
+              color: hasImage ? Colors.white60 : AppTheme.textMuted,
               fontSize: 10,
+              shadows: hasImage
+                  ? [const Shadow(blurRadius: 3, color: Colors.black54)]
+                  : null,
             ),
           ),
         ],
