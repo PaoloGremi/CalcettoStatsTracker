@@ -1281,6 +1281,29 @@ class PlayerStatsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                 ],
 
+                // ── Radar Performance ─────────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Radar Performance',
+                      accent: AppTheme.accentBlue),
+                  _RadarCard(
+                    avgVote: avgVote,
+                    totalGoals: totalGoals,
+                    totalGames: totalGames,
+                    mvpCount: player.mvpCount,
+                    hustleCount: player.hustleCount,
+                    bestGoalCount: player.bestGoalCount,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+// ── Statistiche per Campo ─────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Statistiche per Campo',
+                      accent: AppTheme.accentGreen),
+                  _FieldStatsCard(matches: matches, playerId: player.id),
+                  const SizedBox(height: 24),
+                ],
+
                 // ── Messaggio se non ci sono abbastanza dati ──────
                 if (votePoints.length < 2 && totalGoals == 0)
                   Container(
@@ -1450,6 +1473,337 @@ class _ResultAvgBadge extends StatelessWidget {
           FifaLabel(label, color: color.withOpacity(0.7), fontSize: 8),
           const SizedBox(height: 1),
           FifaLabel('($count partite)', color: AppTheme.textMuted, fontSize: 8),
+        ],
+      );
+}
+// ─────────────────────────────────────────────────────────────
+// Radar Performance
+// ─────────────────────────────────────────────────────────────
+
+class _RadarCard extends StatelessWidget {
+  final double avgVote;
+  final int totalGoals;
+  final int totalGames;
+  final int mvpCount;
+  final int hustleCount;
+  final int bestGoalCount;
+
+  const _RadarCard({
+    required this.avgVote,
+    required this.totalGoals,
+    required this.totalGames,
+    required this.mvpCount,
+    required this.hustleCount,
+    required this.bestGoalCount,
+  });
+
+  // Normalizza un valore su scala 0–1 con un cap "realistico"
+  double _norm(double value, double max) => (value / max).clamp(0.0, 1.0);
+
+  @override
+  Widget build(BuildContext context) {
+    // Scala di riferimento per normalizzazione (adatta a poche partite)
+    final votoNorm = _norm(avgVote, 10.0);
+    final golNorm =
+        _norm(totalGoals / totalGames, 2.0); // media gol/partita, cap 2
+    final mvpNorm = _norm(mvpCount.toDouble(), 5.0);
+    final hustleNorm = _norm(hustleCount.toDouble(), 5.0);
+    final bestGolNorm = _norm(bestGoalCount.toDouble(), 5.0);
+
+    const labels = ['Voto', 'Gol', 'MVP', 'Combatt.', 'Best ⚽'];
+    final values = [votoNorm, golNorm, mvpNorm, hustleNorm, bestGolNorm];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 220,
+            child: RadarChart(
+              RadarChartData(
+                radarShape: RadarShape.polygon,
+                tickCount: 4,
+                ticksTextStyle:
+                    const TextStyle(color: Colors.transparent, fontSize: 0),
+                radarBorderData:
+                    const BorderSide(color: AppTheme.border, width: 1),
+                gridBorderData:
+                    const BorderSide(color: AppTheme.border, width: 1),
+                tickBorderData: BorderSide(
+                    color: AppTheme.border.withOpacity(0.4), width: 1),
+                titleTextStyle: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+                getTitle: (index, angle) =>
+                    RadarChartTitle(text: labels[index]),
+                dataSets: [
+                  RadarDataSet(
+                    fillColor: AppTheme.accentBlue.withOpacity(0.18),
+                    borderColor: AppTheme.accentBlue,
+                    borderWidth: 2,
+                    entryRadius: 4,
+                    dataEntries:
+                        values.map((v) => RadarEntry(value: v)).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Legenda valori reali
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              _RadarLegendItem(
+                  label: 'Voto medio',
+                  value: avgVote.toStringAsFixed(1),
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Media gol/partita',
+                  value: (totalGoals / totalGames).toStringAsFixed(2),
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'MVP', value: '$mvpCount', color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Combattivo',
+                  value: '$hustleCount',
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Best ⚽',
+                  value: '$bestGoalCount',
+                  color: AppTheme.accentBlue),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RadarLegendItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _RadarLegendItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Statistiche per Campo
+// ─────────────────────────────────────────────────────────────
+
+class _FieldStatsCard extends StatelessWidget {
+  final List<MatchModel> matches;
+  final String playerId;
+
+  const _FieldStatsCard({required this.matches, required this.playerId});
+
+  @override
+  Widget build(BuildContext context) {
+    // Aggrega dati per campo
+    final fieldData = <String, _FieldStat>{};
+    for (final m in matches) {
+      // ✅ Dopo — risolve il nome dal box dei campi
+      final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
+      final loc = field?.name ??
+          (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
+      fieldData.putIfAbsent(loc, () => _FieldStat());
+      final stat = fieldData[loc]!;
+      stat.games++;
+
+      final inTeamA = m.teamA.contains(playerId);
+      final ps = inTeamA ? m.scoreA : m.scoreB;
+      final os = inTeamA ? m.scoreB : m.scoreA;
+      if (ps > os)
+        stat.wins++;
+      else if (ps == os)
+        stat.draws++;
+      else
+        stat.losses++;
+
+      final vote = m.votes[playerId];
+      if (vote != null) {
+        stat.totalVotes += vote;
+        stat.votesCount++;
+      }
+      stat.goals += m.goals[playerId] ?? 0;
+    }
+
+    // Ordina per numero partite decrescente
+    final sorted = fieldData.entries.toList()
+      ..sort((a, b) => b.value.games.compareTo(a.value.games));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: sorted.asMap().entries.map((entry) {
+          final i = entry.key;
+          final loc = entry.value.key;
+          final stat = entry.value.value;
+          final avg =
+              stat.votesCount > 0 ? stat.totalVotes / stat.votesCount : null;
+          final isLast = i == sorted.length - 1;
+
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              border: isLast
+                  ? null
+                  : const Border(bottom: BorderSide(color: AppTheme.border)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Nome campo + partite
+                Row(
+                  children: [
+                    const Text('🏟️', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        loc,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${stat.games} ${stat.games == 1 ? 'partita' : 'partite'}',
+                      style: const TextStyle(
+                        color: AppTheme.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Metriche in riga
+                Row(
+                  children: [
+                    _FieldMetric(
+                      label: 'V/P/S',
+                      value: '${stat.wins}/${stat.draws}/${stat.losses}',
+                      color: stat.wins > stat.losses
+                          ? AppTheme.accentGreen
+                          : stat.losses > stat.wins
+                              ? AppTheme.accentRed
+                              : AppTheme.accentGold,
+                    ),
+                    const SizedBox(width: 12),
+                    _FieldMetric(
+                      label: 'Voto medio',
+                      value: avg != null ? avg.toStringAsFixed(1) : '—',
+                      color: avg == null
+                          ? AppTheme.textMuted
+                          : avg >= 7.0
+                              ? AppTheme.accentGreen
+                              : avg >= 5.5
+                                  ? AppTheme.accentGold
+                                  : AppTheme.accentRed,
+                    ),
+                    const SizedBox(width: 12),
+                    _FieldMetric(
+                      label: 'Gol',
+                      value: '${stat.goals}',
+                      color: stat.goals > 0
+                          ? AppTheme.accentRed
+                          : AppTheme.textMuted,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _FieldStat {
+  int games = 0;
+  int wins = 0;
+  int draws = 0;
+  int losses = 0;
+  double totalVotes = 0;
+  int votesCount = 0;
+  int goals = 0;
+}
+
+class _FieldMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _FieldMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 10,
+            ),
+          ),
         ],
       );
 }
