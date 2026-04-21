@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:calcetto_tracker/widgets/ChemestryBubbleChart.dart';
+import 'package:calcetto_tracker/widgets/ChemistryRadarChart.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -1311,6 +1312,16 @@ class PlayerStatsScreen extends StatelessWidget {
                   const FifaSectionHeader('Chemistry con i Compagni',
                       accent: AppTheme.accentGreen),
                   ChemistryBubbleChart(
+                    matches: matches,
+                    player: player,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+                // ── Radar Chemistry ───────────────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Radar Chemistry',
+                      accent: AppTheme.accentBlue),
+                  ChemistryRadarChart(
                     matches: matches,
                     player: player,
                   ),
