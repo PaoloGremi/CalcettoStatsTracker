@@ -315,73 +315,77 @@ class _BubbleCanvas extends StatelessWidget {
     required this.onTap,
   });
 
-  // Margini interni del canvas
   static const double _padL = 32;
   static const double _padR = 16;
   static const double _padT = 12;
   static const double _padB = 24;
 
-  Offset _toCanvas(_ChemistryData d) {
-    final plotW = width - _padL - _padR;
-    final plotH = height - _padT - _padB;
-    // X = partite insieme (normalizzato)
-    final x = _padL + (d.games / maxGames) * plotW;
-    // Y = % vittorie (0% = bottom, 100% = top)
-    final winRate = d.games > 0 ? d.wins / d.games : 0.0;
-    final y = _padT + (1.0 - winRate) * plotH;
-    return Offset(x, y);
-  }
-
-  double _bubbleRadius(_ChemistryData d) {
-    // Raggio base + componente gol (6–20px)
-    final goalFraction = d.goalsFor / maxGoals;
-    return 6 + goalFraction * 14;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final centers = <Offset>[];
+
+    Offset toCanvas(_ChemistryData d) {
+      final plotW = width - _padL - _padR;
+      final plotH = height - _padT - _padB;
+
+      final x = _padL + (d.games / maxGames) * plotW;
+      final winRate = d.games > 0 ? d.wins / d.games : 0.0;
+      final y = _padT + (1.0 - winRate) * plotH;
+
+      Offset pos = Offset(x, y);
+
+      // Anti-overlap
+      for (final other in centers) {
+        if ((pos - other).distance < 32) {
+          pos = pos.translate(8, -8);
+        }
+      }
+
+      centers.add(pos);
+      return pos;
+    }
+
+    double bubbleRadius(_ChemistryData d) {
+      final goalFraction = d.goalsFor / maxGoals;
+      return 6 + goalFraction * 14;
+    }
+
     return GestureDetector(
       onTapDown: (details) {
         final pos = details.localPosition;
-        // Trova la bolla più vicina al tap (entro il suo raggio)
+
         for (final d in data) {
-          final center = _toCanvas(d);
-          final r = _bubbleRadius(d);
+          final center = toCanvas(d);
+          final r = bubbleRadius(d);
+
           if ((pos - center).distance <= r + 6) {
             onTap(d.playerId);
             return;
           }
         }
-        // Tap fuori da qualsiasi bolla → deseleziona
+
         onTap('');
       },
       child: CustomPaint(
         size: Size(width, height),
         painter: _BubblePainter(
           data: data,
-          maxGames: maxGames,
-          maxGoals: maxGoals,
           tappedId: tappedId,
-          toCanvas: _toCanvas,
-          bubbleRadius: _bubbleRadius,
+          toCanvas: toCanvas,
+          bubbleRadius: bubbleRadius,
         ),
       ),
     );
   }
 }
-
 class _BubblePainter extends CustomPainter {
   final List<_ChemistryData> data;
-  final int maxGames;
-  final int maxGoals;
   final String? tappedId;
   final Offset Function(_ChemistryData) toCanvas;
   final double Function(_ChemistryData) bubbleRadius;
 
   _BubblePainter({
     required this.data,
-    required this.maxGames,
-    required this.maxGoals,
     required this.tappedId,
     required this.toCanvas,
     required this.bubbleRadius,
@@ -397,16 +401,15 @@ class _BubblePainter extends CustomPainter {
     final plotW = size.width - padL - padR;
     final plotH = size.height - padT - padB;
 
-    // ── Griglia ────────────────────────────────────────────
     final gridPaint = Paint()
       ..color = AppTheme.border.withOpacity(0.5)
       ..strokeWidth = 0.8;
 
-    // Linee orizzontali 0%, 25%, 50%, 75%, 100%
+    // Griglia orizzontale
     for (int pct in [0, 25, 50, 75, 100]) {
       final y = padT + (1 - pct / 100) * plotH;
       canvas.drawLine(Offset(padL, y), Offset(size.width - padR, y), gridPaint);
-      // Label
+
       final tp = TextPainter(
         text: TextSpan(
           text: '$pct%',
@@ -414,90 +417,108 @@ class _BubblePainter extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
+
       tp.paint(canvas, Offset(0, y - 5));
     }
 
-    // Linea 50% più spessa (break-even)
+    // Linea 50%
     final midPaint = Paint()
       ..color = AppTheme.accentGold.withOpacity(0.3)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
+      ..strokeWidth = 1.5;
+
     final midY = padT + 0.5 * plotH;
     canvas.drawLine(
         Offset(padL, midY), Offset(size.width - padR, midY), midPaint);
 
-    // ── Bolle gol subiti (background, rosso semitrasparente) ──
-    for (final d in data) {
-      final center = toCanvas(d);
-      final r = bubbleRadius(d);
-      // Bolla gol subiti: stessa posizione, leggermente più grande, rossa
-      final concededFraction = maxGoals > 0 ? d.goalsConceded / maxGoals : 0.0;
-      final rConceded = 4 + concededFraction * 12;
-      final paintConceded = Paint()
-        ..color = AppTheme.accentRed.withOpacity(0.18)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(center, rConceded + r * 0.3, paintConceded);
-    }
-
-    // ── Bolle principali ───────────────────────────────────
+    // ── Bolle ──
     for (final d in data) {
       final center = toCanvas(d);
       final r = bubbleRadius(d);
       final isTapped = d.playerId == tappedId;
+
       final winRate = d.games > 0 ? d.wins / d.games : 0.0;
 
-      // Colore in base alla win rate
-      final Color bubbleColor;
-      if (winRate >= 0.6) {
-        bubbleColor = AppTheme.accentGreen;
-      } else if (winRate >= 0.4) {
-        bubbleColor = AppTheme.accentGold;
-      } else {
-        bubbleColor = AppTheme.accentRed;
-      }
+      final Color color = winRate >= 0.6
+          ? AppTheme.accentGreen
+          : winRate >= 0.4
+              ? AppTheme.accentGold
+              : AppTheme.accentRed;
 
       // Fill
-      final fillPaint = Paint()
-        ..color = isTapped
-            ? bubbleColor.withOpacity(0.55)
-            : bubbleColor.withOpacity(0.25)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(center, r, fillPaint);
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..color = isTapped
+              ? color.withOpacity(0.55)
+              : color.withOpacity(0.25),
+      );
 
-      // Bordo
-      final borderPaint = Paint()
-        ..color = isTapped ? bubbleColor : bubbleColor.withOpacity(0.6)
-        ..strokeWidth = isTapped ? 2.5 : 1.5
-        ..style = PaintingStyle.stroke;
-      canvas.drawCircle(center, r, borderPaint);
+      // Border
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..color = isTapped ? color : color.withOpacity(0.6)
+          ..strokeWidth = isTapped ? 2.5 : 1.5
+          ..style = PaintingStyle.stroke,
+      );
 
-      // Iniziale del nome (sempre visibile se la bolla è abbastanza grande)
-      if (r >= 9 || isTapped) {
-        final initial = d.name.isNotEmpty ? d.name[0].toUpperCase() : '?';
+      // Testo interno
+      if (r >= 10 || isTapped) {
+        final text = isTapped
+            ? d.name.split(' ').first
+            : d.name[0].toUpperCase();
+
         final tp = TextPainter(
           text: TextSpan(
-            text: isTapped ? d.name.split(' ').first : initial,
+            text: text,
             style: TextStyle(
-              color: isTapped ? Colors.white : bubbleColor,
+              color: isTapped ? Colors.white : color,
               fontSize: isTapped ? 9 : 10,
               fontWeight: FontWeight.w900,
             ),
           ),
           textDirection: TextDirection.ltr,
-          textAlign: TextAlign.center,
-        )..layout(maxWidth: r * 2.2);
+        )..layout(maxWidth: r * 2);
+
         tp.paint(
           canvas,
           center - Offset(tp.width / 2, tp.height / 2),
         );
       }
 
-      // Cerchio highlight per bolla selezionata
+      // Label sotto (NUOVO)
+      final shortName = d.name.length > 4
+          ? d.name.substring(0, 4).toUpperCase()
+          : d.name.toUpperCase();
+
+      final labelTp = TextPainter(
+        text: TextSpan(
+          text: shortName,
+          style: const TextStyle(
+            color: AppTheme.textMuted,
+            fontSize: 8,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      labelTp.paint(
+        canvas,
+        center + Offset(-labelTp.width / 2, r + 2),
+      );
+
+      // Glow selezione
       if (isTapped) {
-        final glowPaint = Paint()
-          ..color = bubbleColor.withOpacity(0.25)
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(center, r + 6, glowPaint);
+        canvas.drawCircle(
+          center,
+          r + 6,
+          Paint()
+            ..color = color.withOpacity(0.25)
+            ..style = PaintingStyle.fill,
+        );
       }
     }
   }
@@ -506,7 +527,6 @@ class _BubblePainter extends CustomPainter {
   bool shouldRepaint(_BubblePainter old) =>
       old.tappedId != tappedId || old.data != data;
 }
-
 // ── Data class ────────────────────────────────────────────────
 
 class _ChemistryData {
