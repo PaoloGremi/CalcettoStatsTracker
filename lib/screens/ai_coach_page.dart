@@ -109,46 +109,29 @@ class _AiCoachPageState extends State<AiCoachPage>
 
   // ── Prompt builder (invariato dalla versione originale) ───────────────────
   String _buildSystemPrompt(DataService ds) {
-    final players = ds.getAllPlayers();
-    final matches = ds.getAllMatches();
-    final playerBuffer = StringBuffer();
-    playerBuffer.writeln('ROSA GIOCATORI E STATISTICHE ANALITICHE:');
-    if (players.isEmpty) {
-      playerBuffer.writeln('Nessun giocatore registrato.');
-    } else {
-      for (var p in players) {
-        final pMatches = matches
-            .where((m) => m.teamA.contains(p.id) || m.teamB.contains(p.id))
-            .toList();
-        pMatches.sort((a, b) => b.date.compareTo(a.date));
-        final totalGames = pMatches.length;
-        int wins = 0;
-        for (var m in pMatches) {
-          final inTeamA = m.teamA.contains(p.id);
-          if (inTeamA && m.scoreA > m.scoreB) wins++;
-          if (!inTeamA && m.scoreB > m.scoreA) wins++;
-        }
-        final winRate =
-            totalGames > 0 ? (wins / totalGames * 100).toStringAsFixed(0) : '0';
-        final allVotes = pMatches
-            .map((m) => m.votes[p.id])
-            .where((v) => v != null)
-            .cast<double>()
-            .toList();
-        final avgVote = allVotes.isNotEmpty
-            ? (allVotes.reduce((a, b) => a + b) / allVotes.length)
-                .toStringAsFixed(2)
-            : 'N/A';
-
-        playerBuffer.writeln('- ${p.name} [Ruolo: ${p.role}]: '
-            'Media Voto: $avgVote, '
-            'Gol Totali: ${p.totalGoals}, '
-            'MVP: ${p.mvpCount}, '
-            'Combattivo: ${p.hustleCount}, '
-            'Gol più bello: ${p.bestGoalCount}, '
-            'Win Rate: $winRate% ($totalGames partite).');
-      }
-    }
+    final contextJson = {
+    "players": ds.getAllPlayers().map((p) => {
+          "id": p.id,
+          "name": p.name,
+          "role": p.role,
+          "totalGoals": p.totalGoals,
+          "mvpCount": p.mvpCount,
+          "hustleCount": p.hustleCount,
+          "bestGoalCount": p.bestGoalCount,
+        }).toList(),
+    "matches": ds.getAllMatches().map((m) => {
+          "id": m.id,
+          "date": m.date.toIso8601String(),
+          "teamA": m.teamA,
+          "teamB": m.teamB,
+          "scoreA": m.scoreA,
+          "scoreB": m.scoreB,
+          "votes": m.votes,
+          "MVP": m.mvp, 
+          "Combattivo": m.hustlePlayer, 
+          "Gol più bello": m.bestGoalPlayer, 
+        }).toList(),
+  };
     return '''
 Sei un esperto di calcetto e data analyst che assiste l'utente nella gestione del proprio gruppo di Calcetto.
 Il tuo obiettivo è:
@@ -158,6 +141,12 @@ Il tuo obiettivo è:
 - Creare squadre equilibrate quando richiesto, con lo stesso numero di giocatori per squadra(quando possibile)
 - usa tutti i giocatori che sono disponibili per quella partita
 
+REGOLE:
+- NON mostrare mai il JSON
+- NON copiare i dati raw nella risposta
+- Usa i dati solo per analisi
+
+Rispondi alla domanda dell’utente in modo chiaro e sintetico.
 UTILIZZO DATI:
 - Usa SOLO i dati forniti.
 - NON inventare MAI statistiche, ruoli o informazioni mancanti.
@@ -201,8 +190,8 @@ Rispondi in modo chiaro e sintetico usando i dati.
 - NON inventare dati
 - Sii sintetico ma informativo
 
-DATI SQUADRA:
-${playerBuffer.toString()}
+DATI (NON MOSTRARLI ALL’UTENTE):
+${jsonEncode(contextJson)}
 ''';
   }
 
