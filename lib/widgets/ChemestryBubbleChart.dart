@@ -296,7 +296,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
 
 // ── Canvas personalizzato per le bolle ────────────────────────
 
-class _BubbleCanvas extends StatelessWidget {
+class _BubbleCanvas extends StatefulWidget {
   final List<_ChemistryData> data;
   final int maxGames;
   final int maxGoals;
@@ -321,73 +321,129 @@ class _BubbleCanvas extends StatelessWidget {
   static const double _padB = 24;
 
   @override
-  Widget build(BuildContext context) {
-    final centers = <Offset>[];
+  State<_BubbleCanvas> createState() => _BubbleCanvasState();
+}
 
-    Offset toCanvas(_ChemistryData d) {
-      final plotW = width - _padL - _padR;
-      final plotH = height - _padT - _padB;
+class _BubbleCanvasState extends State<_BubbleCanvas>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Map<String, Offset> _centers;
 
-      final x = _padL + (d.games / maxGames) * plotW;
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+
+    _computeCenters();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BubbleCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.data != widget.data) {
+      _computeCenters(); // 🔥 importante: non ricalcolare ogni frame
+    }
+
+    if (oldWidget.tappedId != widget.tappedId) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  void _computeCenters() {
+    final centers = <String, Offset>{};
+    final placed = <Offset>[];
+
+    final plotW = widget.width - _BubbleCanvas._padL - _BubbleCanvas._padR;
+    final plotH = widget.height - _BubbleCanvas._padT - _BubbleCanvas._padB;
+
+    for (final d in widget.data) {
+      final x = _BubbleCanvas._padL + (d.games / widget.maxGames) * plotW;
+
       final winRate = d.games > 0 ? d.wins / d.games : 0.0;
-      final y = _padT + (1.0 - winRate) * plotH;
+      final y = _BubbleCanvas._padT + (1.0 - winRate) * plotH;
 
       Offset pos = Offset(x, y);
 
-      // Anti-overlap
-      for (final other in centers) {
+      // Anti-overlap stabile
+      for (final other in placed) {
         if ((pos - other).distance < 32) {
           pos = pos.translate(8, -8);
         }
       }
 
-      centers.add(pos);
-      return pos;
+      placed.add(pos);
+      centers[d.playerId] = pos;
     }
 
-    double bubbleRadius(_ChemistryData d) {
-      final goalFraction = d.goalsFor / maxGoals;
-      return 6 + goalFraction * 14;
-    }
+    _centers = centers;
+  }
 
-    return GestureDetector(
-      onTapDown: (details) {
-        final pos = details.localPosition;
+  double _bubbleRadius(_ChemistryData d) {
+    final goalFraction = d.goalsFor / widget.maxGoals;
+    return 6 + goalFraction * 14;
+  }
 
-        for (final d in data) {
-          final center = toCanvas(d);
-          final r = bubbleRadius(d);
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, __) {
+        return GestureDetector(
+          onTapDown: (details) {
+            final pos = details.localPosition;
 
-          if ((pos - center).distance <= r + 6) {
-            onTap(d.playerId);
-            return;
-          }
-        }
+            for (final d in widget.data) {
+              final center = _centers[d.playerId]!;
+              final r = _bubbleRadius(d);
 
-        onTap('');
+              if ((pos - center).distance <= r + 6) {
+                widget.onTap(d.playerId);
+                return;
+              }
+            }
+
+            widget.onTap('');
+          },
+          child: CustomPaint(
+            size: Size(widget.width, widget.height),
+            painter: _BubblePainter(
+              data: widget.data,
+              centers: _centers,
+              tappedId: widget.tappedId,
+              animationValue: _controller.value,
+              bubbleRadius: _bubbleRadius,
+            ),
+          ),
+        );
       },
-      child: CustomPaint(
-        size: Size(width, height),
-        painter: _BubblePainter(
-          data: data,
-          tappedId: tappedId,
-          toCanvas: toCanvas,
-          bubbleRadius: bubbleRadius,
-        ),
-      ),
     );
   }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 }
+
+@override
 class _BubblePainter extends CustomPainter {
   final List<_ChemistryData> data;
   final String? tappedId;
-  final Offset Function(_ChemistryData) toCanvas;
   final double Function(_ChemistryData) bubbleRadius;
+  final double animationValue;
+  final Map<String, Offset> centers;
 
   _BubblePainter({
     required this.data,
+    required this.centers,
     required this.tappedId,
-    required this.toCanvas,
+    required this.animationValue,
     required this.bubbleRadius,
   });
 
@@ -432,49 +488,61 @@ class _BubblePainter extends CustomPainter {
 
     // ── Bolle ──
     for (final d in data) {
-      final center = toCanvas(d);
-      final r = bubbleRadius(d);
+      final center = centers[d.playerId]!;
+      final baseR = bubbleRadius(d);
       final isTapped = d.playerId == tappedId;
+// Raggio animato
+      final r = isTapped
+          ? baseR + 6 * Curves.easeOutBack.transform(animationValue)
+          : baseR;
 
+// Opacità dinamica
+      final opacity = isTapped ? 0.25 + 0.30 * animationValue : 0.25;
+
+      // Colore
       final winRate = d.games > 0 ? d.wins / d.games : 0.0;
-
-      final Color color = winRate >= 0.6
+      final Color baseColor = winRate >= 0.6
           ? AppTheme.accentGreen
           : winRate >= 0.4
               ? AppTheme.accentGold
               : AppTheme.accentRed;
 
-      // Fill
+      // Fill (animato)
       canvas.drawCircle(
         center,
         r,
-        Paint()
-          ..color = isTapped
-              ? color.withOpacity(0.55)
-              : color.withOpacity(0.25),
+        Paint()..color = baseColor.withOpacity(opacity),
       );
 
-      // Border
+      // Border animato
       canvas.drawCircle(
         center,
         r,
         Paint()
-          ..color = isTapped ? color : color.withOpacity(0.6)
-          ..strokeWidth = isTapped ? 2.5 : 1.5
+          ..color = isTapped ? baseColor : baseColor.withOpacity(0.6)
+          ..strokeWidth = isTapped ? 1.5 + 1.5 * animationValue : 1.5
           ..style = PaintingStyle.stroke,
       );
-
+// Glow animato
+      if (isTapped) {
+        canvas.drawCircle(
+          center,
+          r + 10 * animationValue,
+          Paint()
+            ..color = baseColor.withOpacity(0.25 * animationValue)
+            ..style = PaintingStyle.fill,
+        );
+      }
       // Testo interno
       if (r >= 10 || isTapped) {
-        final text = isTapped
-            ? d.name.split(' ').first
-            : d.name[0].toUpperCase();
+        final text =
+            isTapped ? d.name.split(' ').first : d.name[0].toUpperCase();
 
         final tp = TextPainter(
           text: TextSpan(
             text: text,
             style: TextStyle(
-              color: isTapped ? Colors.white : color,
+              color: isTapped ? Colors.white : baseColor,
               fontSize: isTapped ? 9 : 10,
               fontWeight: FontWeight.w900,
             ),
@@ -516,7 +584,7 @@ class _BubblePainter extends CustomPainter {
           center,
           r + 6,
           Paint()
-            ..color = color.withOpacity(0.25)
+            ..color = baseColor.withOpacity(0.25)
             ..style = PaintingStyle.fill,
         );
       }
@@ -525,7 +593,9 @@ class _BubblePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BubblePainter old) =>
-      old.tappedId != tappedId || old.data != data;
+      old.tappedId != tappedId ||
+      old.data != data ||
+      old.animationValue != animationValue;
 }
 // ── Data class ────────────────────────────────────────────────
 
