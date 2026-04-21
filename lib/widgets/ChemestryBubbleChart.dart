@@ -1,0 +1,572 @@
+// ─────────────────────────────────────────────────────────────
+// Chemistry Bubble Chart
+// ─────────────────────────────────────────────────────────────
+
+import 'package:calcetto_tracker/data/hive_boxes.dart';
+import 'package:calcetto_tracker/models/match_model.dart';
+import 'package:calcetto_tracker/models/player.dart';
+import 'package:calcetto_tracker/theme/app_theme.dart';
+import 'package:flutter/material.dart';
+
+class ChemistryBubbleChart extends StatefulWidget {
+  final List<MatchModel> matches;
+  final Player player;
+
+  const ChemistryBubbleChart({
+    required this.matches,
+    required this.player,
+  });
+
+  @override
+  State<ChemistryBubbleChart> createState() => ChemistryBubbleChartState();
+}
+
+class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
+  String? _tappedId;
+
+  // Calcola i dati chemistry per ogni compagno di squadra
+  List<_ChemistryData> _computeChemistry() {
+    final playerId = widget.player.id;
+    final allPlayers = HiveBoxes.playersBox.values.toList();
+
+    // mappa playerId -> dati aggregati
+    final data = <String, _ChemistryData>{};
+
+    for (final m in widget.matches) {
+      // Determina se il giocatore è in teamA o teamB
+      final inTeamA = m.teamA.contains(playerId);
+      final inTeamB = m.teamB.contains(playerId);
+      if (!inTeamA && !inTeamB) continue;
+
+      final teammates = inTeamA ? m.teamA : m.teamB;
+      final playerScore = inTeamA ? m.scoreA : m.scoreB;
+      final oppScore = inTeamA ? m.scoreB : m.scoreA;
+
+      final isWin = playerScore > oppScore;
+      final isDraw = playerScore == oppScore;
+
+      // Gol del giocatore selezionato in questa partita
+      final myGoals = m.goals[playerId] ?? 0;
+      // Gol subiti (avversari)
+      final conceded = inTeamA ? m.scoreB : m.scoreA;
+
+      for (final tid in teammates) {
+        if (tid == playerId) continue;
+        data.putIfAbsent(tid, () => _ChemistryData(playerId: tid));
+        final c = data[tid]!;
+        c.games++;
+        if (isWin) c.wins++;
+        if (isDraw) c.draws++;
+        c.goalsFor += myGoals;
+        c.goalsConceded += conceded;
+      }
+    }
+
+    // Arricchisci con il nome del giocatore
+    final result = <_ChemistryData>[];
+    for (final entry in data.values) {
+      if (entry.games == 0) continue;
+      final p = HiveBoxes.playersBox.get(entry.playerId);
+      if (p == null) continue;
+      entry.name = p.name;
+      entry.role = p.role;
+      result.add(entry);
+    }
+
+    // Ordina per games decrescente (bolle più a destra = più esperienza insieme)
+    result.sort((a, b) => b.games.compareTo(a.games));
+    return result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chemData = _computeChemistry();
+
+    if (chemData.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: const Center(
+          child: Text(
+            'Nessun dato disponibile.\nServono partite con compagni in comune.',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final maxGames =
+        chemData.map((d) => d.games).reduce((a, b) => a > b ? a : b);
+    final maxGoals =
+        chemData.map((d) => d.goalsFor).reduce((a, b) => a > b ? a : b);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          // ── Legenda assi ───────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _AxisLabel('← meno partite insieme   più partite →',
+                    color: AppTheme.textMuted),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+            child: Row(
+              children: [
+                _AxisLabel('↑ % vittorie', color: AppTheme.textMuted),
+                const Spacer(),
+                // Legenda dimensione bolla
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.accentGreen,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text('gol fatti',
+                        style:
+                            TextStyle(color: AppTheme.textMuted, fontSize: 9)),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentRed.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text('gol subiti',
+                        style:
+                            TextStyle(color: AppTheme.textMuted, fontSize: 9)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Canvas bolle ───────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: SizedBox(
+              height: 280,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return _BubbleCanvas(
+                    data: chemData,
+                    maxGames: maxGames,
+                    maxGoals: maxGoals > 0 ? maxGoals : 1,
+                    width: constraints.maxWidth,
+                    height: 280,
+                    tappedId: _tappedId,
+                    onTap: (id) => setState(() {
+                      _tappedId = _tappedId == id ? null : id;
+                    }),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // ── Tooltip giocatore selezionato ──────────────────
+          if (_tappedId != null) ...[
+            const Divider(height: 1, color: AppTheme.border),
+            _buildTooltip(chemData.firstWhere((d) => d.playerId == _tappedId,
+                orElse: () => chemData.first)),
+          ],
+
+          // ── Nota tap ───────────────────────────────────────
+          if (_tappedId == null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(
+                'Tocca una bolla per vedere i dettagli',
+                style: TextStyle(
+                    color: AppTheme.textMuted.withOpacity(0.6), fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTooltip(_ChemistryData d) {
+    final winPct = d.games > 0 ? (d.wins / d.games * 100).round() : 0;
+    final drawPct = d.games > 0 ? (d.draws / d.games * 100).round() : 0;
+    final lossPct = 100 - winPct - drawPct;
+    final roleColor = switch (d.role) {
+      'P' => AppTheme.accentGold,
+      'D' => AppTheme.accentBlue,
+      'C' => AppTheme.accentGreen,
+      'A' => AppTheme.accentRed,
+      _ => AppTheme.textMuted,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          // Nome + ruolo
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    FifaBadge(d.role, color: roleColor),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        d.name.toUpperCase(),
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${d.games} partite insieme',
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          // Stats V/P/S
+          _TooltipStat(
+              label: 'VINTE',
+              value: '${d.wins}',
+              sub: '$winPct%',
+              color: AppTheme.accentGreen),
+          const SizedBox(width: 10),
+          _TooltipStat(
+              label: 'PARI',
+              value: '${d.draws}',
+              sub: '$drawPct%',
+              color: AppTheme.accentGold),
+          const SizedBox(width: 10),
+          _TooltipStat(
+              label: 'PERSE',
+              value: '${d.games - d.wins - d.draws}',
+              sub: '$lossPct%',
+              color: AppTheme.accentRed),
+          const SizedBox(width: 10),
+          _TooltipStat(
+              label: 'GOL F.',
+              value: '${d.goalsFor}',
+              sub: '',
+              color: AppTheme.accentGreen),
+          const SizedBox(width: 10),
+          _TooltipStat(
+              label: 'GOL S.',
+              value: '${d.goalsConceded}',
+              sub: '',
+              color: AppTheme.accentRed),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Canvas personalizzato per le bolle ────────────────────────
+
+class _BubbleCanvas extends StatelessWidget {
+  final List<_ChemistryData> data;
+  final int maxGames;
+  final int maxGoals;
+  final double width;
+  final double height;
+  final String? tappedId;
+  final ValueChanged<String> onTap;
+
+  const _BubbleCanvas({
+    required this.data,
+    required this.maxGames,
+    required this.maxGoals,
+    required this.width,
+    required this.height,
+    required this.tappedId,
+    required this.onTap,
+  });
+
+  // Margini interni del canvas
+  static const double _padL = 32;
+  static const double _padR = 16;
+  static const double _padT = 12;
+  static const double _padB = 24;
+
+  Offset _toCanvas(_ChemistryData d) {
+    final plotW = width - _padL - _padR;
+    final plotH = height - _padT - _padB;
+    // X = partite insieme (normalizzato)
+    final x = _padL + (d.games / maxGames) * plotW;
+    // Y = % vittorie (0% = bottom, 100% = top)
+    final winRate = d.games > 0 ? d.wins / d.games : 0.0;
+    final y = _padT + (1.0 - winRate) * plotH;
+    return Offset(x, y);
+  }
+
+  double _bubbleRadius(_ChemistryData d) {
+    // Raggio base + componente gol (6–20px)
+    final goalFraction = d.goalsFor / maxGoals;
+    return 6 + goalFraction * 14;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (details) {
+        final pos = details.localPosition;
+        // Trova la bolla più vicina al tap (entro il suo raggio)
+        for (final d in data) {
+          final center = _toCanvas(d);
+          final r = _bubbleRadius(d);
+          if ((pos - center).distance <= r + 6) {
+            onTap(d.playerId);
+            return;
+          }
+        }
+        // Tap fuori da qualsiasi bolla → deseleziona
+        onTap('');
+      },
+      child: CustomPaint(
+        size: Size(width, height),
+        painter: _BubblePainter(
+          data: data,
+          maxGames: maxGames,
+          maxGoals: maxGoals,
+          tappedId: tappedId,
+          toCanvas: _toCanvas,
+          bubbleRadius: _bubbleRadius,
+        ),
+      ),
+    );
+  }
+}
+
+class _BubblePainter extends CustomPainter {
+  final List<_ChemistryData> data;
+  final int maxGames;
+  final int maxGoals;
+  final String? tappedId;
+  final Offset Function(_ChemistryData) toCanvas;
+  final double Function(_ChemistryData) bubbleRadius;
+
+  _BubblePainter({
+    required this.data,
+    required this.maxGames,
+    required this.maxGoals,
+    required this.tappedId,
+    required this.toCanvas,
+    required this.bubbleRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const padL = _BubbleCanvas._padL;
+    const padR = _BubbleCanvas._padR;
+    const padT = _BubbleCanvas._padT;
+    const padB = _BubbleCanvas._padB;
+
+    final plotW = size.width - padL - padR;
+    final plotH = size.height - padT - padB;
+
+    // ── Griglia ────────────────────────────────────────────
+    final gridPaint = Paint()
+      ..color = AppTheme.border.withOpacity(0.5)
+      ..strokeWidth = 0.8;
+
+    // Linee orizzontali 0%, 25%, 50%, 75%, 100%
+    for (int pct in [0, 25, 50, 75, 100]) {
+      final y = padT + (1 - pct / 100) * plotH;
+      canvas.drawLine(Offset(padL, y), Offset(size.width - padR, y), gridPaint);
+      // Label
+      final tp = TextPainter(
+        text: TextSpan(
+          text: '$pct%',
+          style: const TextStyle(color: AppTheme.textMuted, fontSize: 8),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(0, y - 5));
+    }
+
+    // Linea 50% più spessa (break-even)
+    final midPaint = Paint()
+      ..color = AppTheme.accentGold.withOpacity(0.3)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    final midY = padT + 0.5 * plotH;
+    canvas.drawLine(
+        Offset(padL, midY), Offset(size.width - padR, midY), midPaint);
+
+    // ── Bolle gol subiti (background, rosso semitrasparente) ──
+    for (final d in data) {
+      final center = toCanvas(d);
+      final r = bubbleRadius(d);
+      // Bolla gol subiti: stessa posizione, leggermente più grande, rossa
+      final concededFraction = maxGoals > 0 ? d.goalsConceded / maxGoals : 0.0;
+      final rConceded = 4 + concededFraction * 12;
+      final paintConceded = Paint()
+        ..color = AppTheme.accentRed.withOpacity(0.18)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(center, rConceded + r * 0.3, paintConceded);
+    }
+
+    // ── Bolle principali ───────────────────────────────────
+    for (final d in data) {
+      final center = toCanvas(d);
+      final r = bubbleRadius(d);
+      final isTapped = d.playerId == tappedId;
+      final winRate = d.games > 0 ? d.wins / d.games : 0.0;
+
+      // Colore in base alla win rate
+      final Color bubbleColor;
+      if (winRate >= 0.6) {
+        bubbleColor = AppTheme.accentGreen;
+      } else if (winRate >= 0.4) {
+        bubbleColor = AppTheme.accentGold;
+      } else {
+        bubbleColor = AppTheme.accentRed;
+      }
+
+      // Fill
+      final fillPaint = Paint()
+        ..color = isTapped
+            ? bubbleColor.withOpacity(0.55)
+            : bubbleColor.withOpacity(0.25)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(center, r, fillPaint);
+
+      // Bordo
+      final borderPaint = Paint()
+        ..color = isTapped ? bubbleColor : bubbleColor.withOpacity(0.6)
+        ..strokeWidth = isTapped ? 2.5 : 1.5
+        ..style = PaintingStyle.stroke;
+      canvas.drawCircle(center, r, borderPaint);
+
+      // Iniziale del nome (sempre visibile se la bolla è abbastanza grande)
+      if (r >= 9 || isTapped) {
+        final initial = d.name.isNotEmpty ? d.name[0].toUpperCase() : '?';
+        final tp = TextPainter(
+          text: TextSpan(
+            text: isTapped ? d.name.split(' ').first : initial,
+            style: TextStyle(
+              color: isTapped ? Colors.white : bubbleColor,
+              fontSize: isTapped ? 9 : 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.center,
+        )..layout(maxWidth: r * 2.2);
+        tp.paint(
+          canvas,
+          center - Offset(tp.width / 2, tp.height / 2),
+        );
+      }
+
+      // Cerchio highlight per bolla selezionata
+      if (isTapped) {
+        final glowPaint = Paint()
+          ..color = bubbleColor.withOpacity(0.25)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(center, r + 6, glowPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BubblePainter old) =>
+      old.tappedId != tappedId || old.data != data;
+}
+
+// ── Data class ────────────────────────────────────────────────
+
+class _ChemistryData {
+  final String playerId;
+  String name = '';
+  String role = '';
+  int games = 0;
+  int wins = 0;
+  int draws = 0;
+  int goalsFor = 0;
+  int goalsConceded = 0;
+
+  _ChemistryData({required this.playerId});
+}
+
+// ── Widget ausiliari tooltip ───────────────────────────────────
+
+class _TooltipStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final String sub;
+  final Color color;
+
+  const _TooltipStat({
+    required this.label,
+    required this.value,
+    required this.sub,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value,
+              style: TextStyle(
+                  color: color, fontSize: 15, fontWeight: FontWeight.w900)),
+          if (sub.isNotEmpty)
+            Text(sub,
+                style: TextStyle(
+                    color: color.withOpacity(0.6),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w600)),
+        ],
+      );
+}
+
+class _AxisLabel extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _AxisLabel(this.text, {required this.color});
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: TextStyle(color: color, fontSize: 9),
+      );
+}

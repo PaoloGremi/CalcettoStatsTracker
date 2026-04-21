@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:calcetto_tracker/widgets/ChemestryBubbleChart.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -1305,7 +1306,16 @@ class PlayerStatsScreen extends StatelessWidget {
                   _FieldStatsCard(matches: matches, playerId: player.id),
                   const SizedBox(height: 24),
                 ],
-
+// ── Chemistry con gli altri giocatori ────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Chemistry con i Compagni',
+                      accent: AppTheme.accentGreen),
+                  ChemistryBubbleChart(
+                    matches: matches,
+                    player: player,
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 // ── Messaggio se non ci sono abbastanza dati ──────
                 if (votePoints.length < 2 && totalGoals == 0)
                   Container(
@@ -1642,7 +1652,8 @@ class _FieldStatsCard extends StatelessWidget {
     final fieldData = <String, _FieldStat>{};
     for (final m in matches) {
       final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
-      final loc = field?.name ?? (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
+      final loc = field?.name ??
+          (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
       final imagePath = field?.imagePath;
 
       fieldData.putIfAbsent(loc, () => _FieldStat(imagePath: imagePath));
@@ -1652,9 +1663,12 @@ class _FieldStatsCard extends StatelessWidget {
       final inTeamA = m.teamA.contains(playerId);
       final ps = inTeamA ? m.scoreA : m.scoreB;
       final os = inTeamA ? m.scoreB : m.scoreA;
-      if (ps > os) stat.wins++;
-      else if (ps == os) stat.draws++;
-      else stat.losses++;
+      if (ps > os)
+        stat.wins++;
+      else if (ps == os)
+        stat.draws++;
+      else
+        stat.losses++;
 
       final vote = m.votes[playerId];
       if (vote != null) {
@@ -1671,11 +1685,10 @@ class _FieldStatsCard extends StatelessWidget {
       children: sorted.map((entry) {
         final loc = entry.key;
         final stat = entry.value;
-        final avg = stat.votesCount > 0
-            ? stat.totalVotes / stat.votesCount
-            : null;
-        final hasImage = stat.imagePath != null &&
-            File(stat.imagePath!).existsSync();
+        final avg =
+            stat.votesCount > 0 ? stat.totalVotes / stat.votesCount : null;
+        final hasImage =
+            stat.imagePath != null && File(stat.imagePath!).existsSync();
 
         final winsColor = stat.wins > stat.losses
             ? AppTheme.accentGreen
@@ -1724,7 +1737,8 @@ class _FieldStatsCard extends StatelessWidget {
 
               // ── Contenuto ─────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1745,21 +1759,28 @@ class _FieldStatsCard extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.5,
                               shadows: hasImage
-                                  ? [const Shadow(blurRadius: 4, color: Colors.black54)]
+                                  ? [
+                                      const Shadow(
+                                          blurRadius: 4, color: Colors.black54)
+                                    ]
                                   : null,
                             ),
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(hasImage ? 0.35 : 0.08),
+                            color: Colors.black
+                                .withOpacity(hasImage ? 0.35 : 0.08),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             '${stat.games} ${stat.games == 1 ? 'partita' : 'partite'}',
                             style: TextStyle(
-                              color: hasImage ? Colors.white70 : AppTheme.textMuted,
+                              color: hasImage
+                                  ? Colors.white70
+                                  : AppTheme.textMuted,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1816,8 +1837,9 @@ class _FieldStatsCard extends StatelessWidget {
     );
   }
 }
+
 class _FieldStat {
-  final String? imagePath;    // ← aggiunto
+  final String? imagePath; // ← aggiunto
   int games = 0;
   int wins = 0;
   int draws = 0;
@@ -1826,15 +1848,15 @@ class _FieldStat {
   int votesCount = 0;
   int goals = 0;
 
-  _FieldStat({this.imagePath});  // ← aggiunto
+  _FieldStat({this.imagePath}); // ← aggiunto
 }
 
 class _FieldMetric extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  final Color? valueColor;   // ← opzionale: colore separato per il valore
-  final bool hasImage;       // ← per aggiungere shadow
+  final Color? valueColor; // ← opzionale: colore separato per il valore
+  final bool hasImage; // ← per aggiungere shadow
 
   const _FieldMetric({
     required this.label,
