@@ -197,7 +197,7 @@ class _HeroPoster extends StatelessWidget {
     final hasFileImage = fieldImagePath != null && File(fieldImagePath!).existsSync();
 
     return SizedBox(
-      height: 280,
+      height: 220,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -912,14 +912,6 @@ class _FooterBranding extends StatelessWidget {
                 children: [
                   FifaLabel('Champions Calcetto Stats',
                       color: AppTheme.textSecondary, fontSize: 11),
-                  Text(
-                    'Powered by CCS',
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 9,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
                 ],
               ),
             ],
