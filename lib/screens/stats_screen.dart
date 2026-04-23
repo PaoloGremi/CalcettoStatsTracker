@@ -6,7 +6,7 @@ import '../models/player.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 
-enum _SortMode { avgVote, mvp, hustle, bestGoal, goals } // ✅ aggiunto goals
+enum _SortMode { avgVote, mvp, hustle, bestGoal, goals, matches } // ✅ aggiunto matches
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -24,6 +24,7 @@ class _StatsScreenState extends State<StatsScreen> {
     {'value': _SortMode.hustle,   'label': 'Più Combattivo',    'emoji': '🔥'},
     {'value': _SortMode.bestGoal, 'label': 'Best Goal',         'emoji': '⚽'},
     {'value': _SortMode.goals,    'label': 'Gol Segnati',       'emoji': '🥅'}, // ✅
+    {'value': _SortMode.matches,  'label': 'Partite Giocate',   'emoji': '📊'}, // ✅
   ];
 
   Color _voteColor(double avg) {
@@ -40,6 +41,7 @@ class _StatsScreenState extends State<StatsScreen> {
       case _SortMode.hustle:   return AppTheme.accentOrange;
       case _SortMode.bestGoal: return AppTheme.accentGreen;
       case _SortMode.goals:    return AppTheme.accentRed; // ✅
+      case _SortMode.matches:  return AppTheme.accentBlue; // ✅ (colore neutro, stat di presenza)
     }
   }
 
@@ -52,6 +54,7 @@ class _StatsScreenState extends State<StatsScreen> {
       case _SortMode.hustle:   return player.hustleCount;
       case _SortMode.bestGoal: return player.bestGoalCount;
       case _SortMode.goals:    return stats[player.id]!['goals'] as int; // ✅ calcolato dalle partite
+      case _SortMode.matches:  return stats[player.id]!['games'] as int; // ✅ partite giocate
     }
   }
 
@@ -217,6 +220,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   _SortMode.hustle   => AppTheme.accentOrange,
                   _SortMode.bestGoal => AppTheme.accentGreen,
                   _SortMode.goals    => AppTheme.accentRed, // ✅
+                  _SortMode.matches  => AppTheme.accentBlue, // ✅
                 };
 
                 final boxMain = switch (_mode) {
@@ -225,6 +229,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   _SortMode.hustle   => '${player.hustleCount}',
                   _SortMode.bestGoal => '${player.bestGoalCount}',
                   _SortMode.goals    => '${(stats[player.id]!["goals"] as int)}', // ✅
+                  _SortMode.matches  => '${(stats[player.id]!["games"] as int)}', // ✅
                 };
 
                 final boxSub = switch (_mode) {
@@ -233,6 +238,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   _SortMode.hustle   => '🔥',
                   _SortMode.bestGoal => '⚽',
                   _SortMode.goals    => '🥅', // ✅
+                  _SortMode.matches  => '📊', // ✅
                 };
 
                 return InkWell(
