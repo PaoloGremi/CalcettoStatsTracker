@@ -181,6 +181,7 @@ class CsvService {
       int votesCount = 0;
       double bestVote = 0;
       double worstVote = 10;
+      int totalGoals = 0;
 
       for (final match in matches) {
         if (match.teamA.contains(player.id) || match.teamB.contains(player.id)) {
@@ -192,6 +193,7 @@ class CsvService {
             if (v > bestVote) bestVote = v;
             if (v < worstVote) worstVote = v;
           }
+          totalGoals += match.goals[player.id] ?? 0;
         }
       }
 
@@ -206,7 +208,7 @@ class CsvService {
         avgVote.toStringAsFixed(2),
         votesCount > 0 ? bestVote.toStringAsFixed(1) : '',
         votesCount > 0 ? worstVote.toStringAsFixed(1) : '',
-        player.totalGoals, // ✅
+        totalGoals,
       ]);
     }
 
@@ -219,7 +221,7 @@ class CsvService {
 
   Future<void> exportAll() async {
     final playersFile = await exportPlayers();
-    final fieldsFile  = await exportFields(); // ✅
+    final fieldsFile  = await exportFields();
     final matchesFile = await exportMatches();
     final votesFile   = await exportVotes();
     final statsFile   = await exportStats();

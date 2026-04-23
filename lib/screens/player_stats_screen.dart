@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:calcetto_tracker/widgets/ChemestryBubbleChart.dart';
+import 'package:calcetto_tracker/widgets/ChemistryRadarChart.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +19,8 @@ class PlayerStatsScreen extends StatelessWidget {
   /// Recupera le partite del giocatore ordinate per data crescente
   List<MatchModel> _playerMatches() {
     final matches = HiveBoxes.matchesBox.values
-        .where((m) => m.teamA.contains(player.id) || m.teamB.contains(player.id))
+        .where(
+            (m) => m.teamA.contains(player.id) || m.teamB.contains(player.id))
         .toList();
     matches.sort((a, b) => a.date.compareTo(b.date));
     return matches;
@@ -54,18 +59,22 @@ class PlayerStatsScreen extends StatelessWidget {
     final worstVote = votedGames > 0
         ? votePoints.map((s) => s.y).reduce((a, b) => a < b ? a : b)
         : 0.0;
-    final totalGoals = goalPoints.map((s) => s.y.toInt()).reduce((a, b) => a + b);
-
+    final totalGoals = goalPoints.isEmpty
+        ? 0
+        : goalPoints.map((s) => s.y.toInt()).reduce((a, b) => a + b);
 
     // ── Vittorie / Pareggi / Sconfitte ───────────────────────
     int wins = 0, draws = 0, losses = 0;
     for (final m in matches) {
       final inTeamA = m.teamA.contains(player.id);
       final playerScore = inTeamA ? m.scoreA : m.scoreB;
-      final oppScore    = inTeamA ? m.scoreB : m.scoreA;
-      if (playerScore > oppScore) wins++;
-      else if (playerScore == oppScore) draws++;
-      else losses++;
+      final oppScore = inTeamA ? m.scoreB : m.scoreA;
+      if (playerScore > oppScore)
+        wins++;
+      else if (playerScore == oppScore)
+        draws++;
+      else
+        losses++;
     }
 
     // ── Statistiche aggiuntive ────────────────────────────────
@@ -96,8 +105,10 @@ class PlayerStatsScreen extends StatelessWidget {
         final ps = inTeamA ? m.scoreA : m.scoreB;
         final os = inTeamA ? m.scoreB : m.scoreA;
         final r = ps > os ? 'V' : (ps == os ? 'P' : 'S');
-        if (r == lastResult) streakCount++;
-        else break;
+        if (r == lastResult)
+          streakCount++;
+        else
+          break;
       }
       currentStreak = '$streakCount$lastResult';
     }
@@ -126,7 +137,8 @@ class PlayerStatsScreen extends StatelessWidget {
     }
     double? modeVote;
     if (voteFreq.isNotEmpty) {
-      modeVote = voteFreq.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+      modeVote =
+          voteFreq.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
     }
 
     // ── Partite per mese ─────────────────────────────────────
@@ -141,15 +153,24 @@ class PlayerStatsScreen extends StatelessWidget {
     // ── Distribuzione voti (istogramma) ──────────────────────
     // Raggruppa i voti in bucket: 1-2, 3-4, 5-6, 7-8, 9-10
     final voteDistribution = <String, int>{
-      '1-2': 0, '3-4': 0, '5-6': 0, '7-8': 0, '9-10': 0,
+      '1-2': 0,
+      '3-4': 0,
+      '5-6': 0,
+      '7-8': 0,
+      '9-10': 0,
     };
     for (final s in votePoints) {
       final v = s.y;
-      if (v <= 2) voteDistribution['1-2'] = voteDistribution['1-2']! + 1;
-      else if (v <= 4) voteDistribution['3-4'] = voteDistribution['3-4']! + 1;
-      else if (v <= 6) voteDistribution['5-6'] = voteDistribution['5-6']! + 1;
-      else if (v <= 8) voteDistribution['7-8'] = voteDistribution['7-8']! + 1;
-      else voteDistribution['9-10'] = voteDistribution['9-10']! + 1;
+      if (v <= 2)
+        voteDistribution['1-2'] = voteDistribution['1-2']! + 1;
+      else if (v <= 4)
+        voteDistribution['3-4'] = voteDistribution['3-4']! + 1;
+      else if (v <= 6)
+        voteDistribution['5-6'] = voteDistribution['5-6']! + 1;
+      else if (v <= 8)
+        voteDistribution['7-8'] = voteDistribution['7-8']! + 1;
+      else
+        voteDistribution['9-10'] = voteDistribution['9-10']! + 1;
     }
 
     // ── Voto medio per mese ───────────────────────────────────
@@ -185,20 +206,24 @@ class PlayerStatsScreen extends StatelessWidget {
       final inTeamA = m.teamA.contains(player.id);
       final ps = inTeamA ? m.scoreA : m.scoreB;
       final os = inTeamA ? m.scoreB : m.scoreA;
-      if (ps > os) votesByResult['V']!.add(vote);
-      else if (ps == os) votesByResult['P']!.add(vote);
-      else votesByResult['S']!.add(vote);
+      if (ps > os)
+        votesByResult['V']!.add(vote);
+      else if (ps == os)
+        votesByResult['P']!.add(vote);
+      else
+        votesByResult['S']!.add(vote);
     }
     double _avg(List<double> list) =>
         list.isEmpty ? 0.0 : list.reduce((a, b) => a + b) / list.length;
-    final avgVoteWin  = _avg(votesByResult['V']!);
+    final avgVoteWin = _avg(votesByResult['V']!);
     final avgVoteDraw = _avg(votesByResult['P']!);
     final avgVoteLoss = _avg(votesByResult['S']!);
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: FifaLabel(player.name, color: AppTheme.textPrimary, fontSize: 13),
+        title:
+            FifaLabel(player.name, color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppTheme.border),
@@ -215,7 +240,6 @@ class PlayerStatsScreen extends StatelessWidget {
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               children: [
-
                 // ── Header giocatore ──────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -262,15 +286,20 @@ class PlayerStatsScreen extends StatelessWidget {
                 // ── Statistiche sommario ──────────────────────────
                 Row(
                   children: [
-                    _StatBox(label: 'PARTITE', value: '$totalGames',
+                    _StatBox(
+                        label: 'PARTITE',
+                        value: '$totalGames',
                         color: AppTheme.accentBlue),
                     const SizedBox(width: 8),
                     _StatBox(
                         label: 'VOTO MEDIO',
-                        value: votedGames > 0 ? avgVote.toStringAsFixed(2) : '—',
+                        value:
+                            votedGames > 0 ? avgVote.toStringAsFixed(2) : '—',
                         color: AppTheme.accentGold),
                     const SizedBox(width: 8),
-                    _StatBox(label: 'GOL TOTALI', value: '$totalGoals',
+                    _StatBox(
+                        label: 'GOL TOTALI',
+                        value: '$totalGoals',
                         color: AppTheme.accentRed),
                   ],
                 ),
@@ -281,15 +310,19 @@ class PlayerStatsScreen extends StatelessWidget {
                   children: [
                     _StatBox(
                         label: 'MIGLIOR VOTO',
-                        value: votedGames > 0 ? bestVote.toStringAsFixed(1) : '—',
+                        value:
+                            votedGames > 0 ? bestVote.toStringAsFixed(1) : '—',
                         color: AppTheme.accentGreen),
                     const SizedBox(width: 8),
                     _StatBox(
                         label: 'PEGGIOR VOTO',
-                        value: votedGames > 0 ? worstVote.toStringAsFixed(1) : '—',
+                        value:
+                            votedGames > 0 ? worstVote.toStringAsFixed(1) : '—',
                         color: AppTheme.accentOrange),
                     const SizedBox(width: 8),
-                    _StatBox(label: 'MVP', value: '${player.mvpCount}',
+                    _StatBox(
+                        label: 'MVP',
+                        value: '${player.mvpCount}',
                         color: AppTheme.accentGold,
                         emoji: '👑'),
                   ],
@@ -346,7 +379,8 @@ class PlayerStatsScreen extends StatelessWidget {
                     const SizedBox(width: 8),
                     _StatBox(
                       label: 'VOTO MODALE',
-                      value: modeVote != null ? modeVote.toStringAsFixed(1) : '—',
+                      value:
+                          modeVote != null ? modeVote.toStringAsFixed(1) : '—',
                       color: AppTheme.accentGold,
                     ),
                   ],
@@ -390,7 +424,9 @@ class PlayerStatsScreen extends StatelessWidget {
                             sideTitles: SideTitles(
                               showTitles: true,
                               reservedSize: 22,
-                              interval: (votePoints.length / 5).ceilToDouble().clamp(1, 99),
+                              interval: (votePoints.length / 5)
+                                  .ceilToDouble()
+                                  .clamp(1, 99),
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
                                 if (i < 0 || i >= dateLabels.length) {
@@ -435,7 +471,8 @@ class PlayerStatsScreen extends StatelessWidget {
                             LineChartBarData(
                               spots: [
                                 FlSpot(0, avgVote),
-                                FlSpot((matches.length - 1).toDouble(), avgVote),
+                                FlSpot(
+                                    (matches.length - 1).toDouble(), avgVote),
                               ],
                               isCurved: false,
                               color: AppTheme.accentGold.withOpacity(0.35),
@@ -447,9 +484,11 @@ class PlayerStatsScreen extends StatelessWidget {
                         lineTouchData: LineTouchData(
                           touchTooltipData: LineTouchTooltipData(
                             getTooltipItems: (spots) => spots.map((s) {
-                              if (s.barIndex == 1) return null; // nascondi tooltip media
+                              if (s.barIndex == 1)
+                                return null; // nascondi tooltip media
                               final i = s.x.toInt();
-                              final date = i < dateLabels.length ? dateLabels[i] : '';
+                              final date =
+                                  i < dateLabels.length ? dateLabels[i] : '';
                               return LineTooltipItem(
                                 '$date\n${s.y.toStringAsFixed(1)}',
                                 const TextStyle(
@@ -483,7 +522,10 @@ class PlayerStatsScreen extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: (goalPoints.map((s) => s.y).reduce((a, b) => a > b ? a : b) + 1),
+                        maxY: (goalPoints
+                                .map((s) => s.y)
+                                .reduce((a, b) => a > b ? a : b) +
+                            1),
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
@@ -501,7 +543,8 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble()) return const SizedBox();
+                                if (v != v.floorToDouble())
+                                  return const SizedBox();
                                 return Text(
                                   v.toInt().toString(),
                                   style: const TextStyle(
@@ -516,9 +559,11 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= dateLabels.length) return const SizedBox();
+                                if (i < 0 || i >= dateLabels.length)
+                                  return const SizedBox();
                                 // mostra solo ogni N label per non sovraffollare
-                                final step = (matches.length / 5).ceil().clamp(1, 99);
+                                final step =
+                                    (matches.length / 5).ceil().clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
                                 return Text(
                                   dateLabels[i],
@@ -541,7 +586,9 @@ class PlayerStatsScreen extends StatelessWidget {
                             x: i,
                             barRods: [
                               BarChartRodData(
-                                toY: spot.y == 0 ? 0.05 : spot.y, // piccolo segno anche per 0
+                                toY: spot.y == 0
+                                    ? 0.05
+                                    : spot.y, // piccolo segno anche per 0
                                 color: hasGoal
                                     ? AppTheme.accentRed
                                     : AppTheme.border,
@@ -556,7 +603,8 @@ class PlayerStatsScreen extends StatelessWidget {
                           touchTooltipData: BarTouchTooltipData(
                             getTooltipItem: (group, _, rod, __) {
                               final i = group.x;
-                              final date = i < dateLabels.length ? dateLabels[i] : '';
+                              final date =
+                                  i < dateLabels.length ? dateLabels[i] : '';
                               final goals = goalPoints[i].y.toInt();
                               return BarTooltipItem(
                                 '$date\n$goals 🥅',
@@ -666,7 +714,10 @@ class PlayerStatsScreen extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: (matchesByMonth.values.reduce((a, b) => a > b ? a : b) + 1).toDouble(),
+                        maxY: (matchesByMonth.values
+                                    .reduce((a, b) => a > b ? a : b) +
+                                1)
+                            .toDouble(),
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
@@ -684,7 +735,8 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble()) return const SizedBox();
+                                if (v != v.floorToDouble())
+                                  return const SizedBox();
                                 return Text(
                                   v.toInt().toString(),
                                   style: const TextStyle(
@@ -699,12 +751,16 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= sortedMonthKeys.length) return const SizedBox();
-                                final step = (sortedMonthKeys.length / 5).ceil().clamp(1, 99);
+                                if (i < 0 || i >= sortedMonthKeys.length)
+                                  return const SizedBox();
+                                final step = (sortedMonthKeys.length / 5)
+                                    .ceil()
+                                    .clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
                                 // "yyyy-MM" -> "mmm yy"
                                 final parts = sortedMonthKeys[i].split('-');
-                                final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+                                final dt = DateTime(
+                                    int.parse(parts[0]), int.parse(parts[1]));
                                 return Text(
                                   DateFormat('MMM yy', 'it_IT').format(dt),
                                   style: const TextStyle(
@@ -741,8 +797,10 @@ class PlayerStatsScreen extends StatelessWidget {
                               final i = group.x;
                               final key = sortedMonthKeys[i];
                               final parts = key.split('-');
-                              final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-                              final label = DateFormat('MMMM yyyy', 'it_IT').format(dt);
+                              final dt = DateTime(
+                                  int.parse(parts[0]), int.parse(parts[1]));
+                              final label =
+                                  DateFormat('MMMM yyyy', 'it_IT').format(dt);
                               final count = matchesByMonth[key]!;
                               return BarTooltipItem(
                                 '$label\n$count partite',
@@ -769,13 +827,16 @@ class PlayerStatsScreen extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: (voteDistribution.values.reduce((a, b) => a > b ? a : b) + 1).toDouble(),
+                        maxY: (voteDistribution.values
+                                    .reduce((a, b) => a > b ? a : b) +
+                                1)
+                            .toDouble(),
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
                           horizontalInterval: 1,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: AppTheme.border, strokeWidth: 1),
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: AppTheme.border, strokeWidth: 1),
                         ),
                         borderData: FlBorderData(show: false),
                         titlesData: FlTitlesData(
@@ -785,10 +846,12 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble()) return const SizedBox();
+                                if (v != v.floorToDouble())
+                                  return const SizedBox();
                                 return Text(v.toInt().toString(),
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 10));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 10));
                               },
                             ),
                           ),
@@ -797,19 +860,33 @@ class PlayerStatsScreen extends StatelessWidget {
                               showTitles: true,
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
-                                final labels = ['1-2','3-4','5-6','7-8','9-10'];
+                                final labels = [
+                                  '1-2',
+                                  '3-4',
+                                  '5-6',
+                                  '7-8',
+                                  '9-10'
+                                ];
                                 final i = v.toInt();
-                                if (i < 0 || i >= labels.length) return const SizedBox();
+                                if (i < 0 || i >= labels.length)
+                                  return const SizedBox();
                                 return Text(labels[i],
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 9));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 9));
                               },
                             ),
                           ),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
                         ),
-                        barGroups: voteDistribution.entries.toList().asMap().entries.map((e) {
+                        barGroups: voteDistribution.entries
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((e) {
                           final i = e.key;
                           final count = e.value.value;
                           // colore caldo per i voti alti
@@ -836,7 +913,13 @@ class PlayerStatsScreen extends StatelessWidget {
                         barTouchData: BarTouchData(
                           touchTooltipData: BarTouchTooltipData(
                             getTooltipItem: (group, _, rod, __) {
-                              final labels = ['1-2','3-4','5-6','7-8','9-10'];
+                              final labels = [
+                                '1-2',
+                                '3-4',
+                                '5-6',
+                                '7-8',
+                                '9-10'
+                              ];
                               return BarTooltipItem(
                                 'Voto ${labels[group.x]}\n${rod.toY.toInt()} volte',
                                 const TextStyle(
@@ -866,8 +949,8 @@ class PlayerStatsScreen extends StatelessWidget {
                           show: true,
                           drawVerticalLine: false,
                           horizontalInterval: 2,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: AppTheme.border, strokeWidth: 1),
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: AppTheme.border, strokeWidth: 1),
                         ),
                         borderData: FlBorderData(show: false),
                         titlesData: FlTitlesData(
@@ -889,11 +972,15 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= sortedVoteMonthKeys.length) return const SizedBox();
-                                final step = (sortedVoteMonthKeys.length / 4).ceil().clamp(1, 99);
+                                if (i < 0 || i >= sortedVoteMonthKeys.length)
+                                  return const SizedBox();
+                                final step = (sortedVoteMonthKeys.length / 4)
+                                    .ceil()
+                                    .clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
                                 final parts = sortedVoteMonthKeys[i].split('-');
-                                final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+                                final dt = DateTime(
+                                    int.parse(parts[0]), int.parse(parts[1]));
                                 return Text(
                                   DateFormat('MMM yy', 'it_IT').format(dt),
                                   style: const TextStyle(
@@ -902,19 +989,26 @@ class PlayerStatsScreen extends StatelessWidget {
                               },
                             ),
                           ),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
                         ),
                         lineBarsData: [
                           LineChartBarData(
-                            spots: sortedVoteMonthKeys.asMap().entries.map((e) =>
-                                FlSpot(e.key.toDouble(), avgVoteByMonth[e.value]!)).toList(),
+                            spots: sortedVoteMonthKeys
+                                .asMap()
+                                .entries
+                                .map((e) => FlSpot(
+                                    e.key.toDouble(), avgVoteByMonth[e.value]!))
+                                .toList(),
                             isCurved: true,
                             color: AppTheme.accentGold,
                             barWidth: 2.5,
                             dotData: FlDotData(
                               show: true,
-                              getDotPainter: (_, __, ___, ____) => FlDotCirclePainter(
+                              getDotPainter: (_, __, ___, ____) =>
+                                  FlDotCirclePainter(
                                 radius: 4,
                                 color: AppTheme.accentGold,
                                 strokeWidth: 1.5,
@@ -931,10 +1025,13 @@ class PlayerStatsScreen extends StatelessWidget {
                           touchTooltipData: LineTouchTooltipData(
                             getTooltipItems: (spots) => spots.map((s) {
                               final i = s.x.toInt();
-                              if (i < 0 || i >= sortedVoteMonthKeys.length) return null;
+                              if (i < 0 || i >= sortedVoteMonthKeys.length)
+                                return null;
                               final parts = sortedVoteMonthKeys[i].split('-');
-                              final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-                              final label = DateFormat('MMM yyyy', 'it_IT').format(dt);
+                              final dt = DateTime(
+                                  int.parse(parts[0]), int.parse(parts[1]));
+                              final label =
+                                  DateFormat('MMM yyyy', 'it_IT').format(dt);
                               return LineTooltipItem(
                                 '$label\n${s.y.toStringAsFixed(1)}',
                                 const TextStyle(
@@ -962,8 +1059,8 @@ class PlayerStatsScreen extends StatelessWidget {
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                            color: AppTheme.border, strokeWidth: 1),
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: AppTheme.border, strokeWidth: 1),
                         ),
                         borderData: FlBorderData(show: false),
                         titlesData: FlTitlesData(
@@ -972,10 +1069,12 @@ class PlayerStatsScreen extends StatelessWidget {
                               showTitles: true,
                               reservedSize: 28,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble()) return const SizedBox();
+                                if (v != v.floorToDouble())
+                                  return const SizedBox();
                                 return Text(v.toInt().toString(),
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 10));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 10));
                               },
                             ),
                           ),
@@ -985,17 +1084,22 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= dateLabels.length) return const SizedBox();
-                                final step = (matches.length / 5).ceil().clamp(1, 99);
+                                if (i < 0 || i >= dateLabels.length)
+                                  return const SizedBox();
+                                final step =
+                                    (matches.length / 5).ceil().clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
                                 return Text(dateLabels[i],
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 9));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 9));
                               },
                             ),
                           ),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
                         ),
                         lineBarsData: [
                           LineChartBarData(
@@ -1014,7 +1118,8 @@ class PlayerStatsScreen extends StatelessWidget {
                           touchTooltipData: LineTouchTooltipData(
                             getTooltipItems: (spots) => spots.map((s) {
                               final i = s.x.toInt();
-                              final date = i < dateLabels.length ? dateLabels[i] : '';
+                              final date =
+                                  i < dateLabels.length ? dateLabels[i] : '';
                               return LineTooltipItem(
                                 '$date\n${s.y.toInt()} gol totali',
                                 const TextStyle(
@@ -1032,7 +1137,9 @@ class PlayerStatsScreen extends StatelessWidget {
                 ],
 
                 // ── Grafico: Voto Medio per Risultato ────────────
-                if (votePoints.isNotEmpty && (votesByResult['V']!.isNotEmpty || votesByResult['S']!.isNotEmpty)) ...[
+                if (votePoints.isNotEmpty &&
+                    (votesByResult['V']!.isNotEmpty ||
+                        votesByResult['S']!.isNotEmpty)) ...[
                   const FifaSectionHeader('Voto per Risultato',
                       accent: AppTheme.accentBlue),
                   Container(
@@ -1068,7 +1175,8 @@ class PlayerStatsScreen extends StatelessWidget {
                                     getTitlesWidget: (v, _) => Text(
                                       v.toInt().toString(),
                                       style: const TextStyle(
-                                          color: AppTheme.textMuted, fontSize: 10),
+                                          color: AppTheme.textMuted,
+                                          fontSize: 10),
                                     ),
                                   ),
                                 ),
@@ -1077,17 +1185,25 @@ class PlayerStatsScreen extends StatelessWidget {
                                     showTitles: true,
                                     reservedSize: 22,
                                     getTitlesWidget: (v, _) {
-                                      const labels = ['Vittorie', 'Pareggi', 'Sconfitte'];
+                                      const labels = [
+                                        'Vittorie',
+                                        'Pareggi',
+                                        'Sconfitte'
+                                      ];
                                       final i = v.toInt();
-                                      if (i < 0 || i >= labels.length) return const SizedBox();
+                                      if (i < 0 || i >= labels.length)
+                                        return const SizedBox();
                                       return Text(labels[i],
                                           style: const TextStyle(
-                                              color: AppTheme.textMuted, fontSize: 9));
+                                              color: AppTheme.textMuted,
+                                              fontSize: 9));
                                     },
                                   ),
                                 ),
-                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                rightTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
+                                topTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
                               ),
                               barGroups: [
                                 BarChartGroupData(x: 0, barRods: [
@@ -1095,7 +1211,8 @@ class PlayerStatsScreen extends StatelessWidget {
                                     toY: avgVoteWin,
                                     color: AppTheme.accentGreen,
                                     width: 36,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(6)),
                                   ),
                                 ]),
                                 BarChartGroupData(x: 1, barRods: [
@@ -1103,7 +1220,8 @@ class PlayerStatsScreen extends StatelessWidget {
                                     toY: avgVoteDraw,
                                     color: AppTheme.accentGold,
                                     width: 36,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(6)),
                                   ),
                                 ]),
                                 BarChartGroupData(x: 2, barRods: [
@@ -1111,14 +1229,19 @@ class PlayerStatsScreen extends StatelessWidget {
                                     toY: avgVoteLoss,
                                     color: AppTheme.accentRed,
                                     width: 36,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(6)),
                                   ),
                                 ]),
                               ],
                               barTouchData: BarTouchData(
                                 touchTooltipData: BarTouchTooltipData(
                                   getTooltipItem: (group, _, rod, __) {
-                                    const labels = ['Vittorie', 'Pareggi', 'Sconfitte'];
+                                    const labels = [
+                                      'Vittorie',
+                                      'Pareggi',
+                                      'Sconfitte'
+                                    ];
                                     final avg = rod.toY;
                                     if (avg == 0) return null;
                                     return BarTooltipItem(
@@ -1139,12 +1262,21 @@ class PlayerStatsScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _ResultAvgBadge(label: 'Vittorie', avg: avgVoteWin,
-                                color: AppTheme.accentGreen, count: votesByResult['V']!.length),
-                            _ResultAvgBadge(label: 'Pareggi', avg: avgVoteDraw,
-                                color: AppTheme.accentGold, count: votesByResult['P']!.length),
-                            _ResultAvgBadge(label: 'Sconfitte', avg: avgVoteLoss,
-                                color: AppTheme.accentRed, count: votesByResult['S']!.length),
+                            _ResultAvgBadge(
+                                label: 'Vittorie',
+                                avg: avgVoteWin,
+                                color: AppTheme.accentGreen,
+                                count: votesByResult['V']!.length),
+                            _ResultAvgBadge(
+                                label: 'Pareggi',
+                                avg: avgVoteDraw,
+                                color: AppTheme.accentGold,
+                                count: votesByResult['P']!.length),
+                            _ResultAvgBadge(
+                                label: 'Sconfitte',
+                                avg: avgVoteLoss,
+                                color: AppTheme.accentRed,
+                                count: votesByResult['S']!.length),
                           ],
                         ),
                       ],
@@ -1153,6 +1285,48 @@ class PlayerStatsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                 ],
 
+                // ── Radar Performance ─────────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Radar Performance',
+                      accent: AppTheme.accentBlue),
+                  _RadarCard(
+                    avgVote: avgVote,
+                    totalGoals: totalGoals,
+                    totalGames: totalGames,
+                    mvpCount: player.mvpCount,
+                    hustleCount: player.hustleCount,
+                    bestGoalCount: player.bestGoalCount,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+// ── Statistiche per Campo ─────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Statistiche per Campo',
+                      accent: AppTheme.accentGreen),
+                  _FieldStatsCard(matches: matches, playerId: player.id),
+                  const SizedBox(height: 24),
+                ],
+// ── Chemistry con gli altri giocatori ────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Chemistry con i Compagni',
+                      accent: AppTheme.accentGreen),
+                  ChemistryBubbleChart(
+                    matches: matches,
+                    player: player,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+                // ── Radar Chemistry ───────────────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Radar Chemistry',
+                      accent: AppTheme.accentBlue),
+                  ChemistryRadarChart(
+                    matches: matches,
+                    player: player,
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 // ── Messaggio se non ci sono abbastanza dati ──────
                 if (votePoints.length < 2 && totalGoals == 0)
                   Container(
@@ -1246,7 +1420,8 @@ class _LegendRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 10, height: 10,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(3),
@@ -1321,6 +1496,413 @@ class _ResultAvgBadge extends StatelessWidget {
           FifaLabel(label, color: color.withOpacity(0.7), fontSize: 8),
           const SizedBox(height: 1),
           FifaLabel('($count partite)', color: AppTheme.textMuted, fontSize: 8),
+        ],
+      );
+}
+// ─────────────────────────────────────────────────────────────
+// Radar Performance
+// ─────────────────────────────────────────────────────────────
+
+class _RadarCard extends StatelessWidget {
+  final double avgVote;
+  final int totalGoals;
+  final int totalGames;
+  final int mvpCount;
+  final int hustleCount;
+  final int bestGoalCount;
+
+  const _RadarCard({
+    required this.avgVote,
+    required this.totalGoals,
+    required this.totalGames,
+    required this.mvpCount,
+    required this.hustleCount,
+    required this.bestGoalCount,
+  });
+
+  // Normalizza un valore su scala 0–1 con un cap "realistico"
+  double _norm(double value, double max) => (value / max).clamp(0.0, 1.0);
+
+  @override
+  Widget build(BuildContext context) {
+    // Scala di riferimento per normalizzazione (adatta a poche partite)
+    final votoNorm = _norm(avgVote, 10.0);
+    final golNorm =
+        _norm(totalGoals / totalGames, 2.0); // media gol/partita, cap 2
+    final mvpNorm = _norm(mvpCount.toDouble(), 5.0);
+    final hustleNorm = _norm(hustleCount.toDouble(), 5.0);
+    final bestGolNorm = _norm(bestGoalCount.toDouble(), 5.0);
+
+    const labels = ['Voto', 'Gol', 'MVP', 'Combatt.', 'Best ⚽'];
+    final values = [votoNorm, golNorm, mvpNorm, hustleNorm, bestGolNorm];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 220,
+            child: RadarChart(
+              RadarChartData(
+                radarShape: RadarShape.polygon,
+                tickCount: 4,
+                ticksTextStyle:
+                    const TextStyle(color: Colors.transparent, fontSize: 0),
+                radarBorderData:
+                    const BorderSide(color: AppTheme.border, width: 1),
+                gridBorderData:
+                    const BorderSide(color: AppTheme.border, width: 1),
+                tickBorderData: BorderSide(
+                    color: AppTheme.border.withOpacity(0.4), width: 1),
+                titleTextStyle: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+                getTitle: (index, angle) =>
+                    RadarChartTitle(text: labels[index]),
+                dataSets: [
+                  RadarDataSet(
+                    fillColor: AppTheme.accentBlue.withOpacity(0.18),
+                    borderColor: AppTheme.accentBlue,
+                    borderWidth: 2,
+                    entryRadius: 4,
+                    dataEntries:
+                        values.map((v) => RadarEntry(value: v)).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Legenda valori reali
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              _RadarLegendItem(
+                  label: 'Voto medio',
+                  value: avgVote.toStringAsFixed(1),
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Media gol/partita',
+                  value: (totalGoals / totalGames).toStringAsFixed(2),
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'MVP', value: '$mvpCount', color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Combattivo',
+                  value: '$hustleCount',
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Best ⚽',
+                  value: '$bestGoalCount',
+                  color: AppTheme.accentBlue),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RadarLegendItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _RadarLegendItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Statistiche per Campo
+// ─────────────────────────────────────────────────────────────
+
+class _FieldStatsCard extends StatelessWidget {
+  final List<MatchModel> matches;
+  final String playerId;
+
+  const _FieldStatsCard({required this.matches, required this.playerId});
+
+  @override
+  Widget build(BuildContext context) {
+    // Aggrega dati per campo
+    final fieldData = <String, _FieldStat>{};
+    for (final m in matches) {
+      final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
+      final loc = field?.name ??
+          (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
+      final imagePath = field?.imagePath;
+
+      fieldData.putIfAbsent(loc, () => _FieldStat(imagePath: imagePath));
+      final stat = fieldData[loc]!;
+      stat.games++;
+
+      final inTeamA = m.teamA.contains(playerId);
+      final ps = inTeamA ? m.scoreA : m.scoreB;
+      final os = inTeamA ? m.scoreB : m.scoreA;
+      if (ps > os)
+        stat.wins++;
+      else if (ps == os)
+        stat.draws++;
+      else
+        stat.losses++;
+
+      final vote = m.votes[playerId];
+      if (vote != null) {
+        stat.totalVotes += vote;
+        stat.votesCount++;
+      }
+      stat.goals += m.goals[playerId] ?? 0;
+    }
+
+    final sorted = fieldData.entries.toList()
+      ..sort((a, b) => b.value.games.compareTo(a.value.games));
+
+    return Column(
+      children: sorted.map((entry) {
+        final loc = entry.key;
+        final stat = entry.value;
+        final avg =
+            stat.votesCount > 0 ? stat.totalVotes / stat.votesCount : null;
+        final hasImage =
+            stat.imagePath != null && File(stat.imagePath!).existsSync();
+
+        final winsColor = stat.wins > stat.losses
+            ? AppTheme.accentGreen
+            : stat.losses > stat.wins
+                ? AppTheme.accentRed
+                : AppTheme.accentGold;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          height: 130,
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.border),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ── Sfondo immagine campo ──────────────────────────
+              if (hasImage)
+                Image.file(
+                  File(stat.imagePath!),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(),
+                ),
+
+              // ── Overlay scuro (sempre, più intenso senza immagine) ──
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: hasImage
+                        ? [
+                            Colors.black.withOpacity(0.45),
+                            Colors.black.withOpacity(0.72),
+                          ]
+                        : [
+                            AppTheme.surface,
+                            AppTheme.surface,
+                          ],
+                  ),
+                ),
+              ),
+
+              // ── Contenuto ─────────────────────────────────────
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Nome campo + partite
+                    Row(
+                      children: [
+                        const Text('🏟️', style: TextStyle(fontSize: 14)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            loc,
+                            style: TextStyle(
+                              color: hasImage
+                                  ? Colors.white
+                                  : AppTheme.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                              shadows: hasImage
+                                  ? [
+                                      const Shadow(
+                                          blurRadius: 4, color: Colors.black54)
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black
+                                .withOpacity(hasImage ? 0.35 : 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${stat.games} ${stat.games == 1 ? 'partita' : 'partite'}',
+                            style: TextStyle(
+                              color: hasImage
+                                  ? Colors.white70
+                                  : AppTheme.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Metriche
+                    Row(
+                      children: [
+                        _FieldMetric(
+                          label: 'V/P/S',
+                          value: '${stat.wins}/${stat.draws}/${stat.losses}',
+                          color: hasImage ? Colors.white : winsColor,
+                          valueColor: hasImage ? winsColor : null,
+                          hasImage: hasImage,
+                        ),
+                        const SizedBox(width: 20),
+                        _FieldMetric(
+                          label: 'Voto medio',
+                          value: avg != null ? avg.toStringAsFixed(1) : '—',
+                          color: hasImage
+                              ? Colors.white
+                              : avg == null
+                                  ? AppTheme.textMuted
+                                  : avg >= 7.0
+                                      ? AppTheme.accentGreen
+                                      : avg >= 5.5
+                                          ? AppTheme.accentGold
+                                          : AppTheme.accentRed,
+                          hasImage: hasImage,
+                        ),
+                        const SizedBox(width: 20),
+                        _FieldMetric(
+                          label: 'Gol',
+                          value: '${stat.goals}',
+                          color: hasImage
+                              ? Colors.white
+                              : stat.goals > 0
+                                  ? AppTheme.accentRed
+                                  : AppTheme.textMuted,
+                          hasImage: hasImage,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _FieldStat {
+  final String? imagePath; // ← aggiunto
+  int games = 0;
+  int wins = 0;
+  int draws = 0;
+  int losses = 0;
+  double totalVotes = 0;
+  int votesCount = 0;
+  int goals = 0;
+
+  _FieldStat({this.imagePath}); // ← aggiunto
+}
+
+class _FieldMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final Color? valueColor; // ← opzionale: colore separato per il valore
+  final bool hasImage; // ← per aggiungere shadow
+
+  const _FieldMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.valueColor,
+    this.hasImage = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? color,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              shadows: hasImage
+                  ? [const Shadow(blurRadius: 4, color: Colors.black87)]
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: hasImage ? Colors.white60 : AppTheme.textMuted,
+              fontSize: 10,
+              shadows: hasImage
+                  ? [const Shadow(blurRadius: 3, color: Colors.black54)]
+                  : null,
+            ),
+          ),
         ],
       );
 }

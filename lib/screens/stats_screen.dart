@@ -43,8 +43,7 @@ class _StatsScreenState extends State<StatsScreen> {
     }
   }
 
-  String _modeEmoji() => (_modes.firstWhere((m) => m['value'] == _mode)['emoji'] as String);
-  String _modeLabel() => (_modes.firstWhere((m) => m['value'] == _mode)['label'] as String);
+  
 
   num _sortValue(Player player, Map<String, Map<String, dynamic>> stats) {
     switch (_mode) {

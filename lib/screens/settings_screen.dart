@@ -6,7 +6,6 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/data_service.dart';
-import '../models/player.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:calcetto_tracker/screens/ai_coach_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -89,6 +90,17 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const MatchPromoFormPage())),
           ),
+
+          IconButton(
+            icon: const Icon(Icons.psychology_outlined,
+                color: AppTheme.textSecondary, size: 22),
+            tooltip: 'AI Coach',
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AiCoachPage())),
+          ),
+
+
+
           IconButton(
             icon: const Icon(Icons.backup_rounded,
                 color: AppTheme.textSecondary, size: 22),
