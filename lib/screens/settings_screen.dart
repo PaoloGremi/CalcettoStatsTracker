@@ -14,17 +14,16 @@ import '../theme/app_theme.dart';
 // ─────────────────────────────────────────────────────────────
 class SettingsKeys {
   static const mainPlayerId   = 'main_player_id';
-  static const vel            = 'stat_vel';
-  static const tir            = 'stat_tir';
-  static const pas            = 'stat_pas';
-  static const dri            = 'stat_dri';
-  static const dif            = 'stat_dif';
-  static const fis            = 'stat_fis';
   static const birthDate      = 'info_birth_date';
   static const foot           = 'info_foot';
   static const nationality    = 'info_nationality';
   static const favoriteTeam   = 'info_favorite_team';
   static const jerseyNumber   = 'info_jersey_number';
+  // Obiettivi annuali
+  static const goalMatches    = 'goal_matches';
+  static const goalWins       = 'goal_wins';
+  static const goalGoals      = 'goal_goals';
+  static const goalMvp        = 'goal_mvp';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -32,57 +31,56 @@ class SettingsKeys {
 // ─────────────────────────────────────────────────────────────
 class AppSettings {
   final String? mainPlayerId;
-  final int vel, tir, pas, dri, dif, fis;
   final String birthDate, foot, nationality, favoriteTeam, jerseyNumber;
+  // Obiettivi annuali
+  final int goalMatches, goalWins, goalGoals, goalMvp;
 
   const AppSettings({
     this.mainPlayerId,
-    this.vel = 75, this.tir = 65, this.pas = 70,
-    this.dri = 60, this.dif = 65, this.fis = 70,
     this.birthDate = '',
     this.foot = 'Destro',
     this.nationality = '',
     this.favoriteTeam = '',
     this.jerseyNumber = '',
+    this.goalMatches = 0,
+    this.goalWins = 0,
+    this.goalGoals = 0,
+    this.goalMvp = 0,
   });
 
   static Future<AppSettings> load() async {
     final prefs = await SharedPreferences.getInstance();
     return AppSettings(
       mainPlayerId:  prefs.getString(SettingsKeys.mainPlayerId),
-      vel:           prefs.getInt(SettingsKeys.vel) ?? 75,
-      tir:           prefs.getInt(SettingsKeys.tir) ?? 65,
-      pas:           prefs.getInt(SettingsKeys.pas) ?? 70,
-      dri:           prefs.getInt(SettingsKeys.dri) ?? 60,
-      dif:           prefs.getInt(SettingsKeys.dif) ?? 65,
-      fis:           prefs.getInt(SettingsKeys.fis) ?? 70,
       birthDate:     prefs.getString(SettingsKeys.birthDate) ?? '',
       foot:          prefs.getString(SettingsKeys.foot) ?? 'Destro',
       nationality:   prefs.getString(SettingsKeys.nationality) ?? '',
       favoriteTeam:  prefs.getString(SettingsKeys.favoriteTeam) ?? '',
       jerseyNumber:  prefs.getString(SettingsKeys.jerseyNumber) ?? '',
+      goalMatches:   prefs.getInt(SettingsKeys.goalMatches) ?? 0,
+      goalWins:      prefs.getInt(SettingsKeys.goalWins) ?? 0,
+      goalGoals:     prefs.getInt(SettingsKeys.goalGoals) ?? 0,
+      goalMvp:       prefs.getInt(SettingsKeys.goalMvp) ?? 0,
     );
   }
 
   static Future<void> save({
     String? mainPlayerId,
-    int? vel, int? tir, int? pas, int? dri, int? dif, int? fis,
     String? birthDate, String? foot, String? nationality,
     String? favoriteTeam, String? jerseyNumber,
+    int? goalMatches, int? goalWins, int? goalGoals, int? goalMvp,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     if (mainPlayerId != null) await prefs.setString(SettingsKeys.mainPlayerId, mainPlayerId);
-    if (vel != null) await prefs.setInt(SettingsKeys.vel, vel);
-    if (tir != null) await prefs.setInt(SettingsKeys.tir, tir);
-    if (pas != null) await prefs.setInt(SettingsKeys.pas, pas);
-    if (dri != null) await prefs.setInt(SettingsKeys.dri, dri);
-    if (dif != null) await prefs.setInt(SettingsKeys.dif, dif);
-    if (fis != null) await prefs.setInt(SettingsKeys.fis, fis);
     if (birthDate != null) await prefs.setString(SettingsKeys.birthDate, birthDate);
     if (foot != null) await prefs.setString(SettingsKeys.foot, foot);
     if (nationality != null) await prefs.setString(SettingsKeys.nationality, nationality);
     if (favoriteTeam != null) await prefs.setString(SettingsKeys.favoriteTeam, favoriteTeam);
     if (jerseyNumber != null) await prefs.setString(SettingsKeys.jerseyNumber, jerseyNumber);
+    if (goalMatches != null) await prefs.setInt(SettingsKeys.goalMatches, goalMatches);
+    if (goalWins != null) await prefs.setInt(SettingsKeys.goalWins, goalWins);
+    if (goalGoals != null) await prefs.setInt(SettingsKeys.goalGoals, goalGoals);
+    if (goalMvp != null) await prefs.setInt(SettingsKeys.goalMvp, goalMvp);
   }
 }
 
@@ -102,15 +100,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Giocatore principale
   String? _mainPlayerId;
 
-  // Stats FIFA
-  int _vel = 75, _tir = 65, _pas = 70, _dri = 60, _dif = 65, _fis = 70;
-
   // Info personali
   final _birthCtrl      = TextEditingController();
   final _nationalityCtrl = TextEditingController();
   final _teamCtrl       = TextEditingController();
   final _jerseyCtrl     = TextEditingController();
   String _foot = 'Destro';
+
+  // Obiettivi annuali
+  final _goalMatchesCtrl  = TextEditingController();
+  final _goalWinsCtrl     = TextEditingController();
+  final _goalGoalsCtrl    = TextEditingController();
+  final _goalMvpCtrl      = TextEditingController();
 
   @override
   void initState() {
@@ -122,13 +123,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final s = await AppSettings.load();
     setState(() {
       _mainPlayerId    = s.mainPlayerId;
-      _vel = s.vel; _tir = s.tir; _pas = s.pas;
-      _dri = s.dri; _dif = s.dif; _fis = s.fis;
       _birthCtrl.text       = s.birthDate;
       _foot                 = s.foot;
       _nationalityCtrl.text = s.nationality;
       _teamCtrl.text        = s.favoriteTeam;
       _jerseyCtrl.text      = s.jerseyNumber;
+      _goalMatchesCtrl.text  = s.goalMatches > 0 ? '${s.goalMatches}' : '';
+      _goalWinsCtrl.text     = s.goalWins    > 0 ? '${s.goalWins}'    : '';
+      _goalGoalsCtrl.text    = s.goalGoals   > 0 ? '${s.goalGoals}'   : '';
+      _goalMvpCtrl.text      = s.goalMvp     > 0 ? '${s.goalMvp}'     : '';
       _loading = false;
     });
   }
@@ -136,13 +139,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _save() async {
     await AppSettings.save(
       mainPlayerId:  _mainPlayerId ?? '',
-      vel: _vel, tir: _tir, pas: _pas,
-      dri: _dri, dif: _dif, fis: _fis,
       birthDate:    _birthCtrl.text.trim(),
       foot:         _foot,
       nationality:  _nationalityCtrl.text.trim(),
       favoriteTeam: _teamCtrl.text.trim(),
       jerseyNumber: _jerseyCtrl.text.trim(),
+      goalMatches:  int.tryParse(_goalMatchesCtrl.text.trim()) ?? 0,
+      goalWins:     int.tryParse(_goalWinsCtrl.text.trim()) ?? 0,
+      goalGoals:    int.tryParse(_goalGoalsCtrl.text.trim()) ?? 0,
+      goalMvp:      int.tryParse(_goalMvpCtrl.text.trim()) ?? 0,
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -183,6 +188,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _nationalityCtrl.dispose();
     _teamCtrl.dispose();
     _jerseyCtrl.dispose();
+    _goalMatchesCtrl.dispose();
+    _goalWinsCtrl.dispose();
+    _goalGoalsCtrl.dispose();
+    _goalMvpCtrl.dispose();
     super.dispose();
   }
 
@@ -308,25 +317,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
 
-                // ── STATISTICHE FIFA ──────────────────────────────
-                const FifaSectionHeader('Statistiche FIFA',
+                // ── OBIETTIVI ANNUALI ─────────────────────────────
+                const FifaSectionHeader('Obiettivi Annuali',
                     accent: AppTheme.accentGreen),
                 _FifaCard(
                   child: Column(
                     children: [
-                      _StatSlider(label: 'VEL', value: _vel,
-                          onChanged: (v) => setState(() => _vel = v)),
-                      _StatSlider(label: 'TIR', value: _tir,
-                          onChanged: (v) => setState(() => _tir = v)),
-                      _StatSlider(label: 'PAS', value: _pas,
-                          onChanged: (v) => setState(() => _pas = v)),
-                      _StatSlider(label: 'DRI', value: _dri,
-                          onChanged: (v) => setState(() => _dri = v)),
-                      _StatSlider(label: 'DIF', value: _dif,
-                          onChanged: (v) => setState(() => _dif = v)),
-                      _StatSlider(label: 'FIS', value: _fis,
-                          onChanged: (v) => setState(() => _fis = v),
-                          isLast: true),
+                      _InfoField(
+                        label: 'PARTITE GIOCATE',
+                        controller: _goalMatchesCtrl,
+                        hint: 'es. 50',
+                        icon: Icons.sports_soccer_rounded,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const FifaDivider(),
+                      _InfoField(
+                        label: 'VITTORIE',
+                        controller: _goalWinsCtrl,
+                        hint: 'es. 30',
+                        icon: Icons.emoji_events_rounded,
+                        iconColor: AppTheme.accentGold,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const FifaDivider(),
+                      _InfoField(
+                        label: 'GOL',
+                        controller: _goalGoalsCtrl,
+                        hint: 'es. 20',
+                        icon: Icons.sports_score_rounded,
+                        iconColor: AppTheme.accentGreen,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const FifaDivider(),
+                      _InfoField(
+                        label: 'PREMI MVP',
+                        controller: _goalMvpCtrl,
+                        hint: 'es. 5',
+                        icon: Icons.workspace_premium_rounded,
+                        iconColor: AppTheme.accentOrange,
+                        keyboardType: TextInputType.number,
+                      ),
                     ],
                   ),
                 ),
@@ -432,81 +462,6 @@ class _FifaCard extends StatelessWidget {
     ),
     child: child,
   );
-}
-
-class _StatSlider extends StatelessWidget {
-  final String label;
-  final int value;
-  final ValueChanged<int> onChanged;
-  final bool isLast;
-  const _StatSlider({
-    required this.label, required this.value,
-    required this.onChanged, this.isLast = false,
-  });
-
-  Color _statColor(int v) {
-    if (v >= 80) return AppTheme.accentGreen;
-    if (v >= 65) return AppTheme.accentGold;
-    if (v >= 50) return AppTheme.accentOrange;
-    return AppTheme.accentRed;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _statColor(value);
-    return Column(
-      children: [
-        Row(
-          children: [
-            // Label
-            SizedBox(
-              width: 36,
-              child: Text(label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-            // Slider
-            Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: color,
-                  thumbColor: color,
-                  overlayColor: color.withOpacity(0.15),
-                  inactiveTrackColor: AppTheme.border,
-                  trackHeight: 3,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                ),
-                child: Slider(
-                  value: value.toDouble(),
-                  min: 1, max: 99, divisions: 98,
-                  onChanged: (v) => onChanged(v.round()),
-                ),
-              ),
-            ),
-            // Valore numerico
-            Container(
-              width: 40, height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: color.withOpacity(0.35)),
-              ),
-              child: Text('$value',
-                style: TextStyle(
-                    color: color, fontSize: 14, fontWeight: FontWeight.w900)),
-            ),
-          ],
-        ),
-        if (!isLast) const FifaDivider(),
-      ],
-    );
-  }
 }
 
 class _InfoField extends StatelessWidget {

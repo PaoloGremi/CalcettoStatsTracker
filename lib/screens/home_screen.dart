@@ -14,6 +14,7 @@ import 'backup_screen.dart';
 import '../data/player_icons.dart';
 import 'settings_screen.dart';
 import 'fields_screen.dart';
+import '../services/player_stats_calculator.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -415,6 +416,15 @@ class _MainPlayerCard extends StatelessWidget {
     final avgVote = votesCount > 0 ? totalVotes / votesCount : 0.0;
     final winPct = gamesPlayed > 0 ? (wins / gamesPlayed * 100).round() : 0;
 
+    // Helper: conta i gol del giocatore
+    int _countGoals(DataService d, String playerId) {
+      int total = 0;
+      for (final m in d.getAllMatches()) {
+        total += (m.goals[playerId] ?? 0) as int;
+      }
+      return total;
+    }
+
     Color voteColor(double v) {
       if (v >= 8.0) return AppTheme.accentGreen;
       if (v >= 6.5) return AppTheme.accentGold;
@@ -539,13 +549,68 @@ class _MainPlayerCard extends StatelessWidget {
               Container(height: 1, color: Colors.white10),
               const SizedBox(height: 10),
 
+              // ── Obiettivi annuali ──────────────────────────────
+              if (settings.goalMatches > 0 || settings.goalWins > 0 ||
+                  settings.goalGoals > 0 || settings.goalMvp > 0) ...[
+                const Text(
+                  'OBIETTIVI ANNUALI',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (settings.goalMatches > 0)
+                  _GoalProgressRow(
+                    icon: Icons.sports_soccer_rounded,
+                    label: 'PARTITE',
+                    current: gamesPlayed,
+                    target: settings.goalMatches,
+                    color: AppTheme.accentBlue,
+                  ),
+                if (settings.goalWins > 0)
+                  _GoalProgressRow(
+                    icon: Icons.emoji_events_rounded,
+                    label: 'VITTORIE',
+                    current: wins,
+                    target: settings.goalWins,
+                    color: AppTheme.accentGold,
+                  ),
+                if (settings.goalGoals > 0)
+                  _GoalProgressRow(
+                    icon: Icons.sports_score_rounded,
+                    label: 'GOL',
+                    current: _countGoals(data, player.id as String),
+                    target: settings.goalGoals,
+                    color: AppTheme.accentGreen,
+                  ),
+                if (settings.goalMvp > 0)
+                  _GoalProgressRow(
+                    icon: Icons.workspace_premium_rounded,
+                    label: 'MVP',
+                    current: player.mvpCount as int,
+                    target: settings.goalMvp,
+                    color: AppTheme.accentOrange,
+                  ),
+                const SizedBox(height: 10),
+                Container(height: 1, color: Colors.white10),
+                const SizedBox(height: 10),
+              ],
+
               // ── Info anagrafiche ──────────────────────────────
-              if (settings.birthDate.isNotEmpty)
-                _InfoRow('DATA DI NASCITA', settings.birthDate),
-              if (settings.nationality.isNotEmpty)
-                _InfoRow('NAZIONALITÀ', settings.nationality),
-              if (settings.favoriteTeam.isNotEmpty)
-                _InfoRow('SQUADRA DEL CUORE', settings.favoriteTeam),
+              if (settings.birthDate.isNotEmpty || settings.nationality.isNotEmpty ||
+                  settings.favoriteTeam.isNotEmpty || settings.foot.isNotEmpty) ...[
+                if (settings.birthDate.isNotEmpty)
+                  _InfoRow('DATA DI NASCITA', settings.birthDate),
+                if (settings.nationality.isNotEmpty)
+                  _InfoRow('NAZIONALITÀ', settings.nationality),
+                if (settings.favoriteTeam.isNotEmpty)
+                  _InfoRow('SQUADRA DEL CUORE', settings.favoriteTeam),
+                if (settings.foot.isNotEmpty)
+                  _InfoRow('PIEDE', settings.foot),
+              ],
             ],
           ),
         ),
@@ -626,10 +691,73 @@ class _AwardPill extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// FIFA Ultimate Team Card
+// Barra progresso obiettivo annuale
 // ─────────────────────────────────────────────────────────────
+class _GoalProgressRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int current, target;
+  final Color color;
+
+  const _GoalProgressRow({
+    required this.icon,
+    required this.label,
+    required this.current,
+    required this.target,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (current / target).clamp(0.0, 1.0);
+    final done = current >= target;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 13),
+              const SizedBox(width: 6),
+              Text(label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                done ? '✓ $target/$target' : '$current/$target',
+                style: TextStyle(
+                  color: done ? AppTheme.accentGreen : AppTheme.textPrimary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 5,
+              backgroundColor: color.withOpacity(0.12),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                done ? AppTheme.accentGreen : color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class _FutCard extends StatelessWidget {
-  final dynamic player;
+  final dynamic player; // Player?
   final AppSettings settings;
   final Widget Function(dynamic, double) buildAvatar;
 
@@ -639,18 +767,20 @@ class _FutCard extends StatelessWidget {
     required this.buildAvatar,
   });
 
-  /// Overall rating: media delle 6 stat
-  int get _overall =>
-      ((settings.vel + settings.tir + settings.pas +
-              settings.dri + settings.dif + settings.fis) /
-          6)
-          .round();
+  // ── Stat calcolate dai dati reali ─────────────────────────────────────
+  ComputedFifaStats get _computed {
+    if (player == null) return ComputedFifaStats.empty();
+    return PlayerStatsCalculator.compute(player.id as String);
+  }
 
-  /// Colore card in base all'overall
+  /// Overall: media delle 6 stat calcolate
+  int get _overall => _computed.overall;
+
+  /// Colore card in base all'overall (invariato)
   Color get _cardColor {
     if (_overall >= 85) return const Color(0xFFFFD700); // oro
     if (_overall >= 75) return const Color(0xFFC0C0C0); // argento
-    return const Color(0xFFCD7F32);                     // bronzo
+    return const Color(0xFFCD7F32); // bronzo
   }
 
   @override
@@ -658,6 +788,7 @@ class _FutCard extends StatelessWidget {
     final c = _cardColor;
     final cardW = 200.0;
     final cardH = 280.0;
+    final stats = _computed; // calcolate una sola volta
 
     return Container(
       width: cardW,
@@ -696,14 +827,12 @@ class _FutCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Column(
                 children: [
-
                   // ── Riga superiore: rating + foto + ruolo ──────
                   SizedBox(
                     height: cardH * 0.52,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
                         // Colonna sinistra: overall + ruolo
                         Column(
                           children: [
@@ -795,14 +924,14 @@ class _FutCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // ── Stats a 2 colonne ─────────────────────────
+                  // ── Stats a 2 colonne (ora calcolate) ─────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _statCol(c, [
-                        (settings.vel, 'VEL'),
-                        (settings.tir, 'TIR'),
-                        (settings.pas, 'PAS'),
+                        (stats.vel, 'VEL'),
+                        (stats.tir, 'TIR'),
+                        (stats.pas, 'PAS'),
                       ]),
                       Container(
                         width: 1,
@@ -811,9 +940,9 @@ class _FutCard extends StatelessWidget {
                         color: c.withOpacity(0.25),
                       ),
                       _statCol(c, [
-                        (settings.dri, 'DRI'),
-                        (settings.dif, 'DIF'),
-                        (settings.fis, 'FIS'),
+                        (stats.dri, 'DRI'),
+                        (stats.dif, 'DIF'),
+                        (stats.fis, 'FIS'),
                       ]),
                     ],
                   ),
@@ -837,7 +966,6 @@ class _FutCard extends StatelessWidget {
         alignment: Alignment.topCenter,
       );
     }
-    // Icona asset
     final icon = getPlayerIcon(player.icon);
     if (icon.isAsset) {
       return Image.asset(icon.assetPath!, fit: BoxFit.contain);
@@ -847,41 +975,40 @@ class _FutCard extends StatelessWidget {
   }
 
   Widget _statCol(Color c, List<(int, String)> stats) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: stats
-        .map((s) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 28,
-                    child: Text(
-                      '${s.$1}',
-                      style: TextStyle(
-                        color: c,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: stats
+            .map((s) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        child: Text(
+                          '${s.$1}',
+                          style: TextStyle(
+                            color: c,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                          ),
+                        ),
                       ),
-                    ),
+                      Text(
+                        s.$2,
+                        style: TextStyle(
+                          color: c.withOpacity(0.7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    s.$2,
-                    style: TextStyle(
-                      color: c.withOpacity(0.7),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ))
-        .toList(),
-  );
+                ))
+            .toList(),
+      );
 }
-
 /// Trama geometrica di sfondo della card
 class _CardPatternPainter extends CustomPainter {
   final Color color;
