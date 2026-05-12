@@ -102,7 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Info personali
   final _birthCtrl      = TextEditingController();
-  final _nationalityCtrl = TextEditingController();
+  String _nationality   = '';
   final _teamCtrl       = TextEditingController();
   final _jerseyCtrl     = TextEditingController();
   String _foot = 'Destro';
@@ -125,7 +125,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _mainPlayerId    = s.mainPlayerId;
       _birthCtrl.text       = s.birthDate;
       _foot                 = s.foot;
-      _nationalityCtrl.text = s.nationality;
+      _nationality          = s.nationality;
       _teamCtrl.text        = s.favoriteTeam;
       _jerseyCtrl.text      = s.jerseyNumber;
       _goalMatchesCtrl.text  = s.goalMatches > 0 ? '${s.goalMatches}' : '';
@@ -141,7 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       mainPlayerId:  _mainPlayerId ?? '',
       birthDate:    _birthCtrl.text.trim(),
       foot:         _foot,
-      nationality:  _nationalityCtrl.text.trim(),
+      nationality:  _nationality,
       favoriteTeam: _teamCtrl.text.trim(),
       jerseyNumber: _jerseyCtrl.text.trim(),
       goalMatches:  int.tryParse(_goalMatchesCtrl.text.trim()) ?? 0,
@@ -185,7 +185,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _birthCtrl.dispose();
-    _nationalityCtrl.dispose();
     _teamCtrl.dispose();
     _jerseyCtrl.dispose();
     _goalMatchesCtrl.dispose();
@@ -404,10 +403,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       const FifaDivider(),
-                      _InfoField(label: 'NAZIONALITÀ',
-                          controller: _nationalityCtrl,
-                          hint: 'es. Italiana',
-                          icon: Icons.flag_rounded),
+                      _NationalityDropdown(
+                        value: _nationality,
+                        onChanged: (v) => setState(() => _nationality = v ?? ''),
+                      ),
                       const FifaDivider(),
                       _InfoField(label: 'SQUADRA DEL CUORE',
                           controller: _teamCtrl,
@@ -500,4 +499,239 @@ class _InfoField extends StatelessWidget {
       ),
     ],
   );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Dropdown Nazionalità con bandiera emoji
+// ─────────────────────────────────────────────────────────────
+
+const List<(String, String)> kCountries = [
+  ('🇦🇫', 'Afghana'),    ('🇦🇱', 'Albanese'),   ('🇩🇿', 'Algerina'),
+  ('🇦🇩', 'Andorrana'),  ('🇦🇴', 'Angolana'),    ('🇦🇬', 'Antiguiana'),
+  ('🇦🇷', 'Argentina'),  ('🇦🇲', 'Armena'),      ('🇦🇺', 'Australiana'),
+  ('🇦🇹', 'Austriaca'),  ('🇦🇿', 'Azerbaigiana'),('🇧🇸', 'Bahamense'),
+  ('🇧🇭', 'Bahreinia'),  ('🇧🇩', 'Bangladese'),  ('🇧🇧', 'Barbadiana'),
+  ('🇧🇾', 'Bielorussa'), ('🇧🇪', 'Belga'),        ('🇧🇿', 'Beliziana'),
+  ('🇧🇯', 'Beninese'),   ('🇧🇹', 'Bhutanese'),   ('🇧🇴', 'Boliviana'),
+  ('🇧🇦', 'Bosniaca'),   ('🇧🇼', 'Botswaniana'), ('🇧🇷', 'Brasiliana'),
+  ('🇧🇳', 'Bruneiese'),  ('🇧🇬', 'Bulgara'),     ('🇧🇫', 'Burkinabè'),
+  ('🇧🇮', 'Burundese'),  ('🇰🇭', 'Cambogiana'),  ('🇨🇲', 'Camerunense'),
+  ('🇨🇦', 'Canadese'),   ('🇨🇻', 'Capoverdiana'),('🇨🇫', 'Centrafricana'),
+  ('🇹🇩', 'Ciadiana'),   ('🇨🇱', 'Cilena'),      ('🇨🇳', 'Cinese'),
+  ('🇨🇾', 'Cipriota'),   ('🇨🇴', 'Colombiana'),  ('🇰🇲', 'Comoriana'),
+  ('🇨🇬', 'Congolese'),  ('🇰🇷', 'Coreana del Sud'),('🇰🇵', 'Coreana del Nord'),
+  ('🇨🇷', 'Costaricana'),('🇭🇷', 'Croata'),      ('🇨🇺', 'Cubana'),
+  ('🇩🇰', 'Danese'),     ('🇩🇯', 'Gibutiana'),   ('🇩🇲', 'Dominicana'),
+  ('🇪🇨', 'Ecuadoriana'),('🇪🇬', 'Egiziana'),    ('🇸🇻', 'Salvadoregna'),
+  ('🇦🇪', 'Emiratina'),  ('🇪🇷', 'Eritrea'),     ('🇪🇪', 'Estone'),
+  ('🇸🇿', 'Swazilande'), ('🇪🇹', 'Etiope'),      ('🇫🇯', 'Figiana'),
+  ('🇵🇭', 'Filippina'),  ('🇫🇮', 'Finlandese'),  ('🇫🇷', 'Francese'),
+  ('🇬🇦', 'Gabonese'),   ('🇬🇲', 'Gambiana'),    ('🇬🇪', 'Georgiana'),
+  ('🇩🇪', 'Tedesca'),    ('🇬🇭', 'Ghanese'),     ('🇯🇲', 'Giamaicana'),
+  ('🇯🇵', 'Giapponese'), ('🇬🇮', 'Gibraltana'),  ('🇬🇷', 'Greca'),
+  ('🇬🇩', 'Grenadina'),  ('🇬🇹', 'Guatemalteca'),('🇬🇳', 'Guineana'),
+  ('🇬🇼', 'Guinea-Bissau'),('🇬🇾', 'Guyanese'),  ('🇭🇹', 'Haitiana'),
+  ('🇭🇳', 'Honduregna'), ('🇮🇳', 'Indiana'),     ('🇮🇩', 'Indonesiana'),
+  ('🇮🇷', 'Iraniana'),   ('🇮🇶', 'Irachena'),    ('🇮🇪', 'Irlandese'),
+  ('🇮🇸', 'Islandese'),  ('🇮🇱', 'Israeliana'),  ('🇮🇹', 'Italiana'),
+  ('🇰🇿', 'Kazaka'),     ('🇰🇪', 'Keniota'),     ('🇰🇬', 'Kirghisa'),
+  ('🇰🇮', 'Kiribatiana'),('🇽🇰', 'Kosovara'),    ('🇰🇼', 'Kuwaitiana'),
+  ('🇱🇦', 'Laotiana'),   ('🇱🇻', 'Lettone'),     ('🇱🇧', 'Libanese'),
+  ('🇱🇷', 'Liberiana'),  ('🇱🇾', 'Libica'),      ('🇱🇮', 'Liechtensteiniana'),
+  ('🇱🇹', 'Lituana'),    ('🇱🇺', 'Lussemburghese'),('🇲🇰', 'Macedone'),
+  ('🇲🇬', 'Malgascia'),  ('🇲🇼', 'Malawiana'),   ('🇲🇾', 'Malese'),
+  ('🇲🇻', 'Maldiviana'), ('🇲🇱', 'Maliana'),     ('🇲🇹', 'Maltese'),
+  ('🇲🇦', 'Marocchina'), ('🇲🇷', 'Mauritana'),   ('🇲🇺', 'Mauriziana'),
+  ('🇲🇽', 'Messicana'),  ('🇫🇲', 'Micronesiana'),('🇲🇩', 'Moldava'),
+  ('🇲🇨', 'Monegasca'),  ('🇲🇳', 'Mongola'),     ('🇲🇪', 'Montenegrina'),
+  ('🇲🇿', 'Mozambicana'),('🇲🇲', 'Birmana'),     ('🇳🇦', 'Namibiana'),
+  ('🇳🇷', 'Nauruiana'),  ('🇳🇵', 'Nepalese'),    ('🇳🇮', 'Nicaraguense'),
+  ('🇳🇪', 'Nigerina'),   ('🇳🇬', 'Nigeriana'),   ('🇳🇴', 'Norvegese'),
+  ('🇳🇿', 'Neozelandese'),('🇴🇲', 'Omanita'),    ('🇳🇱', 'Olandese'),
+  ('🇵🇰', 'Pakistana'),  ('🇵🇼', 'Palauiana'),   ('🇵🇦', 'Panamense'),
+  ('🇵🇬', 'Papua'),      ('🇵🇾', 'Paraguaiana'), ('🇵🇪', 'Peruviana'),
+  ('🇵🇱', 'Polacca'),    ('🇵🇹', 'Portoghese'),  ('🇶🇦', 'Qatariota'),
+  ('🇬🇧', 'Britannica'), ('🇨🇿', 'Ceca'),        ('🇷🇴', 'Rumena'),
+  ('🇷🇼', 'Ruandese'),   ('🇷🇺', 'Russa'),       ('🇰🇳', 'Kittitiana'),
+  ('🇱🇨', 'Santa Luciana'),('🇻🇨', 'Vincenziana'),('🇼🇸', 'Samoana'),
+  ('🇸🇲', 'Sammarinese'),('🇸🇹', 'Santomasense'),('🇸🇦', 'Saudita'),
+  ('🇸🇳', 'Senegalese'), ('🇷🇸', 'Serba'),       ('🇸🇨', 'Seychellese'),
+  ('🇸🇱', 'Sierra Leonese'),('🇸🇬', 'Singaporiana'),('🇸🇾', 'Siriana'),
+  ('🇸🇰', 'Slovacca'),   ('🇸🇮', 'Slovena'),     ('🇸🇴', 'Somala'),
+  ('🇪🇸', 'Spagnola'),   ('🇱🇰', 'Sri Lankese'), ('🇺🇸', 'Americana'),
+  ('🇿🇦', 'Sudafricana'),('🇸🇩', 'Sudanese'),    ('🇸🇸', 'Sud Sudanese'),
+  ('🇸🇪', 'Svedese'),    ('🇨🇭', 'Svizzera'),    ('🇸🇷', 'Surinamese'),
+  ('🇹🇯', 'Tagika'),     ('🇹🇿', 'Tanzaniana'),  ('🇹🇭', 'Tailandese'),
+  ('🇹🇱', 'Timorese'),   ('🇹🇬', 'Togolese'),    ('🇹🇴', 'Tongana'),
+  ('🇹🇹', 'Trinidadiana'),('🇹🇳', 'Tunisina'),   ('🇹🇷', 'Turca'),
+  ('🇹🇲', 'Turkmena'),   ('🇹🇻', 'Tuvaluana'),   ('🇺🇦', 'Ucraina'),
+  ('🇺🇬', 'Ugandese'),   ('🇭🇺', 'Ungherese'),   ('🇺🇾', 'Uruguaiana'),
+  ('🇺🇿', 'Uzbeka'),     ('🇻🇺', 'Vanuatuana'),  ('🇻🇪', 'Venezuelana'),
+  ('🇻🇳', 'Vietnamita'), ('🇾🇪', 'Yemenita'),    ('🇿🇲', 'Zambiana'),
+  ('🇿🇼', 'Zimbabwese'),
+];
+
+class _NationalityDropdown extends StatefulWidget {
+  final String value;
+  final ValueChanged<String?> onChanged;
+  const _NationalityDropdown({required this.value, required this.onChanged});
+
+  @override
+  State<_NationalityDropdown> createState() => _NationalityDropdownState();
+}
+
+class _NationalityDropdownState extends State<_NationalityDropdown> {
+  void _openPicker() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _CountryPickerSheet(selected: widget.value),
+    );
+    if (result != null) widget.onChanged(result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValue = widget.value.isNotEmpty;
+    return GestureDetector(
+      onTap: _openPicker,
+      child: Row(
+        children: [
+          Icon(Icons.flag_rounded,
+              color: hasValue ? AppTheme.accentBlue : AppTheme.textMuted,
+              size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('NAZIONALITÀ',
+                    style: TextStyle(
+                        color: AppTheme.textMuted,
+                        fontSize: 11,
+                        letterSpacing: 0.5)),
+                const SizedBox(height: 2),
+                Text(
+                  hasValue ? widget.value : 'Seleziona paese…',
+                  style: TextStyle(
+                    color: hasValue
+                        ? AppTheme.textPrimary
+                        : AppTheme.textMuted,
+                    fontSize: 13,
+                    fontWeight:
+                        hasValue ? FontWeight.w700 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppTheme.textMuted, size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+class _CountryPickerSheet extends StatefulWidget {
+  final String selected;
+  const _CountryPickerSheet({required this.selected});
+
+  @override
+  State<_CountryPickerSheet> createState() => _CountryPickerSheetState();
+}
+
+class _CountryPickerSheetState extends State<_CountryPickerSheet> {
+  String _query = '';
+
+  List<(String, String)> get _filtered {
+    if (_query.isEmpty) return kCountries;
+    final q = _query.toLowerCase();
+    return kCountries
+        .where((c) => c.$2.toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      builder: (_, controller) => Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 8),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: AppTheme.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextField(
+              autofocus: true,
+              style: const TextStyle(
+                  color: AppTheme.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Cerca paese…',
+                hintStyle: const TextStyle(
+                    color: AppTheme.textMuted, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    color: AppTheme.textMuted, size: 20),
+                filled: true,
+                fillColor: AppTheme.surfaceAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          const Divider(color: AppTheme.border, height: 1),
+          // Lista
+          Expanded(
+            child: ListView.builder(
+              controller: controller,
+              itemCount: _filtered.length,
+              itemBuilder: (_, i) {
+                final (flag, name) = _filtered[i];
+                final label = '$flag $name';
+                final isSelected = widget.selected == label;
+                return ListTile(
+                  dense: true,
+                  leading: Text(flag,
+                      style: const TextStyle(fontSize: 22)),
+                  title: Text(name,
+                      style: TextStyle(
+                        color: isSelected
+                            ? AppTheme.accentGreen
+                            : AppTheme.textPrimary,
+                        fontSize: 13,
+                        fontWeight: isSelected
+                            ? FontWeight.w900
+                            : FontWeight.w500,
+                      )),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_rounded,
+                          color: AppTheme.accentGreen, size: 18)
+                      : null,
+                  onTap: () => Navigator.pop(context, label),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
