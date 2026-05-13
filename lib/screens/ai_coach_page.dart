@@ -7,16 +7,19 @@ import 'package:http/http.dart' as http;
 
 import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:calcetto_tracker/screens/api_key_setup_page.dart';
+import 'package:calcetto_tracker/models/player.dart';
+import 'package:calcetto_tracker/widgets/player_avatar.dart';
+import 'package:calcetto_tracker/theme/app_theme.dart';
 
 // ─── Palette FIFA-style ───────────────────────────────────────────────────────
 class _FifaColors {
-  static const bgDeep = Color(0xFF0A0E1A); // sfondo principale, blu notte
-  static const bgCard = Color(0xFF111827); // card messaggi
-  static const bgInput = Color(0xFF1C2536); // input bar
-  static const green = Color(0xFF00D46A); // verde erba luminoso
-  static const greenDark = Color(0xFF008F48); // verde campo scuro
-  static const gold = Color(0xFFF5C518); // oro FIFA
-  static const userBubble = Color(0xFF1A3A5C); // blu maglia
+  static const bgDeep = Color(0xFF0A0E1A);
+  static const bgCard = Color(0xFF111827);
+  static const bgInput = Color(0xFF1C2536);
+  static const green = Color(0xFF00D46A);
+  static const greenDark = Color(0xFF008F48);
+  static const gold = Color(0xFFF5C518);
+  static const userBubble = Color(0xFF1A3A5C);
   static const aiBubble = Color(0xFF162035);
   static const errorBg = Color(0xFF3A0A0A);
   static const textPrimary = Color(0xFFF0F4FF);
@@ -24,7 +27,6 @@ class _FifaColors {
   static const divider = Color(0xFF1E2D45);
 }
 
-// ─── Theme helper ─────────────────────────────────────────────────────────────
 ThemeData fifaTheme() => ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: _FifaColors.bgDeep,
@@ -59,11 +61,6 @@ class AiCoachPage extends StatefulWidget {
 class _AiCoachPageState extends State<AiCoachPage>
     with TickerProviderStateMixin {
   final _storage = const FlutterSecureStorage();
-  final _messageController = TextEditingController();
-  final _scrollController = ScrollController();
-  final List<_ChatMessage> _messages = [];
-
-  bool _loading = false;
   String? _apiKey;
 
   late final AnimationController _headerAnim;
@@ -72,25 +69,16 @@ class _AiCoachPageState extends State<AiCoachPage>
   @override
   void initState() {
     super.initState();
-
     _headerAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 800));
     _headerFade = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
     _headerAnim.forward();
-
     _checkApiKey();
-    _messages.add(_ChatMessage(
-      role: 'assistant',
-      content:
-          '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati della squadra. Come posso aiutarti oggi?',
-    ));
   }
 
   @override
   void dispose() {
     _headerAnim.dispose();
-    _messageController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -107,98 +95,1214 @@ class _AiCoachPageState extends State<AiCoachPage>
     }
   }
 
-  // ── Prompt builder (invariato dalla versione originale) ───────────────────
+  void _openChat() {
+    if (_apiKey == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _ChatPage(apiKey: _apiKey!),
+      ),
+    );
+  }
+
+  void _openTeamBuilder() {
+    if (_apiKey == null) return;
+    final ds = Provider.of<DataService>(context, listen: false);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TeamBuilderPage(apiKey: _apiKey!, dataService: ds),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: fifaTheme(),
+      child: Scaffold(
+        backgroundColor: _FifaColors.bgDeep,
+        body: Column(
+          children: [
+            _FifaAppBar(
+              fadeAnim: _headerFade,
+              onSettingsTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ApiKeySetupPage()),
+                ).then((_) => _checkApiKey());
+              },
+            ),
+            _PitchDivider(),
+            Expanded(
+              child: _apiKey == null
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: _FifaColors.green))
+                  : _ModeSelectionBody(
+                      onChatTap: _openChat,
+                      onTeamBuilderTap: _openTeamBuilder,
+                      fadeAnim: _headerFade,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Schermata selezione modalità ─────────────────────────────────────────────
+class _ModeSelectionBody extends StatelessWidget {
+  final VoidCallback onChatTap;
+  final VoidCallback onTeamBuilderTap;
+  final Animation<double> fadeAnim;
+
+  const _ModeSelectionBody({
+    required this.onChatTap,
+    required this.onTeamBuilderTap,
+    required this.fadeAnim,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: fadeAnim,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Icona centrale
+            Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _FifaColors.greenDark,
+                  border: Border.all(color: _FifaColors.green, width: 2),
+                ),
+                child: const Center(
+                  child: Text('⚽', style: TextStyle(fontSize: 36)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Titolo
+            const Text(
+              'COME POSSO\nAIUTARTI?',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _FifaColors.textPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 3,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Scegli la modalità',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _FifaColors.textSecondary,
+                fontSize: 13,
+                letterSpacing: 1,
+              ),
+            ),
+
+            const SizedBox(height: 48),
+
+            // Card Fai le Squadre
+            _ModeCard(
+              emoji: '🏆',
+              title: 'FAI LE SQUADRE',
+              subtitle: 'Scegli i giocatori disponibili e l\'AI crea squadre equilibrate con statistiche e pronostico',
+              accentColor: _FifaColors.gold,
+              onTap: onTeamBuilderTap,
+              isHighlighted: true,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Card Chat Generale
+            _ModeCard(
+              emoji: '💬',
+              title: 'CHIEDI AL COACH',
+              subtitle: 'Analisi dati, statistiche giocatori, consigli tattici e qualsiasi domanda sulla squadra',
+              accentColor: _FifaColors.green,
+              onTap: onChatTap,
+              isHighlighted: false,
+            ),
+
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeCard extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final Color accentColor;
+  final VoidCallback onTap;
+  final bool isHighlighted;
+
+  const _ModeCard({
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+    required this.onTap,
+    required this.isHighlighted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isHighlighted
+              ? accentColor.withOpacity(0.08)
+              : _FifaColors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isHighlighted
+                ? accentColor.withOpacity(0.5)
+                : _FifaColors.divider,
+            width: isHighlighted ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accentColor.withOpacity(0.3)),
+              ),
+              child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 26)),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isHighlighted
+                          ? accentColor
+                          : _FifaColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: _FifaColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: accentColor.withOpacity(0.6),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Team Builder Page ────────────────────────────────────────────────────────
+class TeamBuilderPage extends StatefulWidget {
+  final String apiKey;
+  final DataService dataService;
+
+  const TeamBuilderPage(
+      {required this.apiKey, required this.dataService, super.key});
+
+  @override
+  State<TeamBuilderPage> createState() => _TeamBuilderPageState();
+}
+
+class _TeamBuilderPageState extends State<TeamBuilderPage> {
+  final Set<String> _selectedIds = {};
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+  bool _loading = false;
+  String? _result;
+  bool _hasResult = false;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Player> get _allPlayers => widget.dataService.getAllPlayers()
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+  List<Player> get _filteredPlayers {
+    final all = _allPlayers;
+    if (_query.isEmpty) return all;
+    final q = _query.toLowerCase();
+    return all.where((p) => p.name.toLowerCase().contains(q)).toList();
+  }
+
+  Future<void> _generateTeams() async {
+    if (_selectedIds.length < 2) return;
+    setState(() {
+      _loading = true;
+      _result = null;
+      _hasResult = false;
+    });
+
+    final selected = _allPlayers.where((p) => _selectedIds.contains(p.id)).toList();
+    final allMatches = widget.dataService.getAllMatches();
+
+    // Raccoglie statistiche per ogni giocatore selezionato
+    final playerStats = <Map<String, dynamic>>[];
+    for (final p in selected) {
+      int games = 0, wins = 0;
+      double totalVote = 0;
+      int voteCount = 0, goals = 0;
+      for (final m in allMatches) {
+        final inA = m.teamA.contains(p.id);
+        final inB = m.teamB.contains(p.id);
+        if (!inA && !inB) continue;
+        games++;
+        final ps = inA ? m.scoreA : m.scoreB;
+        final os = inA ? m.scoreB : m.scoreA;
+        if (ps > os) wins++;
+        goals += m.goals[p.id] ?? 0;
+        if (m.votes.containsKey(p.id)) {
+          totalVote += m.votes[p.id]!;
+          voteCount++;
+        }
+      }
+      playerStats.add({
+        'id': p.id,
+        'name': p.name,
+        'role': p.role,
+        'games': games,
+        'wins': wins,
+        'winRate': games > 0 ? (wins / games * 100).round() : 0,
+        'avgVote': voteCount > 0
+            ? double.parse((totalVote / voteCount).toStringAsFixed(1))
+            : 0.0,
+        'goals': goals,
+        'mvp': p.mvpCount,
+        'hustle': p.hustleCount,
+      });
+    }
+
+    final systemPrompt = '''
+Sei un esperto tattico di calcetto. Il tuo compito è creare due squadre bilanciate dai giocatori forniti.
+
+REGOLE FONDAMENTALI:
+- Usa TUTTI e SOLO i giocatori forniti
+- Ogni giocatore deve apparire in UNA SOLA squadra
+- Se il numero è dispari, indica chi rimane fuori e perché
+- Bilancia le squadre considerando: voto medio, win rate, gol, premi MVP
+- NON mostrare il JSON grezzo
+
+FORMATO RISPOSTA (rispetta questa struttura esatta):
+
+⚽ SQUADRA A
+• [Nome] — [Ruolo] | Voto medio: X.X | Gol: N | Win%: N%
+• [Nome] — [Ruolo] | Voto medio: X.X | Gol: N | Win%: N%
+...
+📊 Media voto squadra: X.X | Win rate medio: N% | Gol totali: N
+
+⚽ SQUADRA B
+• [Nome] — [Ruolo] | Voto medio: X.X | Gol: N | Win%: N%
+• [Nome] — [Ruolo] | Voto medio: X.X | Gol: N | Win%: N%
+...
+📊 Media voto squadra: X.X | Win rate medio: N% | Gol totali: N
+
+⚖️ EQUILIBRIO
+[2-3 righe su quanto sono bilanciate le squadre e quale team ha qualche piccolo vantaggio]
+
+🔮 PRONOSTICO
+[Un pronostico di come potrebbe finire la partita (es. "Partita equilibrata, possibile 3-3 o 2-2") con 2-3 righe di analisi tattica su cosa potrebbe fare la differenza]
+
+DATI GIOCATORI:
+${jsonEncode(playerStats)}
+''';
+
+    try {
+      final request = http.Request(
+        'POST',
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+      );
+      request.headers.addAll({
+        'Authorization': 'Bearer ${widget.apiKey}',
+        'Content-Type': 'application/json',
+      });
+      request.body = jsonEncode({
+        'model': 'gpt-4.1-mini',
+        'messages': [
+          {'role': 'system', 'content': systemPrompt},
+          {
+            'role': 'user',
+            'content':
+                'Crea le squadre con i ${selected.length} giocatori forniti.'
+          }
+        ],
+        'temperature': 0.4,
+        'stream': true,
+      });
+
+      final streamedResponse = await http.Client().send(request);
+      if (streamedResponse.statusCode != 200) {
+        setState(() {
+          _result = 'Errore API: ${streamedResponse.statusCode}';
+          _loading = false;
+          _hasResult = true;
+        });
+        return;
+      }
+
+      final responseBuffer = StringBuffer();
+      String lineBuffer = '';
+
+      await for (final chunk
+          in streamedResponse.stream.transform(utf8.decoder)) {
+        lineBuffer += chunk;
+        while (lineBuffer.contains('\n')) {
+          final newlineIndex = lineBuffer.indexOf('\n');
+          final line = lineBuffer.substring(0, newlineIndex).trim();
+          lineBuffer = lineBuffer.substring(newlineIndex + 1);
+          if (!line.startsWith('data: ')) continue;
+          final jsonStr = line.substring(6);
+          if (jsonStr == '[DONE]') break;
+          try {
+            final data = jsonDecode(jsonStr);
+            final delta =
+                data['choices'][0]['delta']['content'] as String? ?? '';
+            if (delta.isEmpty) continue;
+            responseBuffer.write(delta);
+            if (mounted) {
+              setState(() => _result = responseBuffer.toString());
+            }
+          } catch (_) {}
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _hasResult = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _result = 'Errore di connessione: $e';
+          _loading = false;
+          _hasResult = true;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canGenerate = _selectedIds.length >= 2;
+
+    return Theme(
+      data: fifaTheme(),
+      child: Scaffold(
+        backgroundColor: _FifaColors.bgDeep,
+        appBar: AppBar(
+          backgroundColor: _FifaColors.bgDeep,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: _FifaColors.textPrimary, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'FAI LE SQUADRE',
+                style: TextStyle(
+                  color: _FifaColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.5,
+                ),
+              ),
+              Text(
+                'COACH AI',
+                style: TextStyle(
+                  color: _FifaColors.gold,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(3),
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  Colors.transparent,
+                  _FifaColors.gold,
+                  _FifaColors.green,
+                  _FifaColors.gold,
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+        ),
+        body: Column(
+          children: [
+            // Header selezione
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              decoration: const BoxDecoration(
+                color: _FifaColors.bgCard,
+                border: Border(
+                    bottom: BorderSide(color: _FifaColors.divider)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'SELEZIONA I GIOCATORI DISPONIBILI',
+                              style: TextStyle(
+                                color: _FifaColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${_selectedIds.length} selezionati',
+                              style: const TextStyle(
+                                color: _FifaColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_selectedIds.isNotEmpty)
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _selectedIds.clear()),
+                          child: const Text(
+                            'DESELEZIONA TUTTI',
+                            style: TextStyle(
+                                color: _FifaColors.textSecondary,
+                                fontSize: 10,
+                                letterSpacing: 1),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Barra di ricerca
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _FifaColors.bgInput,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _FifaColors.divider),
+                    ),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style: const TextStyle(
+                          color: _FifaColors.textPrimary, fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Cerca giocatore…',
+                        hintStyle: const TextStyle(
+                            color: _FifaColors.textSecondary, fontSize: 13),
+                        prefixIcon: const Icon(Icons.search_rounded,
+                            color: _FifaColors.textSecondary, size: 18),
+                        suffixIcon: _query.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _query = '');
+                                },
+                                child: const Icon(Icons.close_rounded,
+                                    color: _FifaColors.textSecondary,
+                                    size: 16),
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onChanged: (v) => setState(() => _query = v),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+
+            // Lista giocatori
+            Expanded(
+              child: _hasResult
+                  ? _ResultView(
+                      result: _result ?? '',
+                      loading: _loading,
+                      onReset: () => setState(() {
+                        _hasResult = false;
+                        _result = null;
+                        _selectedIds.clear();
+                        _searchCtrl.clear();
+                        _query = '';
+                      }),
+                    )
+                  : _filteredPlayers.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Nessun giocatore trovato',
+                            style: TextStyle(
+                                color: _FifaColors.textSecondary,
+                                fontSize: 13),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                      itemCount: _filteredPlayers.length,
+                      itemBuilder: (context, i) {
+                        final p = _filteredPlayers[i];
+                        final isSelected = _selectedIds.contains(p.id);
+                        return _PlayerSelectTile(
+                          player: p,
+                          isSelected: isSelected,
+                          onTap: () => setState(() {
+                            if (isSelected) {
+                              _selectedIds.remove(p.id);
+                            } else {
+                              _selectedIds.add(p.id);
+                            }
+                          }),
+                        );
+                      },
+                    ),
+            ),
+
+            // Bottone genera
+            if (!_hasResult)
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                decoration: const BoxDecoration(
+                  color: _FifaColors.bgCard,
+                  border: Border(
+                      top: BorderSide(color: _FifaColors.divider)),
+                ),
+                child: _loading
+                    ? Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _FifaColors.bgInput,
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: _FifaColors.green.withOpacity(0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: _FifaColors.green,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'ANALISI IN CORSO...',
+                              style: TextStyle(
+                                color: _FifaColors.green,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: canGenerate ? _generateTeams : null,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: canGenerate
+                                ? _FifaColors.gold.withOpacity(0.15)
+                                : _FifaColors.bgInput,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: canGenerate
+                                  ? _FifaColors.gold.withOpacity(0.5)
+                                  : _FifaColors.divider,
+                              width: canGenerate ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '🏆',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: canGenerate
+                                      ? _FifaColors.gold
+                                      : _FifaColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                canGenerate
+                                    ? 'GENERA SQUADRE CON ${_selectedIds.length} GIOCATORI'
+                                    : 'SELEZIONA ALMENO 2 GIOCATORI',
+                                style: TextStyle(
+                                  color: canGenerate
+                                      ? _FifaColors.gold
+                                      : _FifaColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Player Select Tile ───────────────────────────────────────────────────────
+class _PlayerSelectTile extends StatelessWidget {
+  final Player player;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PlayerSelectTile({
+    required this.player,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _FifaColors.green.withOpacity(0.08)
+              : _FifaColors.bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? _FifaColors.green.withOpacity(0.5)
+                : _FifaColors.divider,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            PlayerAvatar(player: player, radius: 20),
+            const SizedBox(width: 12),
+            // Nome + ruolo
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    player.name.toUpperCase(),
+                    style: TextStyle(
+                      color: isSelected
+                          ? _FifaColors.textPrimary
+                          : _FifaColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      _RoleBadge(role: player.role),
+                      if (player.mvpCount > 0) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '👑×${player.mvpCount}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: _FifaColors.textSecondary),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Checkbox
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected
+                    ? _FifaColors.green
+                    : Colors.transparent,
+                border: Border.all(
+                  color: isSelected
+                      ? _FifaColors.green
+                      : _FifaColors.divider,
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check_rounded,
+                      size: 14, color: Colors.black)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  final String role;
+  const _RoleBadge({required this.role});
+
+  Color get _color => switch (role) {
+        'P' => _FifaColors.gold,
+        'D' => const Color(0xFF00B0FF),
+        'C' => _FifaColors.green,
+        'A' => const Color(0xFFFF4444),
+        _ => _FifaColors.textSecondary,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _color.withOpacity(0.4)),
+      ),
+      child: Text(
+        role,
+        style: TextStyle(
+          color: _color,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Result View ──────────────────────────────────────────────────────────────
+class _ResultView extends StatelessWidget {
+  final String result;
+  final bool loading;
+  final VoidCallback onReset;
+
+  const _ResultView({
+    required this.result,
+    required this.loading,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Barra azioni
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: const BoxDecoration(
+            color: _FifaColors.bgCard,
+            border: Border(
+                bottom: BorderSide(color: _FifaColors.divider)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: loading ? _FifaColors.gold : _FifaColors.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Text(
+                loading ? 'ANALISI IN CORSO...' : 'ANALISI COMPLETATA',
+                style: TextStyle(
+                  color:
+                      loading ? _FifaColors.gold : _FifaColors.green,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2,
+                ),
+              ),
+              const Spacer(),
+              if (!loading)
+                GestureDetector(
+                  onTap: onReset,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _FifaColors.bgInput,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _FifaColors.divider),
+                    ),
+                    child: const Text(
+                      '↺ RICOMINCIA',
+                      style: TextStyle(
+                        color: _FifaColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // Contenuto risultato
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _ResultCard(text: result),
+                if (loading) ...[
+                  const SizedBox(height: 16),
+                  _TypingIndicatorSmall(),
+                ],
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ResultCard extends StatelessWidget {
+  final String text;
+  const _ResultCard({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.isEmpty) return const SizedBox();
+
+    final sections = _parseResult(text);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: sections.map((s) => _SectionWidget(section: s)).toList(),
+    );
+  }
+
+  List<_Section> _parseResult(String text) {
+    final lines = text.split('\n');
+    final sections = <_Section>[];
+    _Section? current;
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
+
+      if (trimmed.startsWith('⚽') || trimmed.startsWith('⚖️') ||
+          trimmed.startsWith('🔮') || trimmed.startsWith('📊')) {
+        if (current != null) sections.add(current);
+        current = _Section(header: trimmed, lines: []);
+      } else if (current != null) {
+        current.lines.add(trimmed);
+      } else {
+        current = _Section(header: '', lines: [trimmed]);
+      }
+    }
+    if (current != null) sections.add(current);
+    return sections;
+  }
+}
+
+class _Section {
+  final String header;
+  final List<String> lines;
+  _Section({required this.header, required this.lines});
+}
+
+class _SectionWidget extends StatelessWidget {
+  final _Section section;
+  const _SectionWidget({required this.section});
+
+  Color _headerColor() {
+    if (section.header.startsWith('⚽')) return _FifaColors.green;
+    if (section.header.startsWith('⚖️')) return _FifaColors.gold;
+    if (section.header.startsWith('🔮')) return const Color(0xFFAA88FF);
+    if (section.header.startsWith('📊')) return const Color(0xFF00B0FF);
+    return _FifaColors.textSecondary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _headerColor();
+    final isTeam = section.header.startsWith('⚽');
+    final isStats = section.header.startsWith('📊');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isTeam
+            ? color.withOpacity(0.06)
+            : _FifaColors.bgCard,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: color.withOpacity(isTeam ? 0.35 : 0.2),
+          width: isTeam ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (section.header.isNotEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              child: Text(
+                section.header,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ),
+          if (section.header.isNotEmpty && section.lines.isNotEmpty)
+            Container(
+                height: 1,
+                color: color.withOpacity(0.15),
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 14)),
+          ...section.lines.map(
+            (line) => Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+              child: Text(
+                line,
+                style: TextStyle(
+                  color: isStats
+                      ? color
+                      : _FifaColors.textPrimary,
+                  fontSize: isStats ? 12 : 13,
+                  fontWeight: isStats
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+}
+
+class _TypingIndicatorSmall extends StatefulWidget {
+  @override
+  State<_TypingIndicatorSmall> createState() =>
+      _TypingIndicatorSmallState();
+}
+
+class _TypingIndicatorSmallState extends State<_TypingIndicatorSmall>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _anim,
+      child: const Text(
+        '● ● ●',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: _FifaColors.green,
+          fontSize: 12,
+          letterSpacing: 4,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Chat Page (chat generica) ────────────────────────────────────────────────
+class _ChatPage extends StatefulWidget {
+  final String apiKey;
+  const _ChatPage({required this.apiKey});
+
+  @override
+  State<_ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
+  final _messageController = TextEditingController();
+  final _scrollController = ScrollController();
+  final List<_ChatMessage> _messages = [];
+  bool _loading = false;
+
+  late final AnimationController _headerAnim;
+  late final Animation<double> _headerFade;
+
+  @override
+  void initState() {
+    super.initState();
+    _headerAnim = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600));
+    _headerFade = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
+    _headerAnim.forward();
+
+    _messages.add(_ChatMessage(
+      role: 'assistant',
+      content:
+          '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati della squadra. Come posso aiutarti oggi?',
+    ));
+  }
+
+  @override
+  void dispose() {
+    _headerAnim.dispose();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   String _buildSystemPrompt(DataService ds) {
     final contextJson = {
-    "players": ds.getAllPlayers().map((p) => {
-          "id": p.id,
-          "name": p.name,
-          "role": p.role,
-          "totalGoals": p.totalGoals,
-          "mvpCount": p.mvpCount,
-          "hustleCount": p.hustleCount,
-          "bestGoalCount": p.bestGoalCount,
-        }).toList(),
-    "matches": ds.getAllMatches().map((m) => {
-          "id": m.id,
-          "date": m.date.toIso8601String(),
-          "teamA": m.teamA,
-          "teamB": m.teamB,
-          "scoreA": m.scoreA,
-          "scoreB": m.scoreB,
-          "votes": m.votes,
-          "MVP": m.mvp, 
-          "Combattivo": m.hustlePlayer, 
-          "Gol più bello": m.bestGoalPlayer, 
-        }).toList(),
-  };
+      'players': ds.getAllPlayers().map((p) => {
+            'id': p.id,
+            'name': p.name,
+            'role': p.role,
+            'totalGoals': p.totalGoals,
+            'mvpCount': p.mvpCount,
+            'hustleCount': p.hustleCount,
+            'bestGoalCount': p.bestGoalCount,
+          }).toList(),
+      'matches': ds.getAllMatches().map((m) => {
+            'id': m.id,
+            'date': m.date.toIso8601String(),
+            'teamA': m.teamA,
+            'teamB': m.teamB,
+            'scoreA': m.scoreA,
+            'scoreB': m.scoreB,
+            'votes': m.votes,
+            'MVP': m.mvp,
+            'Combattivo': m.hustlePlayer,
+            'Gol più bello': m.bestGoalPlayer,
+          }).toList(),
+    };
     return '''
-Sei un esperto di calcetto e data analyst che assiste l'utente nella gestione del proprio gruppo di Calcetto.
+Sei un esperto di calcetto e data analyst che assiste l\'utente nella gestione del proprio gruppo di Calcetto.
 Il tuo obiettivo è:
-- Analizzare i dati dei giocatori registrati nell'app
+- Analizzare i dati dei giocatori registrati nell\'app
 - Fornire consigli tecnici
 - Rispondere a domande sulle performance
-- Creare squadre equilibrate quando richiesto, con lo stesso numero di giocatori per squadra(quando possibile)
-- usa tutti i giocatori che sono disponibili per quella partita
 
 REGOLE:
 - NON mostrare mai il JSON
 - NON copiare i dati raw nella risposta
 - Usa i dati solo per analisi
+- NON inventare MAI statistiche
 
-Rispondi alla domanda dell’utente in modo chiaro e sintetico.
-UTILIZZO DATI:
-- Usa SOLO i dati forniti.
-- NON inventare MAI statistiche, ruoli o informazioni mancanti.
-- Se un dato non è presente, dichiaralo brevemente.
-- Non fare assunzioni non giustificate dai dati.
-
-METRICHE DI VALUTAZIONE:
-1. Media Voto → qualità costante
-2. Gol Totali → capacità realizzativa
-3. Premi (MVP, Combattivo, Gol Bello) → impatto e leadership
-4. Win Rate → contributo alle vittorie
-
-### GESTIONE RICHIESTE
-
-#### 1. Creazione SQUADRE:
-
-Quando l’utente richiede la creazione delle squadre:
-Usa tutti i giocatori disponibili.
-NON ripetere nessun giocatore.
-Dividi i giocatori in due squadre con lo stesso numero di membri, quando possibile.
-Se il numero è dispari, indica chiaramente chi resta fuori.
-Assicurati che ogni giocatore compaia una sola volta.
-
-Squadra A:
-- Nome — Ruolo
-  Punti di forza: ...
-  Impatto: ...
-Squadra B:
-- Nome — Ruolo
-  Punti di forza: ...
-  Impatto: ...
-CONSIDERAZIONI FINALI:
-- Equilibrio generale
-- Chiavi tattiche
-
-#### 2. Analisi o domanda generica:
-Rispondi in modo chiaro e sintetico usando i dati.
-
-### REGOLE:
-- NON mostrare calcoli o ragionamenti interni
-- NON inventare dati
-- Sii sintetico ma informativo
-
-DATI (NON MOSTRARLI ALL’UTENTE):
+DATI (NON MOSTRARLI ALL\'UTENTE):
 ${jsonEncode(contextJson)}
 ''';
   }
 
-  // ── Send con streaming ────────────────────────────────────────────────────
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _loading || _apiKey == null) return;
+    if (text.isEmpty || _loading) return;
 
     final ds = Provider.of<DataService>(context, listen: false);
     final assistantMessage = _ChatMessage(role: 'assistant', content: '');
@@ -225,7 +1329,7 @@ ${jsonEncode(contextJson)}
         Uri.parse('https://api.openai.com/v1/chat/completions'),
       );
       request.headers.addAll({
-        'Authorization': 'Bearer $_apiKey',
+        'Authorization': 'Bearer ${widget.apiKey}',
         'Content-Type': 'application/json',
       });
       request.body = jsonEncode({
@@ -237,7 +1341,7 @@ ${jsonEncode(contextJson)}
 
       final streamedResponse = await http.Client().send(request);
       if (streamedResponse.statusCode != 200) {
-        _showError("Errore API: ${streamedResponse.statusCode}");
+        _showError('Errore API: ${streamedResponse.statusCode}');
         return;
       }
 
@@ -273,7 +1377,7 @@ ${jsonEncode(contextJson)}
         setState(() => assistantMessage.content = '(nessuna risposta)');
       }
     } catch (e) {
-      _showError("Errore di connessione: $e");
+      _showError('Errore di connessione: $e');
     }
 
     if (mounted) setState(() => _loading = false);
@@ -302,22 +1406,65 @@ ${jsonEncode(contextJson)}
     });
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: fifaTheme(),
       child: Scaffold(
         backgroundColor: _FifaColors.bgDeep,
+        appBar: AppBar(
+          backgroundColor: _FifaColors.bgDeep,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: _FifaColors.textPrimary, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'COACH AI',
+                style: TextStyle(
+                  color: _FifaColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.5,
+                ),
+              ),
+              Text(
+                'ANALISI SQUADRA',
+                style: TextStyle(
+                  color: _FifaColors.green,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(3),
+            child: Container(
+              height: 3,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  Colors.transparent,
+                  _FifaColors.green,
+                  _FifaColors.gold,
+                  _FifaColors.green,
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+        ),
         body: Column(
           children: [
-            _FifaAppBar(fadeAnim: _headerFade),
-            _PitchDivider(),
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
                 itemCount: _messages.length +
                     (_loading && _messages.last.content.isEmpty ? 1 : 0),
                 itemBuilder: (context, index) {
@@ -339,30 +1486,27 @@ ${jsonEncode(contextJson)}
   }
 }
 
-// ─── AppBar FIFA ──────────────────────────────────────────────────────────────
+// ─── AppBar FIFA (per la pagina principale) ───────────────────────────────────
 class _FifaAppBar extends StatelessWidget {
   final Animation<double> fadeAnim;
-  const _FifaAppBar({required this.fadeAnim});
+  final VoidCallback onSettingsTap;
+  const _FifaAppBar({required this.fadeAnim, required this.onSettingsTap});
 
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.only(top: top + 12, bottom: 14, left: 20, right: 20),
-      decoration: const BoxDecoration(
-        color: _FifaColors.bgDeep,
-      ),
+      decoration: const BoxDecoration(color: _FifaColors.bgDeep),
       child: FadeTransition(
         opacity: fadeAnim,
         child: Row(
           children: [
-            // --- TASTO BACK ---
             IconButton(
               icon: const Icon(Icons.arrow_back_ios_new,
                   color: _FifaColors.textPrimary, size: 20),
               onPressed: () => Navigator.of(context).pop(),
             ),
-            // Badge rotondo verde
             Container(
               width: 40,
               height: 40,
@@ -371,8 +1515,8 @@ class _FifaAppBar extends StatelessWidget {
                 color: _FifaColors.greenDark,
                 border: Border.all(color: _FifaColors.green, width: 2),
               ),
-              child: const Center(
-                  child: Text('⚽', style: TextStyle(fontSize: 20))),
+              child:
+                  const Center(child: Text('⚽', style: TextStyle(fontSize: 20))),
             ),
             const SizedBox(width: 14),
             const Column(
@@ -389,7 +1533,7 @@ class _FifaAppBar extends StatelessWidget {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'ANALISI SQUADRA',
+                  'ASSISTENTE SQUADRA',
                   style: TextStyle(
                     color: _FifaColors.green,
                     fontSize: 10,
@@ -400,31 +1544,20 @@ class _FifaAppBar extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            // --- NUOVO TASTO IMPOSTAZIONI ---
             IconButton(
               icon: const Icon(Icons.settings_outlined,
                   color: _FifaColors.textSecondary, size: 20),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ApiKeySetupPage()),
-                ).then((_) {
-                  // Quando si torna indietro, ricarichiamo la chiave nel caso sia cambiata
-                  final state =
-                      context.findAncestorStateOfType<_AiCoachPageState>();
-                  state?._checkApiKey();
-                });
-              },
+              onPressed: onSettingsTap,
             ),
-            // --------------------------------
             const SizedBox(width: 8),
-            // Pill "LIVE"
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: _FifaColors.green.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: _FifaColors.green.withOpacity(0.4)),
+                border: Border.all(
+                    color: _FifaColors.green.withOpacity(0.4)),
               ),
               child: Row(
                 children: [
@@ -499,7 +1632,8 @@ class _MessageBubble extends StatelessWidget {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
                 color: isError
                     ? _FifaColors.errorBg
@@ -520,21 +1654,13 @@ class _MessageBubble extends StatelessWidget {
                           : _FifaColors.divider,
                   width: 1,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isUser
-                        ? _FifaColors.green.withOpacity(0.08)
-                        : Colors.black.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color:
-                      isError ? Colors.red.shade300 : _FifaColors.textPrimary,
+                  color: isError
+                      ? Colors.red.shade300
+                      : _FifaColors.textPrimary,
                   fontSize: 14.5,
                   height: 1.5,
                 ),
@@ -551,7 +1677,6 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
 class _Avatar extends StatelessWidget {
   final bool isUser;
   final bool isError;
@@ -582,7 +1707,6 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-// ─── Typing indicator FIFA style ──────────────────────────────────────────────
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator();
 
@@ -619,7 +1743,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           _Avatar(isUser: false, isError: false),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: _FifaColors.aiBubble,
               borderRadius: const BorderRadius.only(
@@ -707,28 +1832,27 @@ class _InputBar extends StatelessWidget {
                   fontSize: 14.5,
                 ),
                 onSubmitted: (_) => onSend(),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Chiedi al Coach...',
-                  hintStyle: const TextStyle(
+                  hintStyle: TextStyle(
                     color: _FifaColors.textSecondary,
                     fontSize: 14,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 12,
                   ),
                   border: InputBorder.none,
-                  prefixIcon: const Padding(
+                  prefixIcon: Padding(
                     padding: EdgeInsets.only(left: 12, right: 4),
                     child: Text('⚽', style: TextStyle(fontSize: 16)),
                   ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 0),
+                  prefixIconConstraints: BoxConstraints(minWidth: 0),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 8),
-          // Bottone invio FIFA-style
           GestureDetector(
             onTap: loading ? null : onSend,
             child: AnimatedContainer(
@@ -737,14 +1861,7 @@ class _InputBar extends StatelessWidget {
               height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: loading
-                    ? null
-                    : const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [_FifaColors.green, _FifaColors.greenDark],
-                      ),
-                color: loading ? _FifaColors.bgInput : null,
+                color: loading ? _FifaColors.bgInput : _FifaColors.green,
                 boxShadow: loading
                     ? null
                     : [
