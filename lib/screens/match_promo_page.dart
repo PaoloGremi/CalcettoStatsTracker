@@ -5,6 +5,7 @@ import '../models/player.dart';
 import '../models/field_model.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import 'field_lineup_page.dart';
 
 class MatchPromoPage extends StatefulWidget {
   final String dataOra;
@@ -168,6 +169,12 @@ class _MatchPromoPageState extends State<MatchPromoPage>
                   ),
                 ],
               ),
+            ),
+
+            // ── PULSANTE FORMAZIONE ───────────────────────────────
+            _LineupButton(
+              teamWhite: widget.teamWhite,
+              teamBlack: widget.teamBlack,
             ),
 
             // ── FOOTER ────────────────────────────────────────────
@@ -856,6 +863,109 @@ class _MiniStars extends StatelessWidget {
         color: i < stars ? color.withOpacity(0.9) : color.withOpacity(0.25),
         size: 9,
       )),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Lineup Button — apre la pagina campo stile FIFA
+// ─────────────────────────────────────────────────────────────
+
+class _LineupButton extends StatelessWidget {
+  final List<String> teamWhite;
+  final List<String> teamBlack;
+  const _LineupButton({required this.teamWhite, required this.teamBlack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+      child: GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, animation, __) => FieldLineupPage(
+              teamWhite: teamWhite,
+              teamBlack: teamBlack,
+            ),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.05),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOut,
+                  )),
+                  child: child,
+                ),
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        ),
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.accentGreen.withOpacity(0.85),
+                const Color(0xFF0d6b25),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(
+              color: AppTheme.accentGreen.withOpacity(0.5),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.accentGreen.withOpacity(0.35),
+                blurRadius: 16,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icona campo
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.sports_soccer_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'VISUALIZZA FORMAZIONE',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 12,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
