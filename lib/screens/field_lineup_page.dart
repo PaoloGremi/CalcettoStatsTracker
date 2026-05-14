@@ -280,7 +280,8 @@ class _FieldLineupPageState extends State<FieldLineupPage>
                         child: Stack(
                           children: [
                             Positioned.fill(
-                                child: CustomPaint(painter: _FieldPainter())),
+                                child: CustomPaint(painter: _FieldPainter())
+                                ),
                             ..._buildTokenWidgets(),
                           ],
                         ),
