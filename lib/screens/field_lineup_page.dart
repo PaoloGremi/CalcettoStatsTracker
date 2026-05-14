@@ -369,16 +369,53 @@ class _FieldLineupPageState extends State<FieldLineupPage>
                             shape: BoxShape.circle, color: accent),
                       ),
                       // Foto / icona
-                      player != null
-                          ? PlayerAvatar(
-                              player: player!, radius: _kAvatarRadius)
-                          : CircleAvatar(
-                              radius: _kAvatarRadius,
-                              backgroundColor: AppTheme.surfaceAlt,
-                              child: Icon(Icons.person,
-                                  color: AppTheme.textMuted,
-                                  size: _kAvatarRadius),
-                            ),
+                      Container(
+  width: _kAvatarRadius * 2,
+  height: _kAvatarRadius * 2,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+
+    // ⭐ Effetto 3D con gradiente luce/ombra
+    gradient: const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0x33FFFFFF), // luce in alto a sinistra
+        Color(0x33000000), // ombra in basso a destra
+      ],
+    ),
+
+    // ⭐ Ombre per creare profondità
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.35),
+        blurRadius: 10,
+        spreadRadius: 2,
+        offset: const Offset(3, 3), // ombra principale
+      ),
+      BoxShadow(
+        color: Colors.white.withOpacity(0.25),
+        blurRadius: 6,
+        offset: const Offset(-2, -2), // highlight superiore
+      ),
+    ],
+  ),
+
+  // Clip rotondo
+  child: ClipOval(
+    child: player != null
+        ? PlayerAvatar(player: player!, radius: _kAvatarRadius)
+        : CircleAvatar(
+            radius: _kAvatarRadius,
+            backgroundColor: AppTheme.surfaceAlt,
+            child: Icon(
+              Icons.person,
+              color: AppTheme.textMuted,
+              size: _kAvatarRadius,
+            ),
+          ),
+  ),
+),
                       // Badge ruolo
                       if (role.isNotEmpty)
                         Positioned(
