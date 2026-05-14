@@ -10,6 +10,7 @@ import 'package:calcetto_tracker/screens/api_key_setup_page.dart';
 import 'package:calcetto_tracker/models/player.dart';
 import 'package:calcetto_tracker/widgets/player_avatar.dart';
 import 'package:calcetto_tracker/theme/app_theme.dart';
+import 'package:calcetto_tracker/data/hive_boxes.dart';
 
 // ─── Palette FIFA-style ───────────────────────────────────────────────────────
 class _FifaColors {
@@ -1258,30 +1259,91 @@ class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  String _buildSystemPrompt(DataService ds) {
+  // Legge SEMPRE direttamente da HiveBoxes per dati 100% aggiornati,
+  // indipendentemente dallo stato del DataService provider.
+  String _buildSystemPrompt() {
+    final allPlayers = HiveBoxes.playersBox.values.toList();
+    final allMatches = HiveBoxes.matchesBox.values.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    String resolveName(String id) {
+      if (id.isEmpty) return '';
+      return HiveBoxes.playersBox.get(id)?.name ?? id;
+    }
+
+    // Statistiche aggregate per giocatore
+    final playerStats = allPlayers.map((p) {
+      int games = 0, wins = 0, draws = 0, losses = 0, votesCount = 0;
+      double totalVotes = 0;
+      int goalsScored = 0;
+
+      for (final m in allMatches) {
+        final inA = m.teamA.contains(p.id);
+        final inB = m.teamB.contains(p.id);
+        if (!inA && !inB) continue;
+        games++;
+        final myScore = inA ? m.scoreA : m.scoreB;
+        final oppScore = inA ? m.scoreB : m.scoreA;
+        if (myScore > oppScore) wins++;
+        else if (myScore == oppScore) draws++;
+        else losses++;
+        if (m.votes.containsKey(p.id)) {
+          totalVotes += m.votes[p.id]!;
+          votesCount++;
+        }
+        goalsScored += m.goals[p.id] ?? 0;
+      }
+
+      return {
+        'nome': p.name,
+        'ruolo': p.role,
+        'partite_giocate': games,
+        'vittorie': wins,
+        'pareggi': draws,
+        'sconfitte': losses,
+        'win_rate_pct': games > 0 ? (wins / games * 100).toStringAsFixed(1) : '0',
+        'voto_medio': votesCount > 0 ? (totalVotes / votesCount).toStringAsFixed(2) : null,
+        'gol_totali': goalsScored,
+        'premi_mvp': p.mvpCount,
+        'premi_combattivo': p.hustleCount,
+        'premi_best_goal': p.bestGoalCount,
+      };
+    }).toList();
+
+    // Partite con nomi risolti (non ID grezzi)
+    final matchesData = allMatches.map((m) {
+      final votesNamed = <String, double>{};
+      for (final entry in m.votes.entries) {
+        final name = resolveName(entry.key);
+        if (name.isNotEmpty) votesNamed[name] = entry.value;
+      }
+      final goalsNamed = <String, int>{};
+      for (final entry in m.goals.entries) {
+        if (entry.value > 0) {
+          final name = resolveName(entry.key);
+          if (name.isNotEmpty) goalsNamed[name] = entry.value;
+        }
+      }
+      final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
+      return {
+        'data': m.date.toIso8601String().substring(0, 10),
+        'campo': field?.name ?? m.fieldLocation,
+        'squadra_bianca': m.teamA.map(resolveName).where((n) => n.isNotEmpty).toList(),
+        'squadra_colorata': m.teamB.map(resolveName).where((n) => n.isNotEmpty).toList(),
+        'risultato': '${m.scoreA}-${m.scoreB}',
+        'voti': votesNamed,
+        'gol': goalsNamed,
+        'MVP': resolveName(m.mvp),
+        'Combattivo': resolveName(m.hustlePlayer),
+        'Gol_piu_bello': resolveName(m.bestGoalPlayer),
+      };
+    }).toList();
+
     final contextJson = {
-      'players': ds.getAllPlayers().map((p) => {
-            'id': p.id,
-            'name': p.name,
-            'role': p.role,
-            'totalGoals': p.totalGoals,
-            'mvpCount': p.mvpCount,
-            'hustleCount': p.hustleCount,
-            'bestGoalCount': p.bestGoalCount,
-          }).toList(),
-      'matches': ds.getAllMatches().map((m) => {
-            'id': m.id,
-            'date': m.date.toIso8601String(),
-            'teamA': m.teamA,
-            'teamB': m.teamB,
-            'scoreA': m.scoreA,
-            'scoreB': m.scoreB,
-            'votes': m.votes,
-            'MVP': m.mvp,
-            'Combattivo': m.hustlePlayer,
-            'Gol più bello': m.bestGoalPlayer,
-          }).toList(),
+      'statistiche_giocatori': playerStats,
+      'partite': matchesData,
     };
+
     return '''
 Sei un esperto di calcetto e data analyst che assiste l\'utente nella gestione del proprio gruppo di Calcetto.
 Il tuo obiettivo è:
@@ -1294,17 +1356,27 @@ REGOLE:
 - NON copiare i dati raw nella risposta
 - Usa i dati solo per analisi
 - NON inventare MAI statistiche
+- Se un dato non è presente, dichiaralo brevemente
 
 DATI (NON MOSTRARLI ALL\'UTENTE):
 ${jsonEncode(contextJson)}
 ''';
   }
 
+  void _resetChat() {
+    setState(() {
+      _messages.clear();
+      _messages.add(_ChatMessage(
+        role: 'assistant',
+        content: '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati aggiornati della squadra. Come posso aiutarti oggi?',
+      ));
+    });
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _loading) return;
 
-    final ds = Provider.of<DataService>(context, listen: false);
     final assistantMessage = _ChatMessage(role: 'assistant', content: '');
     setState(() {
       _messages.add(_ChatMessage(role: 'user', content: text));
@@ -1315,7 +1387,8 @@ ${jsonEncode(contextJson)}
     _scrollToBottom();
 
     try {
-      final systemPrompt = _buildSystemPrompt(ds);
+      // System prompt rigenerato ad ogni messaggio con dati freschi da Hive
+      final systemPrompt = _buildSystemPrompt();
       final history = _messages.sublist(0, _messages.length - 1);
       final apiMessages = [
         {'role': 'system', 'content': systemPrompt},
@@ -1442,6 +1515,14 @@ ${jsonEncode(contextJson)}
               ),
             ],
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded,
+                  color: _FifaColors.green, size: 22),
+              tooltip: 'Nuova chat',
+              onPressed: _resetChat,
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(3),
             child: Container(
