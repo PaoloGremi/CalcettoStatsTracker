@@ -324,6 +324,7 @@ class _FieldLineupPageState extends State<FieldLineupPage>
     );
 
     return Positioned(
+      key: ValueKey(t.playerId),
       left: t.position.dx - _kTokenW / 2,
       top:  t.position.dy - _kTokenH / 2,
       child: IgnorePointer(
@@ -410,7 +411,7 @@ class _FieldLineupPageState extends State<FieldLineupPage>
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 140),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 4, vertical: 2),
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: isDragging
                           ? accent.withOpacity(0.9)
