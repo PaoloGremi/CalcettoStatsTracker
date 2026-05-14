@@ -16,7 +16,7 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  _SortMode _mode = _SortMode.avgVote;
+  _SortMode _mode = _SortMode.matches;
 
   static const _modes = [
     {'value': _SortMode.avgVote,  'label': 'Voto Medio',        'emoji': '⭐'},
