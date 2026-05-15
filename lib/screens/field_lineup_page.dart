@@ -10,7 +10,8 @@ import '../theme/app_theme.dart';
 // Costanti avatar
 // ─────────────────────────────────────────────────────────────
 const double _kAvatarRadius = 22.0;
-const double _kLabelHeight  = 16.0;
+// [MIGLIORIA 2] Altezza token aumentata per ospitare il ruolo sotto il nome
+const double _kLabelHeight  = 28.0;
 const double _kTokenW       = _kAvatarRadius * 2 + 16;
 const double _kTokenH       = _kAvatarRadius * 2 + _kLabelHeight + 6;
 
@@ -50,9 +51,13 @@ class FieldLineupPage extends StatefulWidget {
   State<FieldLineupPage> createState() => _FieldLineupPageState();
 }
 
+// [MIGLIORIA 3 + 6] TickerProviderStateMixin per supportare più AnimationController
 class _FieldLineupPageState extends State<FieldLineupPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _entryController;
+  // [MIGLIORIA 6] Controller per hint pulsante
+  late AnimationController _hintController;
+  bool _hintVisible = true; // nasconde l'hint dopo il primo drag
 
   double _fieldWidth  = 0;
   double _fieldHeight = 0;
@@ -68,11 +73,18 @@ class _FieldLineupPageState extends State<FieldLineupPage>
       vsync: this,
       duration: const Duration(milliseconds: 850),
     );
+
+    // [MIGLIORIA 6] Hint che pulsa tra 0.35 e 1.0 di opacità
+    _hintController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _entryController.dispose();
+    _hintController.dispose();
     super.dispose();
   }
 
@@ -117,13 +129,7 @@ class _FieldLineupPageState extends State<FieldLineupPage>
   }
 
   // ── Drag handlers — unico GestureDetector sullo Stack ───
-  // Scorre i token dal più in alto (ultimo renderizzato) al più in basso
-  // e prende il primo il cui cerchio contiene il punto toccato.
-
   int? _hitTest(Offset localPos) {
-    // L'ordine di rendering è: token normali in ordine, poi il dragging.
-    // Per l'hit-test vogliamo la priorità inversa: prima il token in drag
-    // (se esiste), poi gli altri dall'ultimo al primo.
     final order = <int>[
       for (int i = _tokens.length - 1; i >= 0; i--)
         if (i != _draggingIndex) i,
@@ -132,7 +138,6 @@ class _FieldLineupPageState extends State<FieldLineupPage>
 
     for (final i in order) {
       final center = _tokens[i].position;
-      // Hit area: cerchio di raggio leggermente generoso
       if ((localPos - center).distance <= _kAvatarRadius + 10) return i;
     }
     return null;
@@ -144,6 +149,11 @@ class _FieldLineupPageState extends State<FieldLineupPage>
     setState(() {
       _draggingIndex = hit;
       _tokens[hit].isDragging = true;
+      // [MIGLIORIA 6] Nascondi hint al primo drag
+      if (_hintVisible) {
+        _hintVisible = false;
+        _hintController.stop();
+      }
     });
   }
 
@@ -196,8 +206,16 @@ class _FieldLineupPageState extends State<FieldLineupPage>
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel(
-            'Formazione', color: AppTheme.textPrimary, fontSize: 13),
+        // [MIGLIORIA 5] AppBar con icona + titolo centrato
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sports_soccer_rounded, size: 16, color: AppTheme.accentBlue),
+            const SizedBox(width: 7),
+            const FifaLabel('FORMAZIONE', color: AppTheme.textPrimary, fontSize: 13),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 20),
@@ -214,34 +232,44 @@ class _FieldLineupPageState extends State<FieldLineupPage>
       body: SafeArea(
         child: Column(
           children: [
+            // [MIGLIORIA 4] Legenda pill
             _TeamLegend(),
-            // Hint
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.open_with_rounded,
-                      size: 12, color: AppTheme.textMuted),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Trascina i giocatori per riposizionarli',
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
+            // [MIGLIORIA 6] Hint pulsante
+            if (_hintVisible)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: AnimatedBuilder(
+                  animation: _hintController,
+                  builder: (context, child) {
+                    final opacity = 0.35 + 0.65 * _hintController.value;
+                    return Opacity(opacity: opacity, child: child);
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.open_with_rounded,
+                          size: 12, color: AppTheme.textMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Trascina i giocatori per riposizionarli',
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              )
+            else
+              const SizedBox(height: 6),
             // Campo — occupa tutto lo spazio disponibile
             Expanded(
               child: LayoutBuilder(builder: (context, constraints) {
                 final fw = constraints.maxWidth - 24;
                 final fh = constraints.maxHeight - 12;
 
-                // Inizializza dopo il primo frame (le dimensioni sono note)
                 if (!_initialized) {
                   WidgetsBinding.instance
                       .addPostFrameCallback((_) => setState(() {
@@ -279,9 +307,10 @@ class _FieldLineupPageState extends State<FieldLineupPage>
                         onPanEnd:    _handlePanEnd,
                         child: Stack(
                           children: [
+                            // [MIGLIORIA 1] Campo con gradiente overlay
                             Positioned.fill(
-                                child: CustomPaint(painter: _FieldPainter())
-                                ),
+                              child: CustomPaint(painter: _FieldPainter()),
+                            ),
                             ..._buildTokenWidgets(),
                           ],
                         ),
@@ -318,156 +347,171 @@ class _FieldLineupPageState extends State<FieldLineupPage>
     // Animazione entrata staggered
     final delayStart = (index * 0.05).clamp(0.0, 0.75);
     final delayEnd   = (delayStart + 0.4).clamp(0.0, 1.0);
-    final fade = CurvedAnimation(
+    final curvedAnim = CurvedAnimation(
       parent: _entryController,
       curve: Interval(delayStart, delayEnd, curve: Curves.easeOut),
     );
+
+    // [MIGLIORIA 3] SlideTransition: i giocatori "entrano in campo" dal basso/alto
+    final slideOffset = Tween<Offset>(
+      begin: const Offset(0, 0.35),
+      end: Offset.zero,
+    ).animate(curvedAnim);
 
     return Positioned(
       key: ValueKey(t.playerId),
       left: t.position.dx - _kTokenW / 2,
       top:  t.position.dy - _kTokenH / 2,
       child: IgnorePointer(
-        child: FadeTransition(
-          opacity: fade,
-          child: AnimatedScale(
-            scale: isDragging ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 140),
-            curve: Curves.easeOut,
-            child: SizedBox(
-              width: _kTokenW,
-              height: _kTokenH,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── Avatar ──────────────────────────────
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Glow
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 140),
-                        width:  _kAvatarRadius * 2 + 10,
-                        height: _kAvatarRadius * 2 + 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: accent.withOpacity(
-                                  isDragging ? 0.80 : 0.40),
-                              blurRadius: isDragging ? 24 : 12,
-                              spreadRadius: isDragging ? 4 : 1,
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Anello accent
-                      Container(
-                        width:  _kAvatarRadius * 2 + 4,
-                        height: _kAvatarRadius * 2 + 4,
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle, color: accent),
-                      ),
-                      // Foto / icona
-                      Container(
-  width: _kAvatarRadius * 2,
-  height: _kAvatarRadius * 2,
-  decoration: BoxDecoration(
-    shape: BoxShape.circle,
-
-    // ⭐ Effetto 3D con gradiente luce/ombra
-    gradient: const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        Color(0x33FFFFFF), // luce in alto a sinistra
-        Color(0x33000000), // ombra in basso a destra
-      ],
-    ),
-
-    // ⭐ Ombre per creare profondità
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.35),
-        blurRadius: 10,
-        spreadRadius: 2,
-        offset: const Offset(3, 3), // ombra principale
-      ),
-      BoxShadow(
-        color: Colors.white.withOpacity(0.25),
-        blurRadius: 6,
-        offset: const Offset(-2, -2), // highlight superiore
-      ),
-    ],
-  ),
-
-  // Clip rotondo
-  child: ClipOval(
-    child: player != null
-        ? PlayerAvatar(player: player!, radius: _kAvatarRadius)
-        : CircleAvatar(
-            radius: _kAvatarRadius,
-            backgroundColor: AppTheme.surfaceAlt,
-            child: Icon(
-              Icons.person,
-              color: AppTheme.textMuted,
-              size: _kAvatarRadius,
-            ),
-          ),
-  ),
-),
-                      // Badge ruolo
-                      if (role.isNotEmpty)
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 3, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: accent,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
-                                  width: 0.5),
-                            ),
-                            child: Text(
-                              role.toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 7,
-                                fontWeight: FontWeight.w900,
+        child: SlideTransition(
+          position: slideOffset,
+          child: FadeTransition(
+            opacity: curvedAnim,
+            child: AnimatedScale(
+              scale: isDragging ? 1.2 : 1.0,
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeOut,
+              child: SizedBox(
+                width: _kTokenW,
+                height: _kTokenH,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── Avatar ──────────────────────────────
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Glow
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 140),
+                          width:  _kAvatarRadius * 2 + 10,
+                          height: _kAvatarRadius * 2 + 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: accent.withOpacity(
+                                    isDragging ? 0.80 : 0.40),
+                                blurRadius: isDragging ? 24 : 12,
+                                spreadRadius: isDragging ? 4 : 1,
                               ),
-                            ),
+                            ],
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  // ── Nome ────────────────────────────────
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 140),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isDragging
-                          ? accent.withOpacity(0.9)
-                          : Colors.black.withOpacity(0.65),
-                      borderRadius: BorderRadius.circular(4),
+                        // Anello accent
+                        Container(
+                          width:  _kAvatarRadius * 2 + 4,
+                          height: _kAvatarRadius * 2 + 4,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle, color: accent),
+                        ),
+                        // Foto / icona
+                        Container(
+                          width: _kAvatarRadius * 2,
+                          height: _kAvatarRadius * 2,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0x33FFFFFF),
+                                Color(0x33000000),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.35),
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                                offset: const Offset(3, 3),
+                              ),
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.25),
+                                blurRadius: 6,
+                                offset: const Offset(-2, -2),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: player != null
+                                ? PlayerAvatar(player: player!, radius: _kAvatarRadius)
+                                : CircleAvatar(
+                                    radius: _kAvatarRadius,
+                                    backgroundColor: AppTheme.surfaceAlt,
+                                    child: Icon(
+                                      Icons.person,
+                                      color: AppTheme.textMuted,
+                                      size: _kAvatarRadius,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        // [MIGLIORIA 2] Badge ruolo rimosso dall'angolo avatar
+                        // (spostato sotto il nome — vedi sezione nome)
+                      ],
                     ),
-                    child: Text(
-                      shortName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
+                    const SizedBox(height: 3),
+                    // ── [MIGLIORIA 2] Nome + strip ruolo come mini-card ──
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      decoration: BoxDecoration(
+                        color: isDragging
+                            ? accent.withOpacity(0.92)
+                            : Colors.black.withOpacity(0.70),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: accent.withOpacity(isDragging ? 0.0 : 0.35),
+                          width: 0.8,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Riga nome
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            child: Text(
+                              shortName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // Strip ruolo (visibile solo se ruolo disponibile)
+                          if (role.isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 1),
+                              decoration: BoxDecoration(
+                                color: accent.withOpacity(0.85),
+                                borderRadius: const BorderRadius.only(
+                                  bottomLeft: Radius.circular(4),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                              ),
+                              child: Text(
+                                role.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 6.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -627,7 +671,7 @@ class _FieldLineupPageState extends State<FieldLineupPage>
 }
 
 // ─────────────────────────────────────────────────────────────
-// Legenda team
+// [MIGLIORIA 4] Legenda team — pill colorata
 // ─────────────────────────────────────────────────────────────
 
 class _TeamLegend extends StatelessWidget {
@@ -653,30 +697,41 @@ class _LegendChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12, height: 12,
-          decoration: BoxDecoration(
-            color: color, shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.45), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: color.withOpacity(0.6), blurRadius: 5)],
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Text(label,
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
               fontSize: 11,
-              fontWeight: FontWeight.w600,
-            )),
-      ],
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// _FieldPainter — campo verde stile FIFA
+// [MIGLIORIA 1] _FieldPainter — campo verde con gradiente overlay
 // ─────────────────────────────────────────────────────────────
 
 class _FieldPainter extends CustomPainter {
@@ -697,9 +752,25 @@ class _FieldPainter extends CustomPainter {
       );
     }
 
+    // [MIGLIORIA 1] Gradiente overlay per profondità realistica
+    final gradOverlay = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0x44000000), // ombra bordo superiore
+          Color(0x00000000), // centro trasparente
+          Color(0x00000000),
+          Color(0x44000000), // ombra bordo inferiore
+        ],
+        stops: [0.0, 0.22, 0.78, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), gradOverlay);
+
+    // [MIGLIORIA 1] Linee più visibili: opacità 0.75, strokeWidth 2.2
     final line = Paint()
-      ..color = Colors.white.withOpacity(0.55)
-      ..strokeWidth = 1.8
+      ..color = Colors.white.withOpacity(0.75)
+      ..strokeWidth = 2.2
       ..style = PaintingStyle.stroke;
 
     canvas.drawRRect(
@@ -739,8 +810,8 @@ class _FieldPainter extends CustomPainter {
 
     // Archi area
     final arc = Paint()
-      ..color = Colors.white.withOpacity(0.45)
-      ..strokeWidth = 1.5
+      ..color = Colors.white.withOpacity(0.50)
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
     canvas.drawArc(
       Rect.fromCenter(
