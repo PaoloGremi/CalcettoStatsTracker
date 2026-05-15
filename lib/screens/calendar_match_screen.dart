@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/match_model.dart';
+import '../models/field_model.dart';
+import '../data/hive_boxes.dart';
 import '../theme/app_theme.dart';
 import 'match_detail_screen.dart';
 
@@ -19,7 +22,6 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
   @override
   void initState() {
     super.initState();
-    // Default: anno dell'ultima partita, oppure anno corrente
     _selectedYear = widget.matches.isNotEmpty
         ? widget.matches
             .map((m) => m.date.year)
@@ -39,12 +41,9 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
   String _dayKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  /// Anni disponibili tra le partite (per il selettore)
   List<int> get _availableYears {
     if (widget.matches.isEmpty) return [DateTime.now().year];
-    final years = widget.matches.map((m) => m.date.year).toSet().toList()
-      ..sort();
-    return years;
+    return widget.matches.map((m) => m.date.year).toSet().toList()..sort();
   }
 
   @override
@@ -60,7 +59,6 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
           child: Container(height: 1, color: AppTheme.border),
         ),
         actions: [
-          // Selettore anno
           PopupMenuButton<int>(
             initialValue: _selectedYear,
             onSelected: (y) => setState(() => _selectedYear = y),
@@ -107,7 +105,6 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
         ),
       );
     } else {
-      // Più partite nello stesso giorno → mostra un bottom sheet di scelta
       showModalBottomSheet(
         context: context,
         backgroundColor: AppTheme.surface,
@@ -120,7 +117,7 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
   }
 }
 
-// ─── Griglia mensile ─────────────────────────────────────────────────────────
+// ─── Griglia mensile ──────────────────────────────────────────────────────────
 
 class _MonthGrid extends StatelessWidget {
   final int year;
@@ -142,13 +139,10 @@ class _MonthGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final firstDay = DateTime(year, month, 1);
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
-    // 0=Mon … 6=Sun (ISO), ma in Flutter DateTime.weekday: 1=Mon, 7=Sun
-    final startOffset = (firstDay.weekday - 1) % 7; // 0 = lunedì
-
+    final startOffset = (firstDay.weekday - 1) % 7;
     final monthName =
         DateFormat('MMMM', 'it_IT').format(firstDay).toUpperCase();
 
-    // Controlla se il mese ha almeno una partita
     bool hasAnyMatch = false;
     for (int d = 1; d <= daysInMonth; d++) {
       if (matchesByDay.containsKey(_dayKey(year, month, d))) {
@@ -166,9 +160,8 @@ class _MonthGrid extends StatelessWidget {
           Row(
             children: [
               FifaLabel(monthName,
-                  color: hasAnyMatch
-                      ? AppTheme.accentGold
-                      : AppTheme.textMuted,
+                  color:
+                      hasAnyMatch ? AppTheme.accentGold : AppTheme.textMuted,
                   fontSize: 11),
               const SizedBox(width: 8),
               if (hasAnyMatch)
@@ -184,7 +177,7 @@ class _MonthGrid extends StatelessWidget {
           ),
           const SizedBox(height: 6),
 
-          // Giorni della settimana
+          // Intestazioni giorni settimana
           Row(
             children: ['L', 'M', 'M', 'G', 'V', 'S', 'D']
                 .map((lbl) => Expanded(
@@ -221,8 +214,7 @@ class _MonthGrid extends StatelessWidget {
 
               return _DayCell(
                 day: day,
-                hasMatch: hasMatch,
-                matchCount: dayMatches?.length ?? 0,
+                matches: dayMatches,
                 onTap: hasMatch ? () => onDayTap(dayMatches!) : null,
               );
             },
@@ -233,59 +225,71 @@ class _MonthGrid extends StatelessWidget {
   }
 }
 
-// ─── Cella giorno ────────────────────────────────────────────────────────────
+// ─── Cella giorno ─────────────────────────────────────────────────────────────
 
 class _DayCell extends StatelessWidget {
   final int day;
-  final bool hasMatch;
-  final int matchCount;
+  final List<MatchModel>? matches;
   final VoidCallback? onTap;
 
   const _DayCell({
     required this.day,
-    required this.hasMatch,
-    required this.matchCount,
+    required this.matches,
     this.onTap,
   });
 
+  bool get _hasMatch => matches != null && matches!.isNotEmpty;
+  bool get _isSingle => _hasMatch && matches!.length == 1;
+
+  Color _resultColor(MatchModel m) {
+    if (m.scoreA > m.scoreB) return AppTheme.accentGreen;
+    if (m.scoreB > m.scoreA) return AppTheme.accentRed;
+    return AppTheme.accentGold;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isToday = DateTime.now().day == day &&
-        DateTime.now().month ==
-            (ModalRoute.of(context)?.settings.arguments as int? ?? -1);
-
-    final Color bg = hasMatch
-        ? AppTheme.accentGreen.withOpacity(0.15)
-        : Colors.transparent;
-    final Color border = hasMatch
-        ? AppTheme.accentGreen.withOpacity(0.5)
-        : AppTheme.border.withOpacity(0.3);
-    final Color textColor =
-        hasMatch ? AppTheme.accentGreen : AppTheme.textMuted;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+    // ── Nessuna partita ───────────────────────────────────────────────────────
+    if (!_hasMatch) {
+      return Container(
         decoration: BoxDecoration(
-          color: bg,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: border, width: hasMatch ? 1.5 : 1),
+          border: Border.all(color: AppTheme.border.withOpacity(0.2)),
         ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Text(
-              '$day',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 12,
-                fontWeight:
-                    hasMatch ? FontWeight.w800 : FontWeight.w400,
+        alignment: Alignment.center,
+        child: Text(
+          '$day',
+          style: const TextStyle(
+            color: AppTheme.textMuted,
+            fontSize: 11,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      );
+    }
+
+    // ── Più partite nello stesso giorno ───────────────────────────────────────
+    if (!_isSingle) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.accentGold.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+                color: AppTheme.accentGold.withOpacity(0.5), width: 1.5),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                '$day',
+                style: const TextStyle(
+                  color: AppTheme.accentGold,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            // Badge contatore se più partite nello stesso giorno
-            if (matchCount > 1)
               Positioned(
                 top: 2,
                 right: 3,
@@ -296,7 +300,7 @@ class _DayCell extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    '$matchCount',
+                    '${matches!.length}',
                     style: const TextStyle(
                       color: Colors.black,
                       fontSize: 8,
@@ -305,24 +309,149 @@ class _DayCell extends StatelessWidget {
                   ),
                 ),
               ),
-            // Pallino partita in basso
-            if (hasMatch)
-              Positioned(
-                bottom: 3,
-                child: Container(
-                  width: 4,
-                  height: 4,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.accentGreen,
-                    shape: BoxShape.circle,
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ── Partita singola: sfondo campo + overlay info ───────────────────────────
+    final match = matches!.first;
+    final accent = _resultColor(match);
+
+    // fieldLocation è l'id del campo — recuperiamo FieldModel da Hive
+    final FieldModel? field = HiveBoxes.fieldsBox.get(match.fieldLocation);
+    final String? imagePath = field?.imagePath;
+    final String fieldName = field?.name ?? match.fieldLocation;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Sfondo: foto del campo o fallback con icona ─────────────────
+            if (imagePath != null && imagePath.isNotEmpty)
+              Image.file(
+                File(imagePath),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _FieldFallback(accent: accent),
+              )
+            else
+              _FieldFallback(accent: accent),
+
+            // ── Gradiente scuro per leggibilità ────────────────────────────
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.2),
+                      Colors.black.withOpacity(0.72),
+                    ],
                   ),
                 ),
               ),
+            ),
+
+            // ── Bordo colorato in base al risultato ─────────────────────────
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: accent.withOpacity(0.75), width: 1.5),
+                ),
+              ),
+            ),
+
+            // ── Numero giorno (angolo alto-sinistra) ────────────────────────
+            Positioned(
+              top: 3,
+              left: 5,
+              child: Text(
+                '$day',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                ),
+              ),
+            ),
+
+            // ── Score al centro ─────────────────────────────────────────────
+            Center(
+              child: Text(
+                '${match.scoreA}-${match.scoreB}',
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  shadows: const [
+                    Shadow(color: Colors.black, blurRadius: 8),
+                    Shadow(color: Colors.black, blurRadius: 2),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Orario e nome campo in basso ────────────────────────────────
+            Positioned(
+              bottom: 3,
+              left: 3,
+              right: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    DateFormat('HH:mm').format(match.date),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 7,
+                      fontWeight: FontWeight.w600,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                    ),
+                  ),
+                  Text(
+                    fieldName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 6,
+                      shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Fallback quando il campo non ha immagine salvata
+class _FieldFallback extends StatelessWidget {
+  final Color accent;
+  const _FieldFallback({required this.accent});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: AppTheme.surfaceAlt,
+        child: Icon(
+          Icons.sports_soccer,
+          color: accent.withOpacity(0.35),
+          size: 20,
+        ),
+      );
 }
 
 // ─── Bottom sheet selezione partita (più partite stesso giorno) ───────────────
@@ -380,8 +509,8 @@ class _MultiMatchSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _resultColor(m).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: _resultColor(m).withOpacity(0.4)),
+                  border:
+                      Border.all(color: _resultColor(m).withOpacity(0.4)),
                 ),
                 child: Text(
                   '${m.scoreA} : ${m.scoreB}',
