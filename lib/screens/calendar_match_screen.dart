@@ -159,15 +159,20 @@ class _MonthGrid extends StatelessWidget {
           // Intestazione mese
           Row(
             children: [
-              FifaLabel(monthName,
-                  color:
-                      hasAnyMatch ? AppTheme.accentGold : AppTheme.textMuted,
-                  fontSize: 11),
+              Text(
+                monthName,
+                style: TextStyle(
+                  color: hasAnyMatch ? AppTheme.accentGold : AppTheme.textMuted,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2.5,
+                ),
+              ),
               const SizedBox(width: 8),
               if (hasAnyMatch)
                 Container(
-                  width: 6,
-                  height: 6,
+                  width: 7,
+                  height: 7,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppTheme.accentGold,
@@ -175,7 +180,7 @@ class _MonthGrid extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
 
           // Intestazioni giorni settimana
           Row(
@@ -184,15 +189,30 @@ class _MonthGrid extends StatelessWidget {
                       child: Center(
                         child: Text(lbl,
                             style: const TextStyle(
-                              color: AppTheme.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
                             )),
                       ),
                     ))
                 .toList(),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
+          // Separatore sotto i giorni della settimana
+          Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.border.withOpacity(0.0),
+                  AppTheme.border.withOpacity(0.6),
+                  AppTheme.border.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
 
           // Griglia giorni
           GridView.builder(
@@ -341,7 +361,16 @@ class _DayCell extends StatelessWidget {
             else
               _FieldFallback(accent: accent),
 
-            // ── Gradiente scuro per leggibilità ────────────────────────────
+            // ── Filtro opaco uniforme sull'immagine ────────────────────────
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.52),
+                ),
+              ),
+            ),
+
+            // ── Gradiente scuro aggiuntivo per leggibilità testo ───────────
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -349,8 +378,8 @@ class _DayCell extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.2),
-                      Colors.black.withOpacity(0.72),
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.55),
                     ],
                   ),
                 ),
