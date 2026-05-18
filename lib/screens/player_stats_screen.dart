@@ -10,6 +10,7 @@ import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import '../services/player_stats_calculator.dart';
 
 class PlayerStatsScreen extends StatelessWidget {
   final Player player;
@@ -1296,6 +1297,7 @@ class PlayerStatsScreen extends StatelessWidget {
                     mvpCount: player.mvpCount,
                     hustleCount: player.hustleCount,
                     bestGoalCount: player.bestGoalCount,
+                    fifaStats: PlayerStatsCalculator.compute(player.id),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -1503,13 +1505,14 @@ class _ResultAvgBadge extends StatelessWidget {
 // Radar Performance
 // ─────────────────────────────────────────────────────────────
 
-class _RadarCard extends StatelessWidget {
+class _RadarCard extends StatefulWidget {
   final double avgVote;
   final int totalGoals;
   final int totalGames;
   final int mvpCount;
   final int hustleCount;
   final int bestGoalCount;
+  final ComputedFifaStats fifaStats;
 
   const _RadarCard({
     required this.avgVote,
@@ -1518,23 +1521,46 @@ class _RadarCard extends StatelessWidget {
     required this.mvpCount,
     required this.hustleCount,
     required this.bestGoalCount,
+    required this.fifaStats,
   });
 
-  // Normalizza un valore su scala 0–1 con un cap "realistico"
+  @override
+  State<_RadarCard> createState() => _RadarCardState();
+}
+
+class _RadarCardState extends State<_RadarCard> {
+  int _selectedTab = 0; // 0 = Performance, 1 = Attributi FIFA
+
   double _norm(double value, double max) => (value / max).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
-    // Scala di riferimento per normalizzazione (adatta a poche partite)
-    final votoNorm = _norm(avgVote, 10.0);
-    final golNorm =
-        _norm(totalGoals / totalGames, 2.0); // media gol/partita, cap 2
-    final mvpNorm = _norm(mvpCount.toDouble(), 5.0);
-    final hustleNorm = _norm(hustleCount.toDouble(), 5.0);
-    final bestGolNorm = _norm(bestGoalCount.toDouble(), 5.0);
+    // ── Dati radar Performance ───────────────────────────────
+    final votoNorm = _norm(widget.avgVote, 10.0);
+    final golNorm = _norm(widget.totalGoals / widget.totalGames, 2.0);
+    final mvpNorm = _norm(widget.mvpCount.toDouble(), 5.0);
+    final hustleNorm = _norm(widget.hustleCount.toDouble(), 5.0);
+    final bestGolNorm = _norm(widget.bestGoalCount.toDouble(), 5.0);
 
-    const labels = ['Voto', 'Gol', 'MVP', 'Combatt.', 'Best ⚽'];
-    final values = [votoNorm, golNorm, mvpNorm, hustleNorm, bestGolNorm];
+    const perfLabels = ['Voto', 'Gol', 'MVP', 'Combatt.', 'Best ⚽'];
+    final perfValues = [votoNorm, golNorm, mvpNorm, hustleNorm, bestGolNorm];
+
+    // ── Dati radar FIFA ──────────────────────────────────────
+    final f = widget.fifaStats;
+    final fifaLabels = ['VEL', 'TIR', 'PAS', 'DRI', 'DIF', 'FIS'];
+    final fifaValues = [
+      _norm(f.vel.toDouble(), 99.0),
+      _norm(f.tir.toDouble(), 99.0),
+      _norm(f.pas.toDouble(), 99.0),
+      _norm(f.dri.toDouble(), 99.0),
+      _norm(f.dif.toDouble(), 99.0),
+      _norm(f.fis.toDouble(), 99.0),
+    ];
+
+    final isPerf = _selectedTab == 0;
+    final labels = isPerf ? perfLabels : fifaLabels;
+    final values = isPerf ? perfValues : fifaValues;
+    final accentColor = isPerf ? AppTheme.accentBlue : AppTheme.accentGold;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1545,6 +1571,35 @@ class _RadarCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // ── Tab selector ─────────────────────────────────
+          Container(
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppTheme.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Row(
+              children: [
+                _TabButton(
+                  label: 'Performance',
+                  selected: _selectedTab == 0,
+                  color: AppTheme.accentBlue,
+                  onTap: () => setState(() => _selectedTab = 0),
+                ),
+                _TabButton(
+                  label: 'Attributi FIFA',
+                  selected: _selectedTab == 1,
+                  color: AppTheme.accentGold,
+                  onTap: () => setState(() => _selectedTab = 1),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Radar chart ──────────────────────────────────
           SizedBox(
             height: 220,
             child: RadarChart(
@@ -1568,8 +1623,8 @@ class _RadarCard extends StatelessWidget {
                     RadarChartTitle(text: labels[index]),
                 dataSets: [
                   RadarDataSet(
-                    fillColor: AppTheme.accentBlue.withOpacity(0.18),
-                    borderColor: AppTheme.accentBlue,
+                    fillColor: accentColor.withOpacity(0.18),
+                    borderColor: accentColor,
                     borderWidth: 2,
                     entryRadius: 4,
                     dataEntries:
@@ -1579,37 +1634,105 @@ class _RadarCard extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(height: 12),
-          // Legenda valori reali
-          Wrap(
-            spacing: 12,
-            runSpacing: 6,
-            alignment: WrapAlignment.center,
-            children: [
-              _RadarLegendItem(
-                  label: 'Voto medio',
-                  value: avgVote.toStringAsFixed(1),
-                  color: AppTheme.accentBlue),
-              _RadarLegendItem(
-                  label: 'Media gol/partita',
-                  value: (totalGoals / totalGames).toStringAsFixed(2),
-                  color: AppTheme.accentBlue),
-              _RadarLegendItem(
-                  label: 'MVP', value: '$mvpCount', color: AppTheme.accentBlue),
-              _RadarLegendItem(
-                  label: 'Combattivo',
-                  value: '$hustleCount',
-                  color: AppTheme.accentBlue),
-              _RadarLegendItem(
-                  label: 'Best ⚽',
-                  value: '$bestGoalCount',
-                  color: AppTheme.accentBlue),
-            ],
-          ),
+
+          // ── Legenda valori reali ─────────────────────────
+          if (isPerf) ...[
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
+              children: [
+                _RadarLegendItem(
+                    label: 'Voto medio',
+                    value: widget.avgVote.toStringAsFixed(1),
+                    color: AppTheme.accentBlue),
+                _RadarLegendItem(
+                    label: 'Media gol/partita',
+                    value: (widget.totalGoals / widget.totalGames)
+                        .toStringAsFixed(2),
+                    color: AppTheme.accentBlue),
+                _RadarLegendItem(
+                    label: 'MVP',
+                    value: '${widget.mvpCount}',
+                    color: AppTheme.accentBlue),
+                _RadarLegendItem(
+                    label: 'Combattivo',
+                    value: '${widget.hustleCount}',
+                    color: AppTheme.accentBlue),
+                _RadarLegendItem(
+                    label: 'Best ⚽',
+                    value: '${widget.bestGoalCount}',
+                    color: AppTheme.accentBlue),
+              ],
+            ),
+          ] else ...[
+            Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
+              children: [
+                _RadarLegendItem(
+                    label: 'VEL', value: '${f.vel}', color: AppTheme.accentGold),
+                _RadarLegendItem(
+                    label: 'TIR', value: '${f.tir}', color: AppTheme.accentGold),
+                _RadarLegendItem(
+                    label: 'PAS', value: '${f.pas}', color: AppTheme.accentGold),
+                _RadarLegendItem(
+                    label: 'DRI', value: '${f.dri}', color: AppTheme.accentGold),
+                _RadarLegendItem(
+                    label: 'DIF', value: '${f.dif}', color: AppTheme.accentGold),
+                _RadarLegendItem(
+                    label: 'FIS', value: '${f.fis}', color: AppTheme.accentGold),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _TabButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: selected ? color.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(7),
+              border: selected
+                  ? Border.all(color: color.withOpacity(0.5), width: 1)
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? color : AppTheme.textMuted,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _RadarLegendItem extends StatelessWidget {
