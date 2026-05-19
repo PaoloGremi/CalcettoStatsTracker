@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:calcetto_tracker/widgets/ChemestryBubbleChart.dart';
 import 'package:calcetto_tracker/widgets/ChemistryRadarChart.dart';
@@ -10,7 +11,6 @@ import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
-import '../services/player_stats_calculator.dart';
 
 class PlayerStatsScreen extends StatelessWidget {
   final Player player;
@@ -1297,7 +1297,6 @@ class PlayerStatsScreen extends StatelessWidget {
                     mvpCount: player.mvpCount,
                     hustleCount: player.hustleCount,
                     bestGoalCount: player.bestGoalCount,
-                    fifaStats: PlayerStatsCalculator.compute(player.id),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -1329,6 +1328,33 @@ class PlayerStatsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                 ],
+                // ── Timeline Traguardi ────────────────────────────
+                if (totalGames > 0) ...[
+                  const FifaSectionHeader('Traguardi in Carriera',
+                      accent: AppTheme.accentGold),
+                  _MilestonesCard(
+                    matches: matches,
+                    playerId: player.id,
+                    mvpCount: player.mvpCount,
+                    bestGoalCount: player.bestGoalCount,
+                    hustleCount: player.hustleCount,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Consistenza Voto ──────────────────────────────
+                if (votedGames >= 2) ...[
+                  const FifaSectionHeader('Consistenza',
+                      accent: AppTheme.accentBlue),
+                  _ConsistencyCard(
+                    avgVote: avgVote,
+                    bestVote: bestVote,
+                    worstVote: worstVote,
+                    votePoints: votePoints,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
                 // ── Messaggio se non ci sono abbastanza dati ──────
                 if (votePoints.length < 2 && totalGoals == 0)
                   Container(
@@ -1505,14 +1531,13 @@ class _ResultAvgBadge extends StatelessWidget {
 // Radar Performance
 // ─────────────────────────────────────────────────────────────
 
-class _RadarCard extends StatefulWidget {
+class _RadarCard extends StatelessWidget {
   final double avgVote;
   final int totalGoals;
   final int totalGames;
   final int mvpCount;
   final int hustleCount;
   final int bestGoalCount;
-  final ComputedFifaStats fifaStats;
 
   const _RadarCard({
     required this.avgVote,
@@ -1521,46 +1546,23 @@ class _RadarCard extends StatefulWidget {
     required this.mvpCount,
     required this.hustleCount,
     required this.bestGoalCount,
-    required this.fifaStats,
   });
 
-  @override
-  State<_RadarCard> createState() => _RadarCardState();
-}
-
-class _RadarCardState extends State<_RadarCard> {
-  int _selectedTab = 0; // 0 = Performance, 1 = Attributi FIFA
-
+  // Normalizza un valore su scala 0–1 con un cap "realistico"
   double _norm(double value, double max) => (value / max).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
-    // ── Dati radar Performance ───────────────────────────────
-    final votoNorm = _norm(widget.avgVote, 10.0);
-    final golNorm = _norm(widget.totalGoals / widget.totalGames, 2.0);
-    final mvpNorm = _norm(widget.mvpCount.toDouble(), 5.0);
-    final hustleNorm = _norm(widget.hustleCount.toDouble(), 5.0);
-    final bestGolNorm = _norm(widget.bestGoalCount.toDouble(), 5.0);
+    // Scala di riferimento per normalizzazione (adatta a poche partite)
+    final votoNorm = _norm(avgVote, 10.0);
+    final golNorm =
+        _norm(totalGoals / totalGames, 2.0); // media gol/partita, cap 2
+    final mvpNorm = _norm(mvpCount.toDouble(), 5.0);
+    final hustleNorm = _norm(hustleCount.toDouble(), 5.0);
+    final bestGolNorm = _norm(bestGoalCount.toDouble(), 5.0);
 
-    const perfLabels = ['Voto', 'Gol', 'MVP', 'Combatt.', 'Best ⚽'];
-    final perfValues = [votoNorm, golNorm, mvpNorm, hustleNorm, bestGolNorm];
-
-    // ── Dati radar FIFA ──────────────────────────────────────
-    final f = widget.fifaStats;
-    final fifaLabels = ['VEL', 'TIR', 'PAS', 'DRI', 'DIF', 'FIS'];
-    final fifaValues = [
-      _norm(f.vel.toDouble(), 99.0),
-      _norm(f.tir.toDouble(), 99.0),
-      _norm(f.pas.toDouble(), 99.0),
-      _norm(f.dri.toDouble(), 99.0),
-      _norm(f.dif.toDouble(), 99.0),
-      _norm(f.fis.toDouble(), 99.0),
-    ];
-
-    final isPerf = _selectedTab == 0;
-    final labels = isPerf ? perfLabels : fifaLabels;
-    final values = isPerf ? perfValues : fifaValues;
-    final accentColor = isPerf ? AppTheme.accentBlue : AppTheme.accentGold;
+    const labels = ['Voto', 'Gol', 'MVP', 'Combatt.', 'Best ⚽'];
+    final values = [votoNorm, golNorm, mvpNorm, hustleNorm, bestGolNorm];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1571,35 +1573,6 @@ class _RadarCardState extends State<_RadarCard> {
       ),
       child: Column(
         children: [
-          // ── Tab selector ─────────────────────────────────
-          Container(
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppTheme.bg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.border),
-            ),
-            child: Row(
-              children: [
-                _TabButton(
-                  label: 'Performance',
-                  selected: _selectedTab == 0,
-                  color: AppTheme.accentBlue,
-                  onTap: () => setState(() => _selectedTab = 0),
-                ),
-                _TabButton(
-                  label: 'Attributi FIFA',
-                  selected: _selectedTab == 1,
-                  color: AppTheme.accentGold,
-                  onTap: () => setState(() => _selectedTab = 1),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // ── Radar chart ──────────────────────────────────
           SizedBox(
             height: 220,
             child: RadarChart(
@@ -1623,8 +1596,8 @@ class _RadarCardState extends State<_RadarCard> {
                     RadarChartTitle(text: labels[index]),
                 dataSets: [
                   RadarDataSet(
-                    fillColor: accentColor.withOpacity(0.18),
-                    borderColor: accentColor,
+                    fillColor: AppTheme.accentBlue.withOpacity(0.18),
+                    borderColor: AppTheme.accentBlue,
                     borderWidth: 2,
                     entryRadius: 4,
                     dataEntries:
@@ -1634,105 +1607,37 @@ class _RadarCardState extends State<_RadarCard> {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // ── Legenda valori reali ─────────────────────────
-          if (isPerf) ...[
-            Wrap(
-              spacing: 12,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: [
-                _RadarLegendItem(
-                    label: 'Voto medio',
-                    value: widget.avgVote.toStringAsFixed(1),
-                    color: AppTheme.accentBlue),
-                _RadarLegendItem(
-                    label: 'Media gol/partita',
-                    value: (widget.totalGoals / widget.totalGames)
-                        .toStringAsFixed(2),
-                    color: AppTheme.accentBlue),
-                _RadarLegendItem(
-                    label: 'MVP',
-                    value: '${widget.mvpCount}',
-                    color: AppTheme.accentBlue),
-                _RadarLegendItem(
-                    label: 'Combattivo',
-                    value: '${widget.hustleCount}',
-                    color: AppTheme.accentBlue),
-                _RadarLegendItem(
-                    label: 'Best ⚽',
-                    value: '${widget.bestGoalCount}',
-                    color: AppTheme.accentBlue),
-              ],
-            ),
-          ] else ...[
-            Wrap(
-              spacing: 16,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: [
-                _RadarLegendItem(
-                    label: 'VEL', value: '${f.vel}', color: AppTheme.accentGold),
-                _RadarLegendItem(
-                    label: 'TIR', value: '${f.tir}', color: AppTheme.accentGold),
-                _RadarLegendItem(
-                    label: 'PAS', value: '${f.pas}', color: AppTheme.accentGold),
-                _RadarLegendItem(
-                    label: 'DRI', value: '${f.dri}', color: AppTheme.accentGold),
-                _RadarLegendItem(
-                    label: 'DIF', value: '${f.dif}', color: AppTheme.accentGold),
-                _RadarLegendItem(
-                    label: 'FIS', value: '${f.fis}', color: AppTheme.accentGold),
-              ],
-            ),
-          ],
+          // Legenda valori reali
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              _RadarLegendItem(
+                  label: 'Voto medio',
+                  value: avgVote.toStringAsFixed(1),
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Media gol/partita',
+                  value: (totalGoals / totalGames).toStringAsFixed(2),
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'MVP', value: '$mvpCount', color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Combattivo',
+                  value: '$hustleCount',
+                  color: AppTheme.accentBlue),
+              _RadarLegendItem(
+                  label: 'Best ⚽',
+                  value: '$bestGoalCount',
+                  color: AppTheme.accentBlue),
+            ],
+          ),
         ],
       ),
     );
   }
-}
-
-class _TabButton extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _TabButton({
-    required this.label,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-        child: GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: selected ? color.withOpacity(0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
-              border: selected
-                  ? Border.all(color: color.withOpacity(0.5), width: 1)
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: selected ? color : AppTheme.textMuted,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ),
-        ),
-      );
 }
 
 class _RadarLegendItem extends StatelessWidget {
@@ -2026,6 +1931,414 @@ class _FieldMetric extends StatelessWidget {
                   : null,
             ),
           ),
+        ],
+      );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Timeline Traguardi in Carriera
+// ─────────────────────────────────────────────────────────────
+
+class _MilestonesCard extends StatelessWidget {
+  final List<MatchModel> matches;
+  final String playerId;
+  final int mvpCount;
+  final int bestGoalCount;
+  final int hustleCount;
+
+  const _MilestonesCard({
+    required this.matches,
+    required this.playerId,
+    required this.mvpCount,
+    required this.bestGoalCount,
+    required this.hustleCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final milestones = <({DateTime date, String title, String subtitle, Color color})>[];
+
+    // Prima partita
+    if (matches.isNotEmpty) {
+      milestones.add((
+        date: matches.first.date,
+        title: 'Prima partita',
+        subtitle: DateFormat('d MMM yyyy', 'it_IT').format(matches.first.date),
+        color: AppTheme.accentBlue,
+      ));
+    }
+
+    // Primo gol
+    for (final m in matches) {
+      if ((m.goals[playerId] ?? 0) > 0) {
+        milestones.add((
+          date: m.date,
+          title: 'Primo gol',
+          subtitle: DateFormat('d MMM yyyy', 'it_IT').format(m.date),
+          color: AppTheme.accentGreen,
+        ));
+        break;
+      }
+    }
+
+    // MVP — data non ricavabile dal modello, mostriamo il totale
+    if (mvpCount > 0) {
+      milestones.add((
+        date: matches.first.date,
+        title: 'MVP 🏆 × $mvpCount',
+        subtitle: '$mvpCount volta${mvpCount > 1 ? ' ' : ''}premiato',
+        color: AppTheme.accentGold,
+      ));
+    }
+
+    // Best Goal
+    if (bestGoalCount > 0) {
+      milestones.add((
+        date: matches.first.date,
+        title: 'Best Goal ⚽ × $bestGoalCount',
+        subtitle: '$bestGoalCount gol del torneo',
+        color: AppTheme.accentGold,
+      ));
+    }
+
+    // Hustle / Combattivo
+    if (hustleCount > 0) {
+      milestones.add((
+        date: matches.first.date,
+        title: 'Combattivo 💪 × $hustleCount',
+        subtitle: '$hustleCount premio combattività',
+        color: AppTheme.accentOrange,
+      ));
+    }
+
+    // Miglior voto
+    double bestVote = 0;
+    DateTime? bestVoteDate;
+    for (final m in matches) {
+      final v = m.votes[playerId];
+      if (v != null && v > bestVote) {
+        bestVote = v;
+        bestVoteDate = m.date;
+      }
+    }
+    if (bestVoteDate != null) {
+      milestones.add((
+        date: bestVoteDate,
+        title: 'Voto record — ${bestVote.toStringAsFixed(1)} ⭐',
+        subtitle: DateFormat('d MMM yyyy', 'it_IT').format(bestVoteDate),
+        color: AppTheme.accentOrange,
+      ));
+    }
+
+    // Ordina per data
+    milestones.sort((a, b) => a.date.compareTo(b.date));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: milestones.asMap().entries.map((entry) {
+          final i = entry.key;
+          final ms = entry.value;
+          final isLast = i == milestones.length - 1;
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Linea + dot
+                SizedBox(
+                  width: 24,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: ms.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      if (!isLast)
+                        Expanded(
+                          child: Container(
+                            width: 1.5,
+                            color: AppTheme.border,
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Testo
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ms.title,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          ms.subtitle,
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Consistenza Voto
+// ─────────────────────────────────────────────────────────────
+
+class _ConsistencyCard extends StatelessWidget {
+  final double avgVote;
+  final double bestVote;
+  final double worstVote;
+  final List<FlSpot> votePoints;
+
+  const _ConsistencyCard({
+    required this.avgVote,
+    required this.bestVote,
+    required this.worstVote,
+    required this.votePoints,
+  });
+
+  String _consistencyLabel(double stdDev) {
+    if (stdDev < 1.0) return 'Molto costante';
+    if (stdDev < 1.8) return 'Abbastanza costante';
+    if (stdDev < 2.5) return 'Variabile';
+    return 'Molto variabile';
+  }
+
+  Color _consistencyColor(double stdDev) {
+    if (stdDev < 1.0) return AppTheme.accentGreen;
+    if (stdDev < 1.8) return AppTheme.accentBlue;
+    if (stdDev < 2.5) return AppTheme.accentGold;
+    return AppTheme.accentRed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Deviazione standard
+    final n = votePoints.length;
+    final mean = avgVote;
+    final realStdDev = n > 1
+        ? math.sqrt(
+            votePoints
+                .map((s) => (s.y - mean) * (s.y - mean))
+                .reduce((a, b) => a + b) /
+            (n - 1),
+          )
+        : 0.0;
+
+    final range = bestVote - worstVote;
+    final label = _consistencyLabel(realStdDev);
+    final labelColor = _consistencyColor(realStdDev);
+
+    // Posizione del marker media sulla barra (1–10)
+    final markerPct = ((avgVote - 1.0) / 9.0).clamp(0.0, 1.0);
+    final leftPct = ((worstVote - 1.0) / 9.0).clamp(0.0, 1.0);
+    final rightPct = 1.0 - ((bestVote - 1.0) / 9.0).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Etichetta consistenza
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: labelColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: labelColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: labelColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  'range ${range.toStringAsFixed(1)}',
+                  style: TextStyle(
+                    color: labelColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Barra range voto
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final barW = constraints.maxWidth;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Sfondo
+                  Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: AppTheme.border.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  // Range colorato
+                  Positioned(
+                    left: leftPct * barW,
+                    right: rightPct * barW,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentBlue.withOpacity(0.35),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: AppTheme.accentBlue.withOpacity(0.5),
+                            width: 1),
+                      ),
+                    ),
+                  ),
+                  // Marker media
+                  Positioned(
+                    left: markerPct * barW - 2,
+                    top: -4,
+                    child: Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentBlue,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Label media sopra
+                  Positioned(
+                    left: (markerPct * barW - 14).clamp(0, barW - 28),
+                    top: -20,
+                    child: Text(
+                      avgVote.toStringAsFixed(1),
+                      style: const TextStyle(
+                        color: AppTheme.accentBlue,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          // Etichette min/max
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('min ${worstVote.toStringAsFixed(1)}',
+                  style: const TextStyle(
+                      color: AppTheme.textMuted, fontSize: 10)),
+              Text('media',
+                  style: const TextStyle(
+                      color: AppTheme.accentBlue,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700)),
+              Text('max ${bestVote.toStringAsFixed(1)}',
+                  style: const TextStyle(
+                      color: AppTheme.textMuted, fontSize: 10)),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Tre stat box
+          Row(
+            children: [
+              Expanded(
+                child: _ConsistStat(
+                  label: 'Partite votate',
+                  value: '${votePoints.length}',
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              Expanded(
+                child: _ConsistStat(
+                  label: 'Voto medio',
+                  value: avgVote.toStringAsFixed(1),
+                  color: AppTheme.accentBlue,
+                ),
+              ),
+              Expanded(
+                child: _ConsistStat(
+                  label: 'Dev. std.',
+                  value: realStdDev.toStringAsFixed(2),
+                  color: labelColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConsistStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _ConsistStat(
+      {required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          Text(value,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(
+                  color: AppTheme.textMuted, fontSize: 10)),
         ],
       );
 }
