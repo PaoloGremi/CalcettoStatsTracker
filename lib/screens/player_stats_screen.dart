@@ -200,6 +200,60 @@ class PlayerStatsScreen extends StatelessWidget {
       cumulativeGoalPoints.add(FlSpot(i.toDouble(), cumGoals.toDouble()));
     }
 
+    // ── Media mobile voti (finestra 5 partite) ───────────────
+    const _movingWindow = 5;
+    final movingAvgPoints = <FlSpot>[];
+    for (int i = _movingWindow - 1; i < votePoints.length; i++) {
+      final window = votePoints.sublist(i - _movingWindow + 1, i + 1);
+      final avg = window.map((s) => s.y).reduce((a, b) => a + b) / _movingWindow;
+      movingAvgPoints.add(FlSpot(votePoints[i].x, avg));
+    }
+
+    // ── Form recente (ultime 10 partite) ─────────────────────
+    final recentMatches = matches.length > 10
+        ? matches.sublist(matches.length - 10)
+        : matches;
+    final recentResults = <_RecentResult>[];
+    for (int i = 0; i < recentMatches.length; i++) {
+      final m = recentMatches[i];
+      final inTeamA = m.teamA.contains(player.id);
+      final ps = inTeamA ? m.scoreA : m.scoreB;
+      final os = inTeamA ? m.scoreB : m.scoreA;
+      final result = ps > os ? 'V' : (ps == os ? 'P' : 'S');
+      final vote = m.votes[player.id];
+      recentResults.add(_RecentResult(
+        index: i,
+        result: result,
+        vote: vote,
+        date: DateFormat('dd/MM', 'it_IT').format(m.date),
+      ));
+    }
+
+    // ── Gol per mese ─────────────────────────────────────────
+    final goalsByMonth = <String, int>{};
+    for (final m in matches) {
+      final key = DateFormat('yyyy-MM').format(m.date);
+      goalsByMonth[key] = (goalsByMonth[key] ?? 0) + (m.goals[player.id] ?? 0);
+    }
+    final sortedGoalMonthKeys = goalsByMonth.keys.toList()..sort();
+
+    // ── Win-rate rolling (finestra 5 partite) ────────────────
+    const _winWindow = 5;
+    final winRatePoints = <FlSpot>[];
+    final winRateLabels = <String>[];
+    for (int i = _winWindow - 1; i < matches.length; i++) {
+      final window = matches.sublist(i - _winWindow + 1, i + 1);
+      int wWins = 0;
+      for (final m in window) {
+        final inTeamA = m.teamA.contains(player.id);
+        final ps = inTeamA ? m.scoreA : m.scoreB;
+        final os = inTeamA ? m.scoreB : m.scoreA;
+        if (ps > os) wWins++;
+      }
+      winRatePoints.add(FlSpot(i.toDouble(), wWins / _winWindow * 100));
+      winRateLabels.add(dateLabels[i]);
+    }
+
     // ── Voto medio per risultato (V/P/S) ─────────────────────
     final votesByResult = <String, List<double>>{'V': [], 'P': [], 'S': []};
     for (final m in matches) {
@@ -1357,6 +1411,507 @@ class PlayerStatsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                 ],
 
+                // ── Trend Voto con Media Mobile ───────────────────
+                if (votePoints.length >= _movingWindow) ...[
+                  const FifaSectionHeader('Trend Voto (Media Mobile)',
+                      accent: AppTheme.accentGold),
+                  _ChartCard(
+                    child: LineChart(
+                      LineChartData(
+                        minY: 1,
+                        maxY: 10,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 2,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                              color: AppTheme.border, strokeWidth: 1),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 2,
+                              reservedSize: 28,
+                              getTitlesWidget: (v, _) => Text(
+                                v.toInt().toString(),
+                                style: const TextStyle(
+                                    color: AppTheme.textMuted, fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              getTitlesWidget: (v, _) {
+                                final i = v.toInt();
+                                if (i < 0 || i >= dateLabels.length)
+                                  return const SizedBox();
+                                final step =
+                                    (matches.length / 5).ceil().clamp(1, 99);
+                                if (i % step != 0) return const SizedBox();
+                                return Text(dateLabels[i],
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 9));
+                              },
+                            ),
+                          ),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        lineBarsData: [
+                          // Voti raw (linea grigia sottile)
+                          LineChartBarData(
+                            spots: votePoints,
+                            isCurved: false,
+                            color: AppTheme.textMuted.withOpacity(0.35),
+                            barWidth: 1.5,
+                            dotData: FlDotData(
+                              show: true,
+                              getDotPainter: (spot, _, __, ___) =>
+                                  FlDotCirclePainter(
+                                radius: 2.5,
+                                color: AppTheme.textMuted.withOpacity(0.5),
+                                strokeWidth: 0,
+                                strokeColor: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                          // Media mobile (linea colorata principale)
+                          LineChartBarData(
+                            spots: movingAvgPoints,
+                            isCurved: true,
+                            color: AppTheme.accentGold,
+                            barWidth: 3,
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: AppTheme.accentGold.withOpacity(0.1),
+                            ),
+                          ),
+                        ],
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (spots) => spots.map((s) {
+                              final i = s.x.toInt();
+                              final date =
+                                  i < dateLabels.length ? dateLabels[i] : '';
+                              final isMovingAvg = s.barIndex == 1;
+                              return LineTooltipItem(
+                                isMovingAvg
+                                    ? 'Media mobile\n${s.y.toStringAsFixed(1)}'
+                                    : '$date  ${s.y.toStringAsFixed(1)}',
+                                TextStyle(
+                                  color: isMovingAvg
+                                      ? AppTheme.accentGold
+                                      : AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Legenda
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                            width: 24,
+                            height: 2,
+                            color: AppTheme.textMuted.withOpacity(0.4)),
+                        const SizedBox(width: 6),
+                        const Text('Voto singola partita',
+                            style: TextStyle(
+                                color: AppTheme.textMuted, fontSize: 10)),
+                        const SizedBox(width: 18),
+                        Container(
+                            width: 24,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentGold,
+                              borderRadius: BorderRadius.circular(2),
+                            )),
+                        const SizedBox(width: 6),
+                        const Text('Media mobile (5 partite)',
+                            style: TextStyle(
+                                color: AppTheme.accentGold,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // ── Form Recente (ultime 10 partite) ─────────────
+                if (recentResults.length >= 3) ...[
+                  const FifaSectionHeader('Form Recente',
+                      accent: AppTheme.accentGreen),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: recentResults.map((r) {
+                            final color = r.result == 'V'
+                                ? AppTheme.accentGreen
+                                : r.result == 'P'
+                                    ? AppTheme.accentGold
+                                    : AppTheme.accentRed;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                child: Column(
+                                  children: [
+                                    // Voto sopra
+                                    Text(
+                                      r.vote != null
+                                          ? r.vote!.toStringAsFixed(0)
+                                          : '—',
+                                      style: TextStyle(
+                                        color: r.vote != null
+                                            ? color
+                                            : AppTheme.textMuted,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // Badge risultato
+                                    Container(
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: color.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: color.withOpacity(0.4)),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        r.result,
+                                        style: TextStyle(
+                                          color: color,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // Data sotto
+                                    Text(
+                                      r.date,
+                                      style: const TextStyle(
+                                        color: AppTheme.textMuted,
+                                        fontSize: 8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 12),
+                        // Riepilogo forma
+                        Builder(builder: (context) {
+                          final recentWins =
+                              recentResults.where((r) => r.result == 'V').length;
+                          final recentDraws =
+                              recentResults.where((r) => r.result == 'P').length;
+                          final recentLosses =
+                              recentResults.where((r) => r.result == 'S').length;
+                          final recentVotes = recentResults
+                              .where((r) => r.vote != null)
+                              .map((r) => r.vote!)
+                              .toList();
+                          final recentAvgVote = recentVotes.isNotEmpty
+                              ? recentVotes.reduce((a, b) => a + b) /
+                                  recentVotes.length
+                              : 0.0;
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _ConsistStat(
+                                  label: 'Vittorie',
+                                  value: '$recentWins',
+                                  color: AppTheme.accentGreen),
+                              _ConsistStat(
+                                  label: 'Pareggi',
+                                  value: '$recentDraws',
+                                  color: AppTheme.accentGold),
+                              _ConsistStat(
+                                  label: 'Sconfitte',
+                                  value: '$recentLosses',
+                                  color: AppTheme.accentRed),
+                              _ConsistStat(
+                                  label: 'Voto medio',
+                                  value: recentAvgVote > 0
+                                      ? recentAvgVote.toStringAsFixed(1)
+                                      : '—',
+                                  color: AppTheme.accentBlue),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Gol per Mese ──────────────────────────────────
+                if (sortedGoalMonthKeys.length >= 2 && totalGoals > 0) ...[
+                  const FifaSectionHeader('Gol per Mese',
+                      accent: AppTheme.accentRed),
+                  _ChartCard(
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: (goalsByMonth.values
+                                    .reduce((a, b) => a > b ? a : b) +
+                                1)
+                            .toDouble(),
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 1,
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: AppTheme.border, strokeWidth: 1),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 1,
+                              reservedSize: 24,
+                              getTitlesWidget: (v, _) {
+                                if (v != v.floorToDouble())
+                                  return const SizedBox();
+                                return Text(v.toInt().toString(),
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 10));
+                              },
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 24,
+                              getTitlesWidget: (v, _) {
+                                final i = v.toInt();
+                                if (i < 0 || i >= sortedGoalMonthKeys.length)
+                                  return const SizedBox();
+                                final step = (sortedGoalMonthKeys.length / 5)
+                                    .ceil()
+                                    .clamp(1, 99);
+                                if (i % step != 0) return const SizedBox();
+                                final parts =
+                                    sortedGoalMonthKeys[i].split('-');
+                                final dt = DateTime(int.parse(parts[0]),
+                                    int.parse(parts[1]));
+                                return Text(
+                                    DateFormat('MMM yy', 'it_IT').format(dt),
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 9));
+                              },
+                            ),
+                          ),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        barGroups:
+                            sortedGoalMonthKeys.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final key = entry.value;
+                          final count = goalsByMonth[key] ?? 0;
+                          final hasGoals = count > 0;
+                          return BarChartGroupData(
+                            x: i,
+                            barRods: [
+                              BarChartRodData(
+                                toY: count == 0 ? 0.05 : count.toDouble(),
+                                color: hasGoals
+                                    ? AppTheme.accentRed
+                                    : AppTheme.border,
+                                width:
+                                    sortedGoalMonthKeys.length > 10 ? 10 : 18,
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(4)),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                        barTouchData: BarTouchData(
+                          touchTooltipData: BarTouchTooltipData(
+                            getTooltipItem: (group, _, rod, __) {
+                              final i = group.x;
+                              final key = sortedGoalMonthKeys[i];
+                              final parts = key.split('-');
+                              final dt = DateTime(
+                                  int.parse(parts[0]), int.parse(parts[1]));
+                              final label =
+                                  DateFormat('MMMM yyyy', 'it_IT').format(dt);
+                              final count = goalsByMonth[key] ?? 0;
+                              return BarTooltipItem(
+                                '$label\n$count ⚽',
+                                const TextStyle(
+                                    color: AppTheme.accentRed,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ── Win-Rate Rolling ──────────────────────────────
+                if (winRatePoints.length >= 2) ...[
+                  const FifaSectionHeader('Win-Rate (rolling 5 partite)',
+                      accent: AppTheme.accentGreen),
+                  _ChartCard(
+                    child: LineChart(
+                      LineChartData(
+                        minY: 0,
+                        maxY: 100,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 25,
+                          getDrawingHorizontalLine: (v) {
+                            if (v == 50) {
+                              return FlLine(
+                                  color: AppTheme.accentGold.withOpacity(0.5),
+                                  strokeWidth: 1,
+                                  dashArray: [4, 4]);
+                            }
+                            return FlLine(
+                                color: AppTheme.border, strokeWidth: 1);
+                          },
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 25,
+                              reservedSize: 34,
+                              getTitlesWidget: (v, _) => Text(
+                                '${v.toInt()}%',
+                                style: const TextStyle(
+                                    color: AppTheme.textMuted, fontSize: 10),
+                              ),
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              getTitlesWidget: (v, _) {
+                                final i = v.toInt();
+                                if (i < 0 || i >= winRateLabels.length)
+                                  return const SizedBox();
+                                final step = (winRateLabels.length / 5)
+                                    .ceil()
+                                    .clamp(1, 99);
+                                // allinea all'indice originale
+                                final origIdx = i - (_winWindow - 1);
+                                if (origIdx < 0 || origIdx % step != 0)
+                                  return const SizedBox();
+                                return Text(
+                                    dateLabels[i],
+                                    style: const TextStyle(
+                                        color: AppTheme.textMuted, fontSize: 9));
+                              },
+                            ),
+                          ),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: winRatePoints,
+                            isCurved: true,
+                            color: AppTheme.accentGreen,
+                            barWidth: 3,
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppTheme.accentGreen.withOpacity(0.2),
+                                  AppTheme.accentGreen.withOpacity(0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (spots) => spots.map((s) {
+                              final i = s.x.toInt();
+                              final date = i < dateLabels.length
+                                  ? dateLabels[i]
+                                  : '';
+                              return LineTooltipItem(
+                                '$date\n${s.y.toStringAsFixed(0)}% vittorie',
+                                const TextStyle(
+                                    color: AppTheme.accentGreen,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, bottom: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 1.5,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentGold.withOpacity(0.6),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text('50% (pareggio tendenziale)',
+                            style: TextStyle(
+                                color: AppTheme.textMuted, fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // ── Messaggio se non ci sono abbastanza dati ──────
                 if (votePoints.length < 2 && totalGoals == 0)
                   Container(
@@ -2079,62 +2634,55 @@ class _MilestonesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final milestones = <({DateTime date, String title, String subtitle, Color color})>[];
+    final milestones = <({DateTime date, String title, String subtitle, Color color, String icon})>[];
 
-    // Prima partita
+    // ── Prima partita ────────────────────────────────────────
     if (matches.isNotEmpty) {
       milestones.add((
         date: matches.first.date,
         title: 'Prima partita',
         subtitle: DateFormat('d MMM yyyy', 'it_IT').format(matches.first.date),
         color: AppTheme.accentBlue,
+        icon: '🎮',
       ));
     }
 
-    // Primo gol
-    for (final m in matches) {
-      if ((m.goals[playerId] ?? 0) > 0) {
+    // ── Traguardi partite: 10, 25, 50, 100 ──────────────────
+    const gamesMilestones = [10, 25, 50, 100];
+    for (final target in gamesMilestones) {
+      if (matches.length >= target) {
+        final m = matches[target - 1];
         milestones.add((
           date: m.date,
-          title: 'Primo gol',
+          title: '$target partite giocate',
           subtitle: DateFormat('d MMM yyyy', 'it_IT').format(m.date),
-          color: AppTheme.accentGreen,
+          color: AppTheme.accentBlue,
+          icon: target >= 50 ? '🏟️' : '⚽',
         ));
-        break;
       }
     }
 
-    // MVP — data non ricavabile dal modello, mostriamo il totale
-    if (mvpCount > 0) {
-      milestones.add((
-        date: matches.first.date,
-        title: 'MVP 🏆 × $mvpCount',
-        subtitle: '$mvpCount volta${mvpCount > 1 ? ' ' : ''}premiato',
-        color: AppTheme.accentGold,
-      ));
+    // ── Primo gol ────────────────────────────────────────────
+    int cumGoals = 0;
+    const goalMilestones = [1, 5, 10, 25, 50];
+    int nextGoalIdx = 0;
+    for (final m in matches) {
+      cumGoals += (m.goals[playerId] ?? 0);
+      while (nextGoalIdx < goalMilestones.length &&
+          cumGoals >= goalMilestones[nextGoalIdx]) {
+        final target = goalMilestones[nextGoalIdx];
+        milestones.add((
+          date: m.date,
+          title: target == 1 ? 'Primo gol ⚽' : '$target gol in carriera',
+          subtitle: DateFormat('d MMM yyyy', 'it_IT').format(m.date),
+          color: AppTheme.accentRed,
+          icon: target == 1 ? '🥅' : '🔥',
+        ));
+        nextGoalIdx++;
+      }
     }
 
-    // Best Goal
-    if (bestGoalCount > 0) {
-      milestones.add((
-        date: matches.first.date,
-        title: 'Best Goal ⚽ × $bestGoalCount',
-        subtitle: '$bestGoalCount gol del torneo',
-        color: AppTheme.accentGold,
-      ));
-    }
-
-    // Hustle / Combattivo
-    if (hustleCount > 0) {
-      milestones.add((
-        date: matches.first.date,
-        title: 'Combattivo 💪 × $hustleCount',
-        subtitle: '$hustleCount premio combattività',
-        color: AppTheme.accentOrange,
-      ));
-    }
-
-    // Miglior voto
+    // ── Miglior voto ─────────────────────────────────────────
     double bestVote = 0;
     DateTime? bestVoteDate;
     for (final m in matches) {
@@ -2144,91 +2692,166 @@ class _MilestonesCard extends StatelessWidget {
         bestVoteDate = m.date;
       }
     }
-    if (bestVoteDate != null) {
+    if (bestVoteDate != null && bestVote >= 8) {
       milestones.add((
         date: bestVoteDate,
-        title: 'Voto record — ${bestVote.toStringAsFixed(1)} ⭐',
+        title: 'Voto record — ${bestVote.toStringAsFixed(1)}',
         subtitle: DateFormat('d MMM yyyy', 'it_IT').format(bestVoteDate),
-        color: AppTheme.accentOrange,
+        color: AppTheme.accentGold,
+        icon: '⭐',
       ));
     }
 
     // Ordina per data
     milestones.sort((a, b) => a.date.compareTo(b.date));
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        children: milestones.asMap().entries.map((entry) {
-          final i = entry.key;
-          final ms = entry.value;
-          final isLast = i == milestones.length - 1;
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Linea + dot
-                SizedBox(
-                  width: 24,
-                  child: Column(
+    // ── Premi (senza data precisa) ───────────────────────────
+    final prizes = <({String title, String subtitle, Color color, String icon})>[];
+    if (mvpCount > 0) {
+      prizes.add((
+        title: 'MVP',
+        subtitle: '$mvpCount ${mvpCount == 1 ? 'volta' : 'volte'}',
+        color: AppTheme.accentGold,
+        icon: '🏆',
+      ));
+    }
+    if (bestGoalCount > 0) {
+      prizes.add((
+        title: 'Best Goal',
+        subtitle: '$bestGoalCount ${bestGoalCount == 1 ? 'volta' : 'volte'}',
+        color: AppTheme.accentGreen,
+        icon: '🎯',
+      ));
+    }
+    if (hustleCount > 0) {
+      prizes.add((
+        title: 'Combattivo',
+        subtitle: '$hustleCount ${hustleCount == 1 ? 'volta' : 'volte'}',
+        color: AppTheme.accentOrange,
+        icon: '💪',
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Timeline ─────────────────────────────────────────
+        if (milestones.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Column(
+              children: milestones.asMap().entries.map((entry) {
+                final i = entry.key;
+                final ms = entry.value;
+                final isLast = i == milestones.length - 1;
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: ms.color,
-                          shape: BoxShape.circle,
+                      // Icona + linea verticale
+                      SizedBox(
+                        width: 32,
+                        child: Column(
+                          children: [
+                            Text(ms.icon,
+                                style: const TextStyle(fontSize: 16)),
+                            if (!isLast)
+                              Expanded(
+                                child: Container(
+                                  width: 1.5,
+                                  color: AppTheme.border,
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      if (!isLast)
-                        Expanded(
-                          child: Container(
-                            width: 1.5,
-                            color: AppTheme.border,
-                            margin: const EdgeInsets.symmetric(vertical: 3),
+                      const SizedBox(width: 10),
+                      // Testo
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              EdgeInsets.only(bottom: isLast ? 0 : 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ms.title,
+                                style: TextStyle(
+                                  color: ms.color,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                ms.subtitle,
+                                style: const TextStyle(
+                                  color: AppTheme.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
+        // ── Sezione Premi ─────────────────────────────────────
+        if (prizes.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 8),
+            child: FifaLabel('PREMI',
+                color: AppTheme.textMuted, fontSize: 10),
+          ),
+          Row(
+            children: prizes.map((p) {
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: p.color.withOpacity(0.35)),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(p.icon,
+                          style: const TextStyle(fontSize: 22)),
+                      const SizedBox(height: 4),
+                      Text(
+                        p.subtitle,
+                        style: TextStyle(
+                          color: p.color,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      FifaLabel(p.title,
+                          color: p.color.withOpacity(0.7), fontSize: 9),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                // Testo
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          ms.title,
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          ms.subtitle,
-                          style: const TextStyle(
-                            color: AppTheme.textMuted,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -2440,6 +3063,24 @@ class _ConsistencyCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Dati per Form Recente
+// ─────────────────────────────────────────────────────────────
+
+class _RecentResult {
+  final int index;
+  final String result;
+  final double? vote;
+  final String date;
+
+  const _RecentResult({
+    required this.index,
+    required this.result,
+    required this.vote,
+    required this.date,
+  });
 }
 
 class _ConsistStat extends StatelessWidget {

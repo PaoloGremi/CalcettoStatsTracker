@@ -12,8 +12,10 @@ import 'package:calcetto_tracker/widgets/player_avatar.dart';
 import 'package:calcetto_tracker/theme/app_theme.dart';
 import 'package:calcetto_tracker/data/hive_boxes.dart';
 
+import 'package:fl_chart/fl_chart.dart';  // <-- assicurati di avere questo import
 // ─── Palette FIFA-style ───────────────────────────────────────────────────────
 class _FifaColors {
+
   static const bgDeep = Color(0xFF0A0E1A);
   static const bgCard = Color(0xFF111827);
   static const bgInput = Color(0xFF1C2536);
@@ -1357,6 +1359,18 @@ REGOLE:
 - Usa i dati solo per analisi
 - NON inventare MAI statistiche
 - Se un dato non è presente, dichiaralo brevemente
+- Quando devi mostrare un grafico, restituisci SOLO un JSON come questo:
+
+{
+  "type": "chart",
+  "chartType": "line",
+  "data": [
+    {"x": "Gen", "y": 12},
+    {"x": "Feb", "y": 20}
+  ]
+}
+
+Non includere testo fuori dal JSON.
 
 DATI (NON MOSTRARLI ALL\'UTENTE):
 ${jsonEncode(contextJson)}
@@ -1433,20 +1447,39 @@ ${jsonEncode(contextJson)}
           if (jsonStr == '[DONE]') break;
           try {
             final data = jsonDecode(jsonStr);
-            final delta =
-                data['choices'][0]['delta']['content'] as String? ?? '';
+            final delta = data['choices'][0]['delta']['content'] as String? ?? '';
             if (delta.isEmpty) continue;
+
+            // Accumula sempre il testo durante lo streaming
             responseBuffer.write(delta);
             if (mounted) {
-              setState(
-                  () => assistantMessage.content = responseBuffer.toString());
+              setState(() => assistantMessage.content = responseBuffer.toString());
               _scrollToBottom();
             }
           } catch (_) {}
         }
       }
 
-      if (responseBuffer.isEmpty) {
+      // --- PARSE JSON PER GRAFICO (a risposta completa) ---
+      final fullResponse = responseBuffer.toString().trim();
+      try {
+        final jsonData = jsonDecode(fullResponse);
+        if (jsonData is Map && jsonData["type"] == "chart") {
+          // È un grafico: svuota il testo e imposta i dati del grafico
+          if (mounted) {
+            setState(() {
+              assistantMessage.content = '';
+              assistantMessage.chartType = jsonData["chartType"] as String?;
+              assistantMessage.chartData =
+                  List<Map<String, dynamic>>.from(jsonData["data"]);
+            });
+          }
+        }
+      } catch (_) {
+        // Non è JSON → risposta testuale normale, non fare nulla
+      }
+
+      if (fullResponse.isEmpty) {
         setState(() => assistantMessage.content = '(nessuna risposta)');
       }
     } catch (e) {
@@ -1736,18 +1769,36 @@ class _MessageBubble extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: Text(
-                message.content,
-                style: TextStyle(
-                  color: isError
-                      ? Colors.red.shade300
-                      : _FifaColors.textPrimary,
-                  fontSize: 14.5,
-                  height: 1.5,
-                ),
+              child: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // Testo normale
+    if (message.content.isNotEmpty)
+      Text(
+        message.content,
+        style: TextStyle(
+          color: isError
+              ? Colors.red.shade300
+              : _FifaColors.textPrimary,
+          fontSize: 14.5,
+          height: 1.5,
+        ),
+      ),
+
+    // --- GRAFICO ---
+    if (message.chartData != null) ...[
+      const SizedBox(height: 12),
+      _ChartWidget(
+        type: message.chartType!,
+        data: message.chartData!,
+      ),
+    ],
+  ],
+),
+               
               ),
             ),
-          ),
+          
           if (isUser) ...[
             const SizedBox(width: 8),
             _Avatar(isUser: true, isError: false),
@@ -1755,6 +1806,68 @@ class _MessageBubble extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+
+class _ChartWidget extends StatelessWidget {
+  final String type;
+  final List<Map<String, dynamic>> data;
+
+  const _ChartWidget({required this.type, required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (type) {
+      case "line":
+        return SizedBox(
+          height: 240,
+          child: LineChart(
+            LineChartData(
+              titlesData: const FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  isCurved: true,
+                  barWidth: 3,
+                  color: Colors.greenAccent,
+                  spots: data.asMap().entries.map(
+                    (e) {
+                      final i = e.key.toDouble();
+                      final y = (e.value["y"] as num).toDouble();
+                      return FlSpot(i, y);
+                    },
+                  ).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case "bar":
+        return SizedBox(
+          height: 240,
+          child: BarChart(
+            BarChartData(
+              titlesData: const FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              barGroups: data.asMap().entries.map(
+                (e) {
+                  final i = e.key.toDouble();
+                  final y = (e.value["y"] as num).toDouble();
+                  return BarChartGroupData(
+                    x: i.toInt(),
+                    barRods: [BarChartRodData(toY: y, color: Colors.greenAccent)],
+                  );
+                },
+              ).toList(),
+            ),
+          ),
+        );
+
+      default:
+        return const Text("Grafico non supportato");
+    }
   }
 }
 
@@ -1978,5 +2091,15 @@ class _InputBar extends StatelessWidget {
 class _ChatMessage {
   final String role;
   String content;
-  _ChatMessage({required this.role, required this.content});
+
+  // NUOVI CAMPI PER I GRAFICI
+  String? chartType; // "line", "bar", etc.
+  List<Map<String, dynamic>>? chartData;
+
+  _ChatMessage({
+    required this.role,
+    required this.content,
+    this.chartType,
+    this.chartData,
+  });
 }

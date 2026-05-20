@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:calcetto_tracker/screens/ai_coach_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
 import '../theme/app_theme.dart';
@@ -15,35 +18,35 @@ import '../data/player_icons.dart';
 import 'settings_screen.dart';
 import 'fields_screen.dart';
 import '../services/player_stats_calculator.dart';
-
+ 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
+ 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
-
+ 
 class _HomeScreenState extends State<HomeScreen> {
   AppSettings _settings = const AppSettings();
-
+ 
   @override
   void initState() {
     super.initState();
     _loadSettings();
   }
-
+ 
   Future<void> _loadSettings() async {
     final s = await AppSettings.load();
     setState(() => _settings = s);
   }
-
+ 
   /// Costruisce il widget avatar da mostrare nello scudo FIFA.
   /// Priorità: 1) foto galleria, 2) asset icona giocatore, 3) icona generica
   Widget _buildShieldAvatar(dynamic player, double shieldSize) {
     if (player == null) {
       return const Icon(Icons.person_rounded, color: Colors.black45, size: 60);
     }
-
+ 
     // 1. Foto dalla galleria
     final hasCustomAvatar = player.imagePath != null &&
         File(player.imagePath!).existsSync();
@@ -52,31 +55,31 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Image.file(File(player.imagePath!), fit: BoxFit.cover),
       );
     }
-
+ 
     // 2. Asset icona personalizzata
     final playerIcon = getPlayerIcon(player.icon);
     if (playerIcon.isAsset) {
       return Image.asset(playerIcon.assetPath!, fit: BoxFit.contain);
     }
-
+ 
     // 3. Icona Material generica
     return Icon(playerIcon.iconData ?? Icons.person_rounded,
         color: Colors.black54, size: shieldSize * 0.4);
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
-
+ 
     final data = Provider.of<DataService>(context, listen: false);
     final players = data.getAllPlayers();
     final mainPlayer = _settings.mainPlayerId != null
         ? players.where((p) => p.id == _settings.mainPlayerId).firstOrNull
         : null;
-
+ 
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
@@ -91,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const MatchPromoFormPage())),
           ),
-
+ 
           IconButton(
             icon: const Icon(Icons.psychology_outlined,
                 color: AppTheme.textSecondary, size: 22),
@@ -99,9 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AiCoachPage())),
           ),
-
-
-
+ 
+ 
+ 
           IconButton(
             icon: const Icon(Icons.backup_rounded,
                 color: AppTheme.textSecondary, size: 22),
@@ -128,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-
+ 
           // ── FIFA UT Card ──────────────────────────────────────
           Expanded(
             flex: 5,
@@ -165,7 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
+ 
+          // ── News Ticker ────────────────────────────────────────
+          const NewsTicker(),
+ 
           // ── Info giocatore principale ─────────────────────────
           Expanded(
             flex: 4,
@@ -216,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
+ 
       // ── Bottom Nav Bar ────────────────────────────────────────
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -281,13 +287,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
+ 
 class _NavBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   const _NavBtn({required this.icon, required this.label, required this.onTap});
-
+ 
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
@@ -309,11 +315,11 @@ class _NavBtn extends StatelessWidget {
     ),
   );
 }
-
+ 
 class _InfoRow extends StatelessWidget {
   final String label, value;
   const _InfoRow(this.label, this.value);
-
+ 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 5),
@@ -332,7 +338,7 @@ class _InfoRow extends StatelessWidget {
     ),
   );
 }
-
+ 
 class FifaStats extends StatelessWidget {
   final int vel, tir, pas, dri, dif, fis;
   const FifaStats({
@@ -340,7 +346,7 @@ class FifaStats extends StatelessWidget {
     required this.vel, required this.tir, required this.pas,
     required this.dri, required this.dif, required this.fis,
   });
-
+ 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
@@ -358,7 +364,7 @@ class FifaStats extends StatelessWidget {
       ]),
     ],
   );
-
+ 
   Widget _stat(String val, String lbl) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(children: [
@@ -372,7 +378,7 @@ class FifaStats extends StatelessWidget {
     ]),
   );
 }
-
+ 
 // ─────────────────────────────────────────────────────────────
 // Scheda giocatore principale nella home
 // ─────────────────────────────────────────────────────────────
@@ -381,18 +387,18 @@ class _MainPlayerCard extends StatelessWidget {
   final AppSettings settings;
   final DataService data;
   final VoidCallback onSettingsTap;
-
+ 
   const _MainPlayerCard({
     required this.player,
     required this.settings,
     required this.data,
     required this.onSettingsTap,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     final matches = data.getAllMatches();
-
+ 
     // Calcola stats reali
     int gamesPlayed = 0, wins = 0, draws = 0, losses = 0, votesCount = 0;
     double totalVotes = 0;
@@ -415,7 +421,7 @@ class _MainPlayerCard extends StatelessWidget {
     }
     final avgVote = votesCount > 0 ? totalVotes / votesCount : 0.0;
     final winPct = gamesPlayed > 0 ? (wins / gamesPlayed * 100).round() : 0;
-
+ 
     // Helper: conta i gol del giocatore
     int _countGoals(DataService d, String playerId) {
       int total = 0;
@@ -424,14 +430,14 @@ class _MainPlayerCard extends StatelessWidget {
       }
       return total;
     }
-
+ 
     Color voteColor(double v) {
       if (v >= 8.0) return AppTheme.accentGreen;
       if (v >= 6.5) return AppTheme.accentGold;
       if (v >= 5.0) return AppTheme.accentOrange;
       return AppTheme.accentRed;
     }
-
+ 
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
@@ -455,7 +461,7 @@ class _MainPlayerCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
+ 
               // ── Header: nome + impostazioni ───────────────────
               Row(
                 children: [
@@ -491,14 +497,14 @@ class _MainPlayerCard extends StatelessWidget {
                       ],
                     ),
                   ),
-
+ 
                 ],
               ),
-
+ 
               const SizedBox(height: 10),
               Container(height: 1, color: Colors.white10),
               const SizedBox(height: 10),
-
+ 
               // ── Stats partite ─────────────────────────────────
               Row(
                 children: [
@@ -524,7 +530,7 @@ class _MainPlayerCard extends StatelessWidget {
                       color: AppTheme.accentOrange),
                 ],
               ),
-
+ 
               // ── Badge premi ───────────────────────────────────
               if (player.mvpCount > 0 || player.hustleCount > 0 ||
                   player.bestGoalCount > 0) ...[
@@ -544,11 +550,11 @@ class _MainPlayerCard extends StatelessWidget {
                         AppTheme.accentGreen),
                 ]),
               ],
-
+ 
               const SizedBox(height: 10),
               Container(height: 1, color: Colors.white10),
               const SizedBox(height: 10),
-
+ 
               // ── Obiettivi annuali ──────────────────────────────
               if (settings.goalMatches > 0 || settings.goalWins > 0 ||
                   settings.goalGoals > 0 || settings.goalMvp > 0) ...[
@@ -598,7 +604,7 @@ class _MainPlayerCard extends StatelessWidget {
                 Container(height: 1, color: Colors.white10),
                 const SizedBox(height: 10),
               ],
-
+ 
               // ── Info anagrafiche ──────────────────────────────
               if (settings.birthDate.isNotEmpty || settings.nationality.isNotEmpty ||
                   settings.favoriteTeam.isNotEmpty || settings.foot.isNotEmpty) ...[
@@ -618,12 +624,12 @@ class _MainPlayerCard extends StatelessWidget {
     );
   }
 }
-
+ 
 class _StatBox extends StatelessWidget {
   final String value, label;
   final Color color;
   const _StatBox({required this.value, required this.label, required this.color});
-
+ 
   @override
   Widget build(BuildContext context) => Expanded(
     child: Container(
@@ -657,13 +663,13 @@ class _StatBox extends StatelessWidget {
     ),
   );
 }
-
+ 
 class _AwardPill extends StatelessWidget {
   final String emoji, label;
   final int count;
   final Color color;
   const _AwardPill(this.emoji, this.label, this.count, this.color);
-
+ 
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -689,7 +695,7 @@ class _AwardPill extends StatelessWidget {
     ),
   );
 }
-
+ 
 // ─────────────────────────────────────────────────────────────
 // Barra progresso obiettivo annuale
 // ─────────────────────────────────────────────────────────────
@@ -698,7 +704,7 @@ class _GoalProgressRow extends StatelessWidget {
   final String label;
   final int current, target;
   final Color color;
-
+ 
   const _GoalProgressRow({
     required this.icon,
     required this.label,
@@ -706,7 +712,7 @@ class _GoalProgressRow extends StatelessWidget {
     required this.target,
     required this.color,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     final pct = (current / target).clamp(0.0, 1.0);
@@ -760,36 +766,36 @@ class _FutCard extends StatelessWidget {
   final dynamic player; // Player?
   final AppSettings settings;
   final Widget Function(dynamic, double) buildAvatar;
-
+ 
   const _FutCard({
     required this.player,
     required this.settings,
     required this.buildAvatar,
   });
-
+ 
   // ── Stat calcolate dai dati reali ─────────────────────────────────────
   ComputedFifaStats get _computed {
     if (player == null) return ComputedFifaStats.empty();
     return PlayerStatsCalculator.compute(player.id as String);
   }
-
+ 
   /// Overall: media delle 6 stat calcolate
   int get _overall => _computed.overall;
-
+ 
   /// Colore card in base all'overall (invariato)
   Color get _cardColor {
     if (_overall >= 85) return const Color(0xFFFFD700); // oro
     if (_overall >= 75) return const Color(0xFFC0C0C0); // argento
     return const Color(0xFFCD7F32); // bronzo
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     final c = _cardColor;
     final cardW = 200.0;
     final cardH = 280.0;
     final stats = _computed; // calcolate una sola volta
-
+ 
     return Container(
       width: cardW,
       height: cardH,
@@ -821,7 +827,7 @@ class _FutCard extends StatelessWidget {
             Positioned.fill(
               child: CustomPaint(painter: _CardPatternPainter(c)),
             ),
-
+ 
             // Contenuto
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -877,7 +883,7 @@ class _FutCard extends StatelessWidget {
                               ),
                           ],
                         ),
-
+ 
                         // Foto centrata che fuoriesce
                         Expanded(
                           child: Padding(
@@ -897,7 +903,7 @@ class _FutCard extends StatelessWidget {
                       ],
                     ),
                   ),
-
+ 
                   // Linea divisoria
                   Container(
                     height: 1,
@@ -910,7 +916,7 @@ class _FutCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-
+ 
                   // ── Nome ──────────────────────────────────────
                   Text(
                     (player?.name ?? 'Nessun Giocatore').toUpperCase(),
@@ -923,7 +929,7 @@ class _FutCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-
+ 
                   // ── Stats a 2 colonne (ora calcolate) ─────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -954,7 +960,7 @@ class _FutCard extends StatelessWidget {
       ),
     );
   }
-
+ 
   Widget _buildPlayerImage(Color c) {
     if (player == null) return const SizedBox();
     if (player.imagePath != null &&
@@ -973,7 +979,7 @@ class _FutCard extends StatelessWidget {
     return Icon(icon.iconData ?? Icons.person_rounded,
         color: c.withOpacity(0.6), size: 80);
   }
-
+ 
   Widget _statCol(Color c, List<(int, String)> stats) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: stats
@@ -1009,24 +1015,389 @@ class _FutCard extends StatelessWidget {
             .toList(),
       );
 }
+
+
+// ─────────────────────────────────────────────────────────────
+// Service: notizie calcio da TheSportsDB (Riparato)
+// ─────────────────────────────────────────────────────────────
+class _FootballNewsService {
+  static Future<List<String>> fetchLatestNews() async {
+    final List<String> results = [];
+ 
+    // ── 1. Ultimi risultati Serie A ───────────────────────────
+    await _fetchLastEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4332',
+      prefix: '🇮🇹 Serie A:',
+      results: results,
+      limit: 5,
+    );
+ 
+    // ── 2. Ultimi risultati Premier League ────────────────────
+    await _fetchLastEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4328',
+      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League:',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 3. Ultimi risultati French Ligue 1 ───────────────────────────
+    await _fetchLastEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4334',
+      prefix: '🇫🇷 Ligue 1',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 4. Ultimi risultati La Liga (Riparato: ora usa _fetchLastEvents) ──
+    await _fetchLastEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4335',
+      prefix: '🇪🇸 La Liga:',
+      results: results,
+      limit: 3,
+    );
+ 
+    // ── 5. Prossime partite Serie A ───────────────────────────
+    await _fetchNextEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4332',
+      prefix: '📅 IN ARRIVO:  🇮🇹',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 6. Prossime partite Serie A ───────────────────────────
+    await _fetchNextEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4328',
+      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 7. Prossime partite Serie A ───────────────────────────
+    await _fetchNextEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4334',
+      prefix: '🇫🇷',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 8. Prossime partite Serie A ───────────────────────────
+    await _fetchNextEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4335',
+      prefix: '🇪🇸 ',
+      results: results,
+      limit: 3,
+    );
+ 
+  
+ 
+    if (results.isEmpty) {
+      results.addAll([
+        '⚽ Nessuna notizia disponibile al momento',
+        '📡 Controlla la connessione internet',
+      ]);
+    }
+ 
+    return results;
+  }
+ 
+  static Future<void> _fetchLastEvents(
+    String url, {
+    required String prefix,
+    required List<String> results,
+    int limit = 5,
+  }) async {
+    try {
+      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+      if (resp.statusCode != 200) return;
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final events = data['results'] as List<dynamic>? ?? data['events'] as List<dynamic>?;
+      if (events == null) return;
+      for (final e in events.take(limit)) {
+        final home = (e['strHomeTeam'] ?? '').toString();
+        final away = (e['strAwayTeam'] ?? '').toString();
+        final scoreH = (e['intHomeScore'] ?? '').toString();
+        final scoreA = (e['intAwayScore'] ?? '').toString();
+        if (home.isEmpty || away.isEmpty) continue;
+        if (scoreH.isNotEmpty && scoreA.isNotEmpty && scoreH != 'null' && scoreA != 'null') {
+          results.add('$prefix $home $scoreH – $scoreA $away');
+        }
+      }
+    } catch (_) {}
+  }
+ 
+  static Future<void> _fetchNextEvents(
+    String url, {
+    required String prefix,
+    required List<String> results,
+    int limit = 3,
+  }) async {
+    try {
+      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+      if (resp.statusCode != 200) return;
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final events = data['events'] as List<dynamic>?;
+      if (events == null) return;
+      for (final e in events.take(limit)) {
+        final home = (e['strHomeTeam'] ?? '').toString();
+        final away = (e['strAwayTeam'] ?? '').toString();
+        final date = (e['dateEvent'] ?? '').toString();
+        final time = (e['strTime'] ?? '').toString();
+        if (home.isEmpty || away.isEmpty) continue;
+        final timeStr = time.length >= 5 ? time.substring(0, 5) : time;
+        final dateShort = date.length >= 10 ? date.substring(5) : date; // MM-DD
+        results.add('$prefix $home vs $away ($dateShort ${timeStr.isNotEmpty ? "· $timeStr" : ""})');
+      }
+    } catch (_) {}
+  }
+ 
+  static Future<void> _fetchTeamNews(
+    String url, {
+    required List<String> results,
+  }) async {
+    try {
+      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+      if (resp.statusCode != 200) return;
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final teams = data['teams'] as List<dynamic>?;
+      if (teams == null || teams.isEmpty) return;
+      final team = teams.first as Map<String, dynamic>;
+      final name = (team['strTeam'] ?? '').toString();
+      final league = (team['strLeague'] ?? '').toString();
+      final stadium = (team['strStadium'] ?? '').toString();
+      if (name.isNotEmpty && league.isNotEmpty) {
+        results.add('🏟️ Focus Team: $name ($league) · Casa: $stadium');
+      }
+    } catch (_) {}
+  }
+}
+ 
+// ─────────────────────────────────────────────────────────────
+// Widget: banner scorrevole notizie calcistiche (Riparato)
+// ─────────────────────────────────────────────────────────────
+class NewsTicker extends StatefulWidget {
+  const NewsTicker({super.key});
+ 
+  @override
+  State<NewsTicker> createState() => _NewsTickerState();
+}
+ 
+class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateMixin {
+  List<String> _items = [];
+  bool _loading = true;
+ 
+  late AnimationController _controller;
+  double _textWidth = 0;
+ 
+  // Velocità: pixel al secondo
+  static const double _pxPerSec = 55.0;
+ 
+  // Ritorna la stringa singola con i separatori
+  String get _singlePassText => _items.join('     ·     ') + '     ·     ';
+ 
+  @override
+  void initState() {
+    super.initState();
+    // Inizializzazione con durata fittizia, verrà sovrascritta in _startMarquee
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 5));
+    _loadNews();
+  }
+ 
+  Future<void> _loadNews() async {
+    final news = await _FootballNewsService.fetchLatestNews();
+    if (!mounted) return;
+    setState(() {
+      _items = news;
+      _loading = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startMarquee());
+  }
+ 
+  void _startMarquee() {
+    if (_items.isEmpty) return;
+ 
+    // Ripariamo il bug del calcolo: misuriamo l'esatta stringa singola
+    final tp = TextPainter(
+      text: TextSpan(
+        text: _singlePassText,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: double.infinity);
+ 
+    _textWidth = tp.width;
+ 
+    // Ora la durata corrisponde perfettamente allo spazio che deve traslare
+    final durationMs = (_textWidth / _pxPerSec * 1000).round();
+    _controller.duration = Duration(milliseconds: durationMs);
+    _controller.repeat();
+  }
+ 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+ 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        border: Border(
+          top: BorderSide(color: Colors.white24, width: 0.5),
+          bottom: BorderSide(color: Colors.white24, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          // ── Badge sinistro ────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppTheme.accentGreen,
+            alignment: Alignment.center,
+            child: const Text(
+              'CALCIO',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          Container(width: 0.5, color: Colors.white24),
+ 
+          // ── Area scorrevole ───────────────────
+          Expanded(
+            child: Stack(
+              children: [
+                ClipRect(
+                  child: _loading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: AppTheme.accentGold,
+                            ),
+                          ),
+                        )
+                      : _items.isEmpty
+                          ? const SizedBox()
+                          : AnimatedBuilder(
+                              animation: _controller,
+                              builder: (context, child) {
+                                // Trasla esattamente di una lunghezza di testo (_textWidth)
+                                // Arrivato alla fine, il loop ricomincia in modo invisibile all'utente
+                                return Transform.translate(
+                                  offset: Offset(-_controller.value * _textWidth, 0),
+                                  child: child,
+                                );
+                              },
+                              // Qui concateniamo il testo DUE volte per coprire lo spazio vuoto durante lo scorrimento
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  _singlePassText + _singlePassText,
+                                  style: const TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.visible,
+                                ),
+                              ),
+                            ),
+                ),
+ 
+                // Fade sinistro
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 20,
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.black, Colors.transparent],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+ 
+                // Fade destro
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 20,
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+ 
+          Container(width: 0.5, color: Colors.white24),
+ 
+          // ── Badge destro ──────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppTheme.accentGold.withOpacity(0.15),
+            alignment: Alignment.center,
+            child: const Text(
+              'NEWS',
+              style: TextStyle(
+                color: AppTheme.accentGold,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+ 
 /// Trama geometrica di sfondo della card
 class _CardPatternPainter extends CustomPainter {
   final Color color;
   _CardPatternPainter(this.color);
-
+ 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color.withOpacity(0.04)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-
+ 
     const spacing = 18.0;
     for (double i = -size.height; i < size.width + size.height; i += spacing) {
       canvas.drawLine(Offset(i, 0), Offset(i + size.height, size.height), paint);
     }
   }
-
+ 
   @override
   bool shouldRepaint(_CardPatternPainter old) => old.color != color;
 }
