@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
  
           // ── News Ticker ────────────────────────────────────────
-          const _NewsTicker(),
+          const NewsTicker(),
  
           // ── Info giocatore principale ─────────────────────────
           Expanded(
@@ -1015,18 +1015,19 @@ class _FutCard extends StatelessWidget {
             .toList(),
       );
 }
+
+
 // ─────────────────────────────────────────────────────────────
-// Service: notizie calcio da TheSportsDB
+// Service: notizie calcio da TheSportsDB (Riparato)
 // ─────────────────────────────────────────────────────────────
 class _FootballNewsService {
-  /// Recupera notizie calcistiche variegate da TheSportsDB (free tier, no key)
   static Future<List<String>> fetchLatestNews() async {
     final List<String> results = [];
  
     // ── 1. Ultimi risultati Serie A ───────────────────────────
     await _fetchLastEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4332',
-      prefix: '🇮🇹 Serie A',
+      prefix: '🇮🇹 Serie A:',
       results: results,
       limit: 5,
     );
@@ -1034,33 +1035,60 @@ class _FootballNewsService {
     // ── 2. Ultimi risultati Premier League ────────────────────
     await _fetchLastEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4328',
-      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League',
+      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League:',
       results: results,
-      limit: 4,
+      limit: 3,
+    );
+
+    // ── 3. Ultimi risultati French Ligue 1 ───────────────────────────
+    await _fetchLastEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4334',
+      prefix: '🇫🇷 Ligue 1',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 4. Ultimi risultati La Liga (Riparato: ora usa _fetchLastEvents) ──
+    await _fetchLastEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4335',
+      prefix: '🇪🇸 La Liga:',
+      results: results,
+      limit: 3,
     );
  
-    // ── 3. Prossime partite Serie A ───────────────────────────
+    // ── 5. Prossime partite Serie A ───────────────────────────
     await _fetchNextEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4332',
-      prefix: '🇮🇹 Serie A (Prossime)',
+      prefix: '📅 IN ARRIVO:  🇮🇹',
       results: results,
       limit: 3,
     );
- 
-    // ── 4. Ultimi risultati La Liga ──────────────────
+
+    // ── 6. Prossime partite Serie A ───────────────────────────
     await _fetchNextEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4335',
-      prefix: '🇪🇸 La Liga',
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4328',
+      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 7. Prossime partite Serie A ───────────────────────────
+    await _fetchNextEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4334',
+      prefix: '🇫🇷',
+      results: results,
+      limit: 3,
+    );
+
+    // ── 8. Prossime partite Serie A ───────────────────────────
+    await _fetchNextEvents(
+      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4335',
+      prefix: '🇪🇸 ',
       results: results,
       limit: 3,
     );
  
-    // ── 5. Ultimi risultati La Liga ───────────────────────────
-    await _fetchLastEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventsnext.php?id=133604',
-      prefix: '⚪⚫ Juventus',
-      results: results,
-    );
+  
  
     if (results.isEmpty) {
       results.addAll([
@@ -1089,7 +1117,6 @@ class _FootballNewsService {
         final away = (e['strAwayTeam'] ?? '').toString();
         final scoreH = (e['intHomeScore'] ?? '').toString();
         final scoreA = (e['intAwayScore'] ?? '').toString();
-        final league = (e['strLeague'] ?? '').toString();
         if (home.isEmpty || away.isEmpty) continue;
         if (scoreH.isNotEmpty && scoreA.isNotEmpty && scoreH != 'null' && scoreA != 'null') {
           results.add('$prefix $home $scoreH – $scoreA $away');
@@ -1100,8 +1127,9 @@ class _FootballNewsService {
  
   static Future<void> _fetchNextEvents(
     String url, {
+    required String prefix,
     required List<String> results,
-    int limit = 3, required String prefix,
+    int limit = 3,
   }) async {
     try {
       final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
@@ -1114,11 +1142,10 @@ class _FootballNewsService {
         final away = (e['strAwayTeam'] ?? '').toString();
         final date = (e['dateEvent'] ?? '').toString();
         final time = (e['strTime'] ?? '').toString();
-        final league = (e['strLeague'] ?? '').toString();
         if (home.isEmpty || away.isEmpty) continue;
         final timeStr = time.length >= 5 ? time.substring(0, 5) : time;
         final dateShort = date.length >= 10 ? date.substring(5) : date; // MM-DD
-        results.add('📅 $home vs $away  $dateShort ${timeStr.isNotEmpty ? "· $timeStr" : ""}');
+        results.add('$prefix $home vs $away ($dateShort ${timeStr.isNotEmpty ? "· $timeStr" : ""})');
       }
     } catch (_) {}
   }
@@ -1135,47 +1162,43 @@ class _FootballNewsService {
       if (teams == null || teams.isEmpty) return;
       final team = teams.first as Map<String, dynamic>;
       final name = (team['strTeam'] ?? '').toString();
-      final formed = (team['intFormedYear'] ?? '').toString();
       final league = (team['strLeague'] ?? '').toString();
       final stadium = (team['strStadium'] ?? '').toString();
       if (name.isNotEmpty && league.isNotEmpty) {
-        results.add('🏟 $name · $league${stadium.isNotEmpty ? " · $stadium" : ""}');
+        results.add('🏟️ Focus Team: $name ($league) · Casa: $stadium');
       }
     } catch (_) {}
   }
 }
  
 // ─────────────────────────────────────────────────────────────
-// Widget: banner scorrevole notizie calcistiche
+// Widget: banner scorrevole notizie calcistiche (Riparato)
 // ─────────────────────────────────────────────────────────────
-class _NewsTicker extends StatefulWidget {
-  const _NewsTicker();
+class NewsTicker extends StatefulWidget {
+  const NewsTicker({super.key});
  
   @override
-  State<_NewsTicker> createState() => _NewsTickerState();
+  State<NewsTicker> createState() => _NewsTickerState();
 }
  
-class _NewsTickerState extends State<_NewsTicker>
-    with SingleTickerProviderStateMixin {
+class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateMixin {
   List<String> _items = [];
   bool _loading = true;
  
-  // Animazione marquee
   late AnimationController _controller;
   double _textWidth = 0;
-  final GlobalKey _textKey = GlobalKey();
  
   // Velocità: pixel al secondo
   static const double _pxPerSec = 55.0;
  
-  /// Stringa completa con separatori tra le notizie
-  String get _fullText =>
-      _items.join('     ·     ') + '     ·     ';
+  // Ritorna la stringa singola con i separatori
+  String get _singlePassText => _items.join('     ·     ') + '     ·     ';
  
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1));
+    // Inizializzazione con durata fittizia, verrà sovrascritta in _startMarquee
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 5));
     _loadNews();
   }
  
@@ -1186,17 +1209,16 @@ class _NewsTickerState extends State<_NewsTicker>
       _items = news;
       _loading = false;
     });
-    // Misura larghezza testo dopo il frame
     WidgetsBinding.instance.addPostFrameCallback((_) => _startMarquee());
   }
  
   void _startMarquee() {
     if (_items.isEmpty) return;
  
-    // Calcola la larghezza del testo con TextPainter
+    // Ripariamo il bug del calcolo: misuriamo l'esatta stringa singola
     final tp = TextPainter(
       text: TextSpan(
-        text: _fullText,
+        text: _singlePassText,
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -1209,6 +1231,7 @@ class _NewsTickerState extends State<_NewsTicker>
  
     _textWidth = tp.width;
  
+    // Ora la durata corrisponde perfettamente allo spazio che deve traslare
     final durationMs = (_textWidth / _pxPerSec * 1000).round();
     _controller.duration = Duration(milliseconds: durationMs);
     _controller.repeat();
@@ -1227,8 +1250,8 @@ class _NewsTickerState extends State<_NewsTicker>
       decoration: const BoxDecoration(
         color: Colors.black,
         border: Border(
-          top: BorderSide(color: AppTheme.border, width: 0.5),
-          bottom: BorderSide(color: AppTheme.border, width: 0.5),
+          top: BorderSide(color: Colors.white24, width: 0.5),
+          bottom: BorderSide(color: Colors.white24, width: 0.5),
         ),
       ),
       child: Row(
@@ -1237,6 +1260,7 @@ class _NewsTickerState extends State<_NewsTicker>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             color: AppTheme.accentGreen,
+            alignment: Alignment.center,
             child: const Text(
               'CALCIO',
               style: TextStyle(
@@ -1247,13 +1271,12 @@ class _NewsTickerState extends State<_NewsTicker>
               ),
             ),
           ),
-          Container(width: 1, color: AppTheme.border),
+          Container(width: 0.5, color: Colors.white24),
  
-          // ── Area scorrevole con fade su entrambi i lati ───────
+          // ── Area scorrevole ───────────────────
           Expanded(
             child: Stack(
               children: [
-                // Testo scorrevole
                 ClipRect(
                   child: _loading
                       ? const Center(
@@ -1271,17 +1294,18 @@ class _NewsTickerState extends State<_NewsTicker>
                           : AnimatedBuilder(
                               animation: _controller,
                               builder: (context, child) {
-                                final offset = -_controller.value * _textWidth;
+                                // Trasla esattamente di una lunghezza di testo (_textWidth)
+                                // Arrivato alla fine, il loop ricomincia in modo invisibile all'utente
                                 return Transform.translate(
-                                  offset: Offset(offset, 0),
+                                  offset: Offset(-_controller.value * _textWidth, 0),
                                   child: child,
                                 );
                               },
+                              // Qui concateniamo il testo DUE volte per coprire lo spazio vuoto durante lo scorrimento
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  key: _textKey,
-                                  _fullText + _fullText,
+                                  _singlePassText + _singlePassText,
                                   style: const TextStyle(
                                     color: AppTheme.textPrimary,
                                     fontSize: 11,
@@ -1296,7 +1320,7 @@ class _NewsTickerState extends State<_NewsTicker>
                             ),
                 ),
  
-                // Fade sinistro (dopo il badge verde)
+                // Fade sinistro
                 Positioned(
                   left: 0,
                   top: 0,
@@ -1313,7 +1337,7 @@ class _NewsTickerState extends State<_NewsTicker>
                   ),
                 ),
  
-                // Fade destro (prima del badge NEWS)
+                // Fade destro
                 Positioned(
                   right: 0,
                   top: 0,
@@ -1333,12 +1357,13 @@ class _NewsTickerState extends State<_NewsTicker>
             ),
           ),
  
-          Container(width: 1, color: AppTheme.border),
+          Container(width: 0.5, color: Colors.white24),
  
           // ── Badge destro ──────────────────────────────────────
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             color: AppTheme.accentGold.withOpacity(0.15),
+            alignment: Alignment.center,
             child: const Text(
               'NEWS',
               style: TextStyle(
