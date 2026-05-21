@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:calcetto_tracker/screens/ai_coach_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
@@ -170,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
  
           // ── News Ticker ────────────────────────────────────────
-          const NewsTicker(),
+          const SmartNewsTicker(),
  
           // ── Info giocatore principale ─────────────────────────
           Expanded(
@@ -1015,8 +1016,8 @@ class _FutCard extends StatelessWidget {
             .toList(),
       );
 }
-
-
+ 
+ 
 // ─────────────────────────────────────────────────────────────
 // Service: notizie calcio da TheSportsDB (Riparato)
 // ─────────────────────────────────────────────────────────────
@@ -1039,7 +1040,7 @@ class _FootballNewsService {
       results: results,
       limit: 3,
     );
-
+ 
     // ── 3. Ultimi risultati French Ligue 1 ───────────────────────────
     await _fetchLastEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4334',
@@ -1047,7 +1048,7 @@ class _FootballNewsService {
       results: results,
       limit: 3,
     );
-
+ 
     // ── 4. Ultimi risultati La Liga (Riparato: ora usa _fetchLastEvents) ──
     await _fetchLastEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4335',
@@ -1063,7 +1064,7 @@ class _FootballNewsService {
       results: results,
       limit: 3,
     );
-
+ 
     // ── 6. Prossime partite Serie A ───────────────────────────
     await _fetchNextEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4328',
@@ -1071,7 +1072,7 @@ class _FootballNewsService {
       results: results,
       limit: 3,
     );
-
+ 
     // ── 7. Prossime partite Serie A ───────────────────────────
     await _fetchNextEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4334',
@@ -1079,7 +1080,7 @@ class _FootballNewsService {
       results: results,
       limit: 3,
     );
-
+ 
     // ── 8. Prossime partite Serie A ───────────────────────────
     await _fetchNextEvents(
       'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4335',
@@ -1172,41 +1173,153 @@ class _FootballNewsService {
 }
  
 // ─────────────────────────────────────────────────────────────
-// Widget: banner scorrevole notizie calcistiche (Riparato)
+// Service: news AI stile Sky Sport 24 basate sui dati locali
 // ─────────────────────────────────────────────────────────────
-class NewsTicker extends StatefulWidget {
-  const NewsTicker({super.key});
+class _AiNewsService {
+  static const _storageKey = 'openai_api_key';
+  static const _storage = FlutterSecureStorage();
  
-  @override
-  State<NewsTicker> createState() => _NewsTickerState();
+  /// Genera titoli stile ticker TV sportivo basati sui giocatori/partite locali.
+  /// Ritorna [] se nessuna chiave è configurata o in caso di errore.
+  static Future<List<String>> generateAiNews(DataService data) async {
+    final apiKey = await _storage.read(key: _storageKey);
+    if (apiKey == null || apiKey.isEmpty) return [];
+ 
+    final players = data.getAllPlayers();
+    final matches = data.getAllMatches();
+    if (players.isEmpty) return [];
+ 
+    // Costruiamo un mini-report dei dati reali da passare al modello
+    final buffer = StringBuffer();
+    buffer.writeln('GIOCATORI REGISTRATI:');
+    for (final p in players.take(12)) {
+      int gol = 0, pg = 0, vinte = 0, mvp = p.mvpCount as int;
+      double totalVoto = 0; int nVoti = 0;
+      for (final m in matches) {
+        final inA = m.teamA.contains(p.id);
+        final inB = m.teamB.contains(p.id);
+        if (!inA && !inB) continue;
+        pg++;
+        if (m.scoreA != m.scoreB &&
+            ((inA && m.scoreA > m.scoreB) || (inB && m.scoreB > m.scoreA))) vinte++;
+        gol += (m.goals[p.id] ?? 0) as int;
+        if (m.votes.containsKey(p.id)) { totalVoto += m.votes[p.id]!; nVoti++; }
+      }
+      final voto = nVoti > 0 ? (totalVoto / nVoti).toStringAsFixed(1) : '—';
+      buffer.writeln('- ${p.name} (${p.role}): ${pg}PG $vinte W, $gol gol, $mvp MVP, voto medio $voto');
+    }
+ 
+    if (matches.isNotEmpty) {
+      buffer.writeln('\nULTIME PARTITE:');
+      for (final m in matches.reversed.take(5)) {
+        final scoreStr = '${m.scoreA}–${m.scoreB}';
+        final teamA = m.teamA.map((id) {
+          final pl = players.where((p) => p.id == id).firstOrNull;
+          return pl?.name ?? id;
+        }).join(', ');
+        final teamB = m.teamB.map((id) {
+          final pl = players.where((p) => p.id == id).firstOrNull;
+          return pl?.name ?? id;
+        }).join(', ');
+        buffer.writeln('- Squadra A ($teamA) $scoreStr Squadra B ($teamB)');
+      }
+    }
+ 
+    final prompt = '''
+Sei il ticker di Sky Sport 24. Basandoti SOLO sui seguenti dati reali di una lega di calcetto amatoriale,
+genera ESATTAMENTE 8 titoli brevi (max 12 parole ciascuno) stile breaking news / ticker TV sportivo.
+Mix consigliato: 3 risultati/statistiche, 2 classifiche/record, 3 gossip/curiosità (inventato ma ispirato ai dati veri).
+Usa tono giornalistico-sportivo italiano. NO emoji. Separa ogni titolo con il carattere | su una sola riga.
+ 
+DATI:
+${buffer.toString()}
+ 
+RISPOSTA (solo i titoli separati da |, nessuna numerazione):''';
+ 
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'max_tokens': 300,
+          'messages': [
+            {'role': 'user', 'content': prompt}
+          ],
+        }),
+      ).timeout(const Duration(seconds: 12));
+ 
+      if (response.statusCode != 200) return [];
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final text = (body['choices'] as List?)
+              ?.firstOrNull?['message']?['content'] as String? ?? '';
+      return text
+          .split('|')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .map((s) => '🤖 $s')
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
 }
  
-class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateMixin {
+// ─────────────────────────────────────────────────────────────
+// Widget: banner scorrevole notizie calcistiche (con AI)
+// ─────────────────────────────────────────────────────────────
+class SmartNewsTicker extends StatefulWidget {
+  const SmartNewsTicker({super.key});
+ 
+  @override
+  State<SmartNewsTicker> createState() => _SmartNewsTickerState();
+}
+ 
+class _SmartNewsTickerState extends State<SmartNewsTicker> with SingleTickerProviderStateMixin {
   List<String> _items = [];
   bool _loading = true;
  
   late AnimationController _controller;
   double _textWidth = 0;
  
-  // Velocità: pixel al secondo
   static const double _pxPerSec = 55.0;
  
-  // Ritorna la stringa singola con i separatori
   String get _singlePassText => _items.join('     ·     ') + '     ·     ';
  
   @override
   void initState() {
     super.initState();
-    // Inizializzazione con durata fittizia, verrà sovrascritta in _startMarquee
     _controller = AnimationController(vsync: this, duration: const Duration(seconds: 5));
     _loadNews();
   }
  
   Future<void> _loadNews() async {
-    final news = await _FootballNewsService.fetchLatestNews();
+    final data = Provider.of<DataService>(context, listen: false);
+ 
+    // Carica news reali e news AI in parallelo
+    final results = await Future.wait([
+      _FootballNewsService.fetchLatestNews(),
+      _AiNewsService.generateAiNews(data),
+    ]);
+ 
+    final realNews = results[0];
+    final aiNews = results[1];
+ 
+    // Intercala: 1 reale, 2 AI, 1 reale, 2 AI...
+    final mixed = <String>[];
+    int ri = 0, ai = 0;
+    while (ri < realNews.length || ai < aiNews.length) {
+      if (ri < realNews.length) { mixed.add(realNews[ri++]); }
+      if (ai < aiNews.length)   { mixed.add(aiNews[ai++]); }
+      if (ai < aiNews.length)   { mixed.add(aiNews[ai++]); }
+    }
+ 
     if (!mounted) return;
     setState(() {
-      _items = news;
+      _items = mixed.isEmpty ? ['⚽ Nessuna notizia disponibile al momento'] : mixed;
       _loading = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _startMarquee());
@@ -1214,24 +1327,15 @@ class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateM
  
   void _startMarquee() {
     if (_items.isEmpty) return;
- 
-    // Ripariamo il bug del calcolo: misuriamo l'esatta stringa singola
     final tp = TextPainter(
       text: TextSpan(
         text: _singlePassText,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
     )..layout(maxWidth: double.infinity);
- 
     _textWidth = tp.width;
- 
-    // Ora la durata corrisponde perfettamente allo spazio che deve traslare
     final durationMs = (_textWidth / _pxPerSec * 1000).round();
     _controller.duration = Duration(milliseconds: durationMs);
     _controller.repeat();
@@ -1294,14 +1398,11 @@ class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateM
                           : AnimatedBuilder(
                               animation: _controller,
                               builder: (context, child) {
-                                // Trasla esattamente di una lunghezza di testo (_textWidth)
-                                // Arrivato alla fine, il loop ricomincia in modo invisibile all'utente
                                 return Transform.translate(
                                   offset: Offset(-_controller.value * _textWidth, 0),
                                   child: child,
                                 );
                               },
-                              // Qui concateniamo il testo DUE volte per coprire lo spazio vuoto durante lo scorrimento
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
@@ -1322,16 +1423,11 @@ class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateM
  
                 // Fade sinistro
                 Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 20,
+                  left: 0, top: 0, bottom: 0, width: 20,
                   child: IgnorePointer(
                     child: Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.black, Colors.transparent],
-                        ),
+                        gradient: LinearGradient(colors: [Colors.black, Colors.transparent]),
                       ),
                     ),
                   ),
@@ -1339,16 +1435,11 @@ class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateM
  
                 // Fade destro
                 Positioned(
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 20,
+                  right: 0, top: 0, bottom: 0, width: 20,
                   child: IgnorePointer(
                     child: Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.transparent, Colors.black],
-                        ),
+                        gradient: LinearGradient(colors: [Colors.transparent, Colors.black]),
                       ),
                     ),
                   ),
@@ -1380,7 +1471,7 @@ class _NewsTickerState extends State<NewsTicker> with SingleTickerProviderStateM
   }
 }
  
-/// Trama geometrica di sfondo della card
+ 
 class _CardPatternPainter extends CustomPainter {
   final Color color;
   _CardPatternPainter(this.color);
