@@ -1024,22 +1024,22 @@ class _FutCard extends StatelessWidget {
 // Fonti: Gazzetta dello Sport + Corriere dello Sport + Tuttosport
 // ─────────────────────────────────────────────────────────────
 class _FootballNewsService {
-  /// Feed RSS ufficiali dei principali giornali sportivi italiani.
+  /// Feed Google News RSS — gratuito, aggregato, sempre UTF-8.
   /// Ogni entry è (url, prefisso, limite notizie).
   static const _feeds = [
     (
-      'https://www.gazzetta.it/rss/calcio.xml',
-      '📰 GdS:',
+      'https://news.google.com/rss/search?q=serie+a&hl=it&gl=IT&ceid=IT:it',
+      '🇮🇹 Serie A:',
       6,
     ),
     (
-      'https://www.corrieredellosport.it/rss/calcio',
-      '📰 CdS:',
+      'https://news.google.com/rss/search?q=calcio+italiano&hl=it&gl=IT&ceid=IT:it',
+      '⚽',
       5,
     ),
     (
-      'https://www.tuttosport.com/rss/calcio',
-      '📰 TS:',
+      'https://news.google.com/rss/search?q=champions+league&hl=it&gl=IT&ceid=IT:it',
+      '🏆 UCL:',
       4,
     ),
   ];
@@ -1096,32 +1096,15 @@ class _FootballNewsService {
     } catch (_) {}
   }
 
-  /// Decodifica il body del feed rispettando l'encoding dichiarato nell'XML.
-  /// I feed italiani usano spesso ISO-8859-1 o Windows-1252 invece di UTF-8.
+  /// Google News RSS è sempre UTF-8; fallback con allowMalformed per sicurezza.
   static String _decodeRssBody(List<int> bytes) {
-    // Prima prova UTF-8 (se valido, usalo direttamente)
     try {
       return utf8.decode(bytes);
-    } catch (_) {}
-
-    // Prova a leggere l'header XML per capire l'encoding dichiarato
-    // es. <?xml version="1.0" encoding="ISO-8859-1"?>
-    final rawLatin = latin1.decode(bytes, allowInvalid: true);
-    final encMatch = RegExp(
-      '<[?]xml[^>]+encoding="([^"]+)"',
-      caseSensitive: false,
-    ).firstMatch(rawLatin);
-
-    final declared = encMatch?.group(1)?.toUpperCase() ?? '';
-
-    if (declared == 'UTF-8' || declared.isEmpty) {
-      // Dichiarato UTF-8 ma non era valido → decodifica con sostituzione
+    } catch (_) {
       return utf8.decode(bytes, allowMalformed: true);
     }
-
-    // ISO-8859-1 / Latin-1 / Windows-1252: usa latin1
-    return latin1.decode(bytes, allowInvalid: true);
   }
+
 
   /// Estrae i titoli dagli <item> di un feed RSS tramite regex leggera
   /// (senza dipendenze esterne come xml package).
