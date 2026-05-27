@@ -19,6 +19,7 @@ import '../data/player_icons.dart';
 import 'settings_screen.dart';
 import 'fields_screen.dart';
 import '../services/player_stats_calculator.dart';
+import 'package:calcetto_tracker/data/hive_boxes.dart';
  
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1019,158 +1020,144 @@ class _FutCard extends StatelessWidget {
  
  
 // ─────────────────────────────────────────────────────────────
-// Service: notizie calcio da TheSportsDB (Riparato)
+// Service: notizie calcio da feed RSS italiani
+// Fonti: Gazzetta dello Sport + Corriere dello Sport + Tuttosport
 // ─────────────────────────────────────────────────────────────
 class _FootballNewsService {
+  /// Feed RSS ufficiali dei principali giornali sportivi italiani.
+  /// Ogni entry è (url, prefisso, limite notizie).
+  static const _feeds = [
+    (
+      'https://www.gazzetta.it/rss/calcio.xml',
+      '📰 GdS:',
+      6,
+    ),
+    (
+      'https://www.corrieredellosport.it/rss/calcio',
+      '📰 CdS:',
+      5,
+    ),
+    (
+      'https://www.tuttosport.com/rss/calcio',
+      '📰 TS:',
+      4,
+    ),
+  ];
+
   static Future<List<String>> fetchLatestNews() async {
     final List<String> results = [];
- 
-    // ── 1. Ultimi risultati Serie A ───────────────────────────
-    await _fetchLastEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4332',
-      prefix: '🇮🇹 Serie A:',
-      results: results,
-      limit: 5,
+
+    // Scarica tutti i feed in parallelo
+    await Future.wait(
+      _feeds.map((f) => _fetchRssFeed(f.$1, prefix: f.$2, results: results, limit: f.$3)),
     );
- 
-    // ── 2. Ultimi risultati Premier League ────────────────────
-    await _fetchLastEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4328',
-      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League:',
-      results: results,
-      limit: 3,
-    );
- 
-    // ── 3. Ultimi risultati French Ligue 1 ───────────────────────────
-    await _fetchLastEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4334',
-      prefix: '🇫🇷 Ligue 1',
-      results: results,
-      limit: 3,
-    );
- 
-    // ── 4. Ultimi risultati La Liga (Riparato: ora usa _fetchLastEvents) ──
-    await _fetchLastEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4335',
-      prefix: '🇪🇸 La Liga:',
-      results: results,
-      limit: 3,
-    );
- 
-    // ── 5. Prossime partite Serie A ───────────────────────────
-    await _fetchNextEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4332',
-      prefix: '📅 IN ARRIVO:  🇮🇹',
-      results: results,
-      limit: 3,
-    );
- 
-    // ── 6. Prossime partite Serie A ───────────────────────────
-    await _fetchNextEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4328',
-      prefix: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-      results: results,
-      limit: 3,
-    );
- 
-    // ── 7. Prossime partite Serie A ───────────────────────────
-    await _fetchNextEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4334',
-      prefix: '🇫🇷',
-      results: results,
-      limit: 3,
-    );
- 
-    // ── 8. Prossime partite Serie A ───────────────────────────
-    await _fetchNextEvents(
-      'https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4335',
-      prefix: '🇪🇸 ',
-      results: results,
-      limit: 3,
-    );
- 
-  
- 
+
+    // Mischia le notizie per varietà di fonte
+    results.shuffle();
+
     if (results.isEmpty) {
       results.addAll([
         '⚽ Nessuna notizia disponibile al momento',
         '📡 Controlla la connessione internet',
       ]);
     }
- 
+
     return results;
   }
- 
-  static Future<void> _fetchLastEvents(
+
+  /// Scarica e parsa un feed RSS, estrae i titoli degli articoli.
+  static Future<void> _fetchRssFeed(
     String url, {
     required String prefix,
     required List<String> results,
     int limit = 5,
   }) async {
     try {
-      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+      final resp = await http.get(
+        Uri.parse(url),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; CalcettoTracker/1.0)',
+          'Accept': 'application/rss+xml, application/xml, text/xml',
+        },
+      ).timeout(const Duration(seconds: 10));
+
       if (resp.statusCode != 200) return;
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final events = data['results'] as List<dynamic>? ?? data['events'] as List<dynamic>?;
-      if (events == null) return;
-      for (final e in events.take(limit)) {
-        final home = (e['strHomeTeam'] ?? '').toString();
-        final away = (e['strAwayTeam'] ?? '').toString();
-        final scoreH = (e['intHomeScore'] ?? '').toString();
-        final scoreA = (e['intAwayScore'] ?? '').toString();
-        if (home.isEmpty || away.isEmpty) continue;
-        if (scoreH.isNotEmpty && scoreA.isNotEmpty && scoreH != 'null' && scoreA != 'null') {
-          results.add('$prefix $home $scoreH – $scoreA $away');
+
+      // Rileva l'encoding dichiarato nel feed (es. ISO-8859-1, Windows-1252)
+      // e decodifica di conseguenza; fallback a UTF-8
+      final body = _decodeRssBody(resp.bodyBytes);
+      final titles = _parseRssTitles(body, limit: limit);
+
+      for (final title in titles) {
+        if (title.isNotEmpty) {
+          results.add('$prefix $title');
         }
       }
     } catch (_) {}
   }
- 
-  static Future<void> _fetchNextEvents(
-    String url, {
-    required String prefix,
-    required List<String> results,
-    int limit = 3,
-  }) async {
+
+  /// Decodifica il body del feed rispettando l'encoding dichiarato nell'XML.
+  /// I feed italiani usano spesso ISO-8859-1 o Windows-1252 invece di UTF-8.
+  static String _decodeRssBody(List<int> bytes) {
+    // Prima prova UTF-8 (se valido, usalo direttamente)
     try {
-      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
-      if (resp.statusCode != 200) return;
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final events = data['events'] as List<dynamic>?;
-      if (events == null) return;
-      for (final e in events.take(limit)) {
-        final home = (e['strHomeTeam'] ?? '').toString();
-        final away = (e['strAwayTeam'] ?? '').toString();
-        final date = (e['dateEvent'] ?? '').toString();
-        final time = (e['strTime'] ?? '').toString();
-        if (home.isEmpty || away.isEmpty) continue;
-        final timeStr = time.length >= 5 ? time.substring(0, 5) : time;
-        final dateShort = date.length >= 10 ? date.substring(5) : date; // MM-DD
-        results.add('$prefix $home vs $away ($dateShort ${timeStr.isNotEmpty ? "· $timeStr" : ""})');
-      }
+      return utf8.decode(bytes);
     } catch (_) {}
+
+    // Prova a leggere l'header XML per capire l'encoding dichiarato
+    // es. <?xml version="1.0" encoding="ISO-8859-1"?>
+    final rawLatin = latin1.decode(bytes, allowInvalid: true);
+    final encMatch = RegExp(
+      '<[?]xml[^>]+encoding="([^"]+)"',
+      caseSensitive: false,
+    ).firstMatch(rawLatin);
+
+    final declared = encMatch?.group(1)?.toUpperCase() ?? '';
+
+    if (declared == 'UTF-8' || declared.isEmpty) {
+      // Dichiarato UTF-8 ma non era valido → decodifica con sostituzione
+      return utf8.decode(bytes, allowMalformed: true);
+    }
+
+    // ISO-8859-1 / Latin-1 / Windows-1252: usa latin1
+    return latin1.decode(bytes, allowInvalid: true);
   }
- 
-  static Future<void> _fetchTeamNews(
-    String url, {
-    required List<String> results,
-  }) async {
-    try {
-      final resp = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
-      if (resp.statusCode != 200) return;
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final teams = data['teams'] as List<dynamic>?;
-      if (teams == null || teams.isEmpty) return;
-      final team = teams.first as Map<String, dynamic>;
-      final name = (team['strTeam'] ?? '').toString();
-      final league = (team['strLeague'] ?? '').toString();
-      final stadium = (team['strStadium'] ?? '').toString();
-      if (name.isNotEmpty && league.isNotEmpty) {
-        results.add('🏟️ Focus Team: $name ($league) · Casa: $stadium');
-      }
-    } catch (_) {}
+
+  /// Estrae i titoli dagli <item> di un feed RSS tramite regex leggera
+  /// (senza dipendenze esterne come xml package).
+  static List<String> _parseRssTitles(String xml, {int limit = 5}) {
+    final titles = <String>[];
+
+    final itemRegex = RegExp(r'<item[^>]*>([\s\S]*?)<\/item>', caseSensitive: false);
+    final titleRegex = RegExp(
+      r'<title[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/title>|<title[^>]*>([\s\S]*?)<\/title>',
+      caseSensitive: false,
+    );
+
+    for (final item in itemRegex.allMatches(xml)) {
+      if (titles.length >= limit) break;
+      final itemContent = item.group(1) ?? '';
+      final titleMatch = titleRegex.firstMatch(itemContent);
+      if (titleMatch == null) continue;
+
+      var title = (titleMatch.group(1) ?? titleMatch.group(2) ?? '').trim();
+      title = title.replaceAll(RegExp(r'<[^>]+>'), '').trim();
+      title = title
+          .replaceAll('&amp;', '&')
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&quot;', '"')
+          .replaceAll('&#39;', "'")
+          .replaceAll('&nbsp;', ' ');
+
+      if (title.length < 10) continue;
+      titles.add(title);
+    }
+
+    return titles;
   }
 }
+
  
 // ─────────────────────────────────────────────────────────────
 // Service: news AI stile Sky Sport 24 basate sui dati locali
@@ -1179,93 +1166,95 @@ class _AiNewsService {
   static const _storageKey = 'openai_api_key';
   static const _storage = FlutterSecureStorage();
  
-  /// Genera titoli stile ticker TV sportivo basati sui giocatori/partite locali.
-  /// Ritorna [] se nessuna chiave è configurata o in caso di errore.
-  static Future<List<String>> generateAiNews(DataService data) async {
-    final apiKey = await _storage.read(key: _storageKey);
-    if (apiKey == null || apiKey.isEmpty) return [];
- 
-    final players = data.getAllPlayers();
-    final matches = data.getAllMatches();
-    if (players.isEmpty) return [];
- 
-    // Costruiamo un mini-report dei dati reali da passare al modello
-    final buffer = StringBuffer();
-    buffer.writeln('GIOCATORI REGISTRATI:');
-    for (final p in players.take(12)) {
-      int gol = 0, pg = 0, vinte = 0, mvp = p.mvpCount as int;
-      double totalVoto = 0; int nVoti = 0;
-      for (final m in matches) {
-        final inA = m.teamA.contains(p.id);
-        final inB = m.teamB.contains(p.id);
-        if (!inA && !inB) continue;
-        pg++;
-        if (m.scoreA != m.scoreB &&
-            ((inA && m.scoreA > m.scoreB) || (inB && m.scoreB > m.scoreA))) vinte++;
-        gol += (m.goals[p.id] ?? 0) as int;
-        if (m.votes.containsKey(p.id)) { totalVoto += m.votes[p.id]!; nVoti++; }
-      }
-      final voto = nVoti > 0 ? (totalVoto / nVoti).toStringAsFixed(1) : '—';
-      buffer.writeln('- ${p.name} (${p.role}): ${pg}PG $vinte W, $gol gol, $mvp MVP, voto medio $voto');
+/// Genera titoli stile ticker TV sportivo basati sui giocatori/partite locali.
+/// Legge SEMPRE direttamente da HiveBoxes per dati 100% aggiornati,
+/// indipendentemente dallo stato del DataService provider.
+static Future<List<String>> generateAiNews(DataService data) async {
+  final apiKey = await _storage.read(key: _storageKey);
+  if (apiKey == null || apiKey.isEmpty) return [];
+
+  // ── Legge da HiveBoxes (come fa _buildSystemPrompt in ai_coach_page) ──
+  final players = HiveBoxes.playersBox.values.toList();
+  final matches = HiveBoxes.matchesBox.values.toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
+
+  if (players.isEmpty) return [];
+
+  String resolveName(String id) {
+    if (id.isEmpty) return '';
+    return HiveBoxes.playersBox.get(id)?.name ?? id;
+  }
+
+  final buffer = StringBuffer();
+  buffer.writeln('GIOCATORI REGISTRATI:');
+  for (final p in players.take(12)) {
+    int gol = 0, pg = 0, vinte = 0, mvp = p.mvpCount as int;
+    double totalVoto = 0; int nVoti = 0;
+    for (final m in matches) {
+      final inA = m.teamA.contains(p.id);
+      final inB = m.teamB.contains(p.id);
+      if (!inA && !inB) continue;
+      pg++;
+      if (m.scoreA != m.scoreB &&
+          ((inA && m.scoreA > m.scoreB) || (inB && m.scoreB > m.scoreA))) vinte++;
+      gol += (m.goals[p.id] ?? 0) as int;
+      if (m.votes.containsKey(p.id)) { totalVoto += m.votes[p.id]!; nVoti++; }
     }
- 
-    if (matches.isNotEmpty) {
-      buffer.writeln('\nULTIME PARTITE:');
-      for (final m in matches.reversed.take(5)) {
-        final scoreStr = '${m.scoreA}–${m.scoreB}';
-        final teamA = m.teamA.map((id) {
-          final pl = players.where((p) => p.id == id).firstOrNull;
-          return pl?.name ?? id;
-        }).join(', ');
-        final teamB = m.teamB.map((id) {
-          final pl = players.where((p) => p.id == id).firstOrNull;
-          return pl?.name ?? id;
-        }).join(', ');
-        buffer.writeln('- Squadra A ($teamA) $scoreStr Squadra B ($teamB)');
-      }
+    final voto = nVoti > 0 ? (totalVoto / nVoti).toStringAsFixed(1) : '—';
+    buffer.writeln('- ${p.name} (${p.role}): ${pg}PG $vinte W, $gol gol, $mvp MVP, voto medio $voto');
+  }
+
+  if (matches.isNotEmpty) {
+    buffer.writeln('\nULTIME PARTITE:');
+    for (final m in matches.take(5)) {  // già ordinate desc per data
+      final scoreStr = '${m.scoreA}–${m.scoreB}';
+      final teamA = m.teamA.map(resolveName).where((n) => n.isNotEmpty).join(', ');
+      final teamB = m.teamB.map(resolveName).where((n) => n.isNotEmpty).join(', ');
+      buffer.writeln('- Squadra A ($teamA) $scoreStr Squadra B ($teamB)');
     }
- 
-    final prompt = '''
+  }
+
+  final prompt = '''
 Sei il ticker di Sky Sport 24. Basandoti SOLO sui seguenti dati reali di una lega di calcetto amatoriale,
 genera ESATTAMENTE 8 titoli brevi (max 12 parole ciascuno) stile breaking news / ticker TV sportivo.
 Mix consigliato: 3 risultati/statistiche, 2 classifiche/record, 3 gossip/curiosità (inventato ma ispirato ai dati veri).
 Usa tono giornalistico-sportivo italiano. NO emoji. Separa ogni titolo con il carattere | su una sola riga.
- 
+
 DATI:
 ${buffer.toString()}
- 
+
 RISPOSTA (solo i titoli separati da |, nessuna numerazione):''';
- 
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o-mini',
-          'max_tokens': 300,
-          'messages': [
-            {'role': 'user', 'content': prompt}
-          ],
-        }),
-      ).timeout(const Duration(seconds: 12));
- 
-      if (response.statusCode != 200) return [];
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final text = (body['choices'] as List?)
-              ?.firstOrNull?['message']?['content'] as String? ?? '';
-      return text
-          .split('|')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .map((s) => '🤖 $s')
-          .toList();
-    } catch (_) {
-      return [];
-    }
+
+  try {
+    final response = await http.post(
+      Uri.parse('https://api.openai.com/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': 'gpt-4o-mini',
+        'max_tokens': 300,
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ],
+      }),
+    ).timeout(const Duration(seconds: 12));
+
+    if (response.statusCode != 200) return [];
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final text = (body['choices'] as List?)
+            ?.firstOrNull?['message']?['content'] as String? ?? '';
+    return text
+        .split('|')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .map((s) => '🤖 $s')
+        .toList();
+  } catch (_) {
+    return [];
   }
+}
 }
  
 // ─────────────────────────────────────────────────────────────
