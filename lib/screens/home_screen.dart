@@ -1319,10 +1319,25 @@ class _SmartNewsTickerState extends State<SmartNewsTicker> with SingleTickerProv
     super.dispose();
   }
  
+  void _openNewsSheet() {
+    if (_items.isEmpty) return;
+    _controller.stop();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _NewsJournalSheet(items: _items),
+    ).whenComplete(() {
+      if (mounted) _controller.repeat();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 30,
+    return GestureDetector(
+      onTap: _loading ? null : _openNewsSheet,
+      child: Container(
+        height: 30,
       decoration: const BoxDecoration(
         color: Colors.black,
         border: Border(
@@ -1439,10 +1454,213 @@ class _SmartNewsTickerState extends State<SmartNewsTicker> with SingleTickerProv
           ),
         ],
       ),
+      ),
     );
   }
 }
- 
+
+// ─────────────────────────────────────────────────────────────
+// Widget: popup stile giornale con tutte le notizie
+// ─────────────────────────────────────────────────────────────
+class _NewsJournalSheet extends StatelessWidget {
+  final List<String> items;
+  const _NewsJournalSheet({required this.items});
+
+  bool _isAi(String s) => s.startsWith('🤖');
+
+  String _cleanText(String s) => s
+      .replaceFirst(RegExp(r'^🤖\s*'), '')
+      .replaceFirst(RegExp(r'^⚽\s*'), '')
+      .trim();
+
+  @override
+  Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+
+    return Container(
+      height: screenH * 0.82,
+      decoration: const BoxDecoration(
+        color: Color(0xFF0D0D0D),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(color: Colors.white12, width: 0.5),
+          left: BorderSide(color: Colors.white12, width: 0.5),
+          right: BorderSide(color: Colors.white12, width: 0.5),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Center(
+            child: Container(
+              width: 38, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Testata stile giornale
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Container(height: 0.5, color: AppTheme.accentGold)),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'IL CALCIO',
+                      style: TextStyle(
+                        color: AppTheme.accentGold,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Container(height: 0.5, color: AppTheme.accentGold)),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'CALCETTO TRACKER  ·  EDIZIONE SPECIALE',
+                  style: TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 8,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(height: 2, color: AppTheme.accentGold),
+                const SizedBox(height: 2),
+                Container(height: 0.5, color: Color(0x66C9A84C)),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          // Lista notizie
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => Container(
+                height: 0.5,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                color: Colors.white10,
+              ),
+              itemBuilder: (context, i) {
+                final item = items[i];
+                final isAi = _isAi(item);
+                final text = _cleanText(item);
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        child: Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            color: isAi
+                                ? AppTheme.accentGold.withOpacity(0.5)
+                                : AppTheme.accentGreen.withOpacity(0.7),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              text,
+                              style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: isAi
+                                    ? AppTheme.accentGold.withOpacity(0.12)
+                                    : AppTheme.accentGreen.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(3),
+                                border: Border.all(
+                                  color: isAi
+                                      ? AppTheme.accentGold.withOpacity(0.3)
+                                      : AppTheme.accentGreen.withOpacity(0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                isAi ? '🤖 AI COACH' : '⚽ CALCIO LIVE',
+                                style: TextStyle(
+                                  color: isAi
+                                      ? AppTheme.accentGold
+                                      : AppTheme.accentGreen,
+                                  fontSize: 7,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Footer
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(
+                16, 10, 16, MediaQuery.of(context).padding.bottom + 10),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.sports_soccer_rounded,
+                    color: AppTheme.accentGold, size: 12),
+                const SizedBox(width: 6),
+                Text(
+                  '${items.length} NOTIZIE  ·  Scorri per leggere tutto',
+                  style: const TextStyle(
+                    color: AppTheme.textMuted,
+                    fontSize: 9,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
  
 class _CardPatternPainter extends CustomPainter {
   final Color color;
