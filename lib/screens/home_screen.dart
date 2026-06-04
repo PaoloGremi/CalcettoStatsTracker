@@ -1193,7 +1193,7 @@ static Future<List<String>> generateAiNews(DataService data) async {
       final scoreStr = '${m.scoreA}–${m.scoreB}';
       final teamA = m.teamA.map(resolveName).where((n) => n.isNotEmpty).join(', ');
       final teamB = m.teamB.map(resolveName).where((n) => n.isNotEmpty).join(', ');
-      buffer.writeln('- Squadra A ($teamA) $scoreStr Squadra B ($teamB)');
+      buffer.writeln('- Squadra Bianca ($teamA) $scoreStr Squadra Colorata ($teamB)');
     }
   }
 
