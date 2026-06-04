@@ -1199,7 +1199,7 @@ static Future<List<String>> generateAiNews(DataService data) async {
 
   final prompt = '''
 Sei il ticker di Sky Sport 24. Basandoti SOLO sui seguenti dati reali di una lega di calcetto amatoriale,
-genera ESATTAMENTE 8 titoli brevi (max 12 parole ciascuno) stile breaking news / ticker TV sportivo.
+genera ESATTAMENTE 12 titoli brevi (max 18 parole ciascuno) stile breaking news / ticker TV sportivo.
 Mix consigliato: 3 risultati/statistiche, 2 classifiche/record, 3 gossip/curiosità (inventato ma ispirato ai dati veri).
 Usa tono giornalistico-sportivo italiano. NO emoji. Separa ogni titolo con il carattere | su una sola riga.
 
