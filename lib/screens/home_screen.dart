@@ -1460,7 +1460,33 @@ class _SmartNewsTickerState extends State<SmartNewsTicker> with SingleTickerProv
 }
 
 // ─────────────────────────────────────────────────────────────
-// Widget: popup stile giornale con tutte le notizie
+// Colori Gazzetta
+// ─────────────────────────────────────────────────────────────
+class _GdS {
+  static const rosso   = Color(0xFFD00000);
+  static const crema   = Color(0xFFF5F0E8);
+  static const cremaDark = Color(0xFFEDE7D5);
+  static const inchiostro = Color(0xFF1A1A1A);
+  static const grigio  = Color(0xFF555555);
+  static const grigioLight = Color(0xFF888888);
+  static const sepLine = Color(0xFFCCBFA0);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Immagini calcio usate come copertine per le notizie
+// (Unsplash – uso libero)
+// ─────────────────────────────────────────────────────────────
+const List<String> _newsImages = [
+  'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=600&q=80', // stadio
+  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80', // palla
+  'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&q=80', // giocatore
+  'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80', // pallone erba
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80', // tifosi
+  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=600&q=80', // portiere
+];
+
+// ─────────────────────────────────────────────────────────────
+// Widget: popup stile Gazzetta dello Sport
 // ─────────────────────────────────────────────────────────────
 class _NewsJournalSheet extends StatelessWidget {
   final List<String> items;
@@ -1473,189 +1499,495 @@ class _NewsJournalSheet extends StatelessWidget {
       .replaceFirst(RegExp(r'^⚽\s*'), '')
       .trim();
 
+  String _imageFor(int index) =>
+      _newsImages[index % _newsImages.length];
+
+  // Restituisce la categoria da mostrare sul bollino
+  String _category(bool isAi) => isAi ? 'AI COACH' : 'CALCIO';
+
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
+    final today = DateTime.now();
+    final dateStr =
+        '${today.day} ${_monthIt(today.month)} ${today.year}'.toUpperCase();
 
     return Container(
-      height: screenH * 0.82,
+      height: screenH * 0.92,
       decoration: const BoxDecoration(
-        color: Color(0xFF0D0D0D),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(
-          top: BorderSide(color: Colors.white12, width: 0.5),
-          left: BorderSide(color: Colors.white12, width: 0.5),
-          right: BorderSide(color: Colors.white12, width: 0.5),
-        ),
+        color: _GdS.crema,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Column(
         children: [
+          // ── Handle ───────────────────────────────────────────
           const SizedBox(height: 10),
           Center(
             child: Container(
-              width: 38, height: 4,
+              width: 36, height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: _GdS.sepLine,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 14),
 
-          // Testata stile giornale
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+          // ── Testata ───────────────────────────────────────────
+          Container(
+            color: _GdS.rosso,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Column(
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(child: Container(height: 0.5, color: AppTheme.accentGold)),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'IL CALCIO',
-                      style: TextStyle(
-                        color: AppTheme.accentGold,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 4,
+                    // Pallone SVG stilizzato
+                    Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Center(
+                        child: Text('⚽', style: TextStyle(fontSize: 20)),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(child: Container(height: 0.5, color: AppTheme.accentGold)),
+                    // Titolo testata
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'LA GAZZETTA',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                              height: 1,
+                            ),
+                          ),
+                          Text(
+                            'DEL CALCETTO',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 4,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Data
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          dateStr,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const Text(
+                          'EDIZIONE SPECIALE',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 7,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                const Text(
-                  'CALCETTO TRACKER  ·  EDIZIONE SPECIALE',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 8,
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(height: 2, color: AppTheme.accentGold),
-                const SizedBox(height: 2),
-                Container(height: 0.5, color: Color(0x66C9A84C)),
               ],
             ),
           ),
 
-          const SizedBox(height: 4),
+          // Striscia nera sotto testata
+          Container(height: 3, color: _GdS.inchiostro),
 
-          // Lista notizie
+          // ── Contenuto ─────────────────────────────────────────
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => Container(
-                height: 0.5,
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                color: Colors.white10,
-              ),
+            child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 32),
+              itemCount: items.length + 1, // +1 per l'articolo hero
               itemBuilder: (context, i) {
-                final item = items[i];
+                // Item 0 = articolo hero (prima notizia grande con immagine)
+                if (i == 0) {
+                  if (items.isEmpty) return const SizedBox();
+                  return _HeroArticle(
+                    text: _cleanText(items[0]),
+                    imageUrl: _imageFor(0),
+                    isAi: _isAi(items[0]),
+                    category: _category(_isAi(items[0])),
+                    number: 1,
+                  );
+                }
+
+                final idx = i - 1; // indice reale nella lista items
+                if (idx >= items.length) return const SizedBox();
+
+                final item = items[idx];
                 final isAi = _isAi(item);
                 final text = _cleanText(item);
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 28,
-                        child: Text(
-                          '${i + 1}',
-                          style: TextStyle(
-                            color: isAi
-                                ? AppTheme.accentGold.withOpacity(0.5)
-                                : AppTheme.accentGreen.withOpacity(0.7),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              text,
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: isAi
-                                    ? AppTheme.accentGold.withOpacity(0.12)
-                                    : AppTheme.accentGreen.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(3),
-                                border: Border.all(
-                                  color: isAi
-                                      ? AppTheme.accentGold.withOpacity(0.3)
-                                      : AppTheme.accentGreen.withOpacity(0.3),
-                                  width: 0.5,
-                                ),
-                              ),
-                              child: Text(
-                                isAi ? '🤖 AI COACH' : '⚽ CALCIO LIVE',
-                                style: TextStyle(
-                                  color: isAi
-                                      ? AppTheme.accentGold
-                                      : AppTheme.accentGreen,
-                                  fontSize: 7,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                // Ogni 4 notizie mostra un articolo con immagine thumbnail
+                if (idx % 4 == 0 && idx > 0) {
+                  return _ThumbArticle(
+                    text: text,
+                    imageUrl: _imageFor(idx),
+                    isAi: isAi,
+                    category: _category(isAi),
+                    number: idx + 1,
+                  );
+                }
+
+                return _TextArticle(
+                  text: text,
+                  isAi: isAi,
+                  category: _category(isAi),
+                  number: idx + 1,
                 );
               },
             ),
           ),
 
-          // Footer
+          // ── Footer ───────────────────────────────────────────
           Container(
-            width: double.infinity,
+            color: _GdS.inchiostro,
             padding: EdgeInsets.fromLTRB(
-                16, 10, 16, MediaQuery.of(context).padding.bottom + 10),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
-            ),
+                16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.sports_soccer_rounded,
-                    color: AppTheme.accentGold, size: 12),
+                const Text('⚽', style: TextStyle(fontSize: 12)),
                 const SizedBox(width: 6),
                 Text(
-                  '${items.length} NOTIZIE  ·  Scorri per leggere tutto',
+                  'CALCETTO TRACKER  ·  ${items.length} NOTIZIE',
                   style: const TextStyle(
-                    color: AppTheme.textMuted,
+                    color: Colors.white54,
                     fontSize: 9,
                     letterSpacing: 1.5,
                     fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  color: _GdS.rosso,
+                  child: const Text(
+                    'LIVE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  String _monthIt(int m) {
+    const mesi = ['GEN','FEB','MAR','APR','MAG','GIU',
+                   'LUG','AGO','SET','OTT','NOV','DIC'];
+    return mesi[m - 1];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Articolo hero (grande, con immagine a tutta larghezza)
+// ─────────────────────────────────────────────────────────────
+class _HeroArticle extends StatelessWidget {
+  final String text, imageUrl, category;
+  final bool isAi;
+  final int number;
+  const _HeroArticle({
+    required this.text,
+    required this.imageUrl,
+    required this.isAi,
+    required this.category,
+    required this.number,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Immagine hero
+        SizedBox(
+          height: 200,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: _GdS.cremaDark,
+                  child: const Center(
+                    child: Icon(Icons.sports_soccer_rounded,
+                        color: _GdS.sepLine, size: 48),
+                  ),
+                ),
+              ),
+              // Gradiente basso
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.55),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Bollino categoria
+              Positioned(
+                top: 10, left: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  color: isAi ? const Color(0xFFC9A84C) : _GdS.rosso,
+                  child: Text(
+                    category,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Testo titolo hero con numero
+        Container(
+          color: _GdS.inchiostro,
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$number',
+                style: const TextStyle(
+                  color: _GdS.rosso,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    height: 1.35,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Container(height: 4, color: _GdS.rosso),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Articolo con thumbnail (immagine a destra)
+// ─────────────────────────────────────────────────────────────
+class _ThumbArticle extends StatelessWidget {
+  final String text, imageUrl, category;
+  final bool isAi;
+  final int number;
+  const _ThumbArticle({
+    required this.text,
+    required this.imageUrl,
+    required this.isAi,
+    required this.category,
+    required this.number,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Numero rosso
+              SizedBox(
+                width: 26,
+                child: Text(
+                  '$number',
+                  style: const TextStyle(
+                    color: _GdS.rosso,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              // Testo
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _CategoryPill(label: category, isAi: isAi),
+                    const SizedBox(height: 6),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: _GdS.inchiostro,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Thumbnail
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  width: 90, height: 75,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: _GdS.cremaDark,
+                      child: const Icon(Icons.sports_soccer_rounded,
+                          color: _GdS.sepLine, size: 28),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(height: 0.5, color: _GdS.sepLine,
+            margin: const EdgeInsets.symmetric(horizontal: 14)),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Articolo solo testo (stile notizia breve)
+// ─────────────────────────────────────────────────────────────
+class _TextArticle extends StatelessWidget {
+  final String text, category;
+  final bool isAi;
+  final int number;
+  const _TextArticle({
+    required this.text,
+    required this.isAi,
+    required this.category,
+    required this.number,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Numero articolo in rosso
+              SizedBox(
+                width: 26,
+                child: Text(
+                  '$number',
+                  style: const TextStyle(
+                    color: _GdS.rosso,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              // Testo
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _CategoryPill(label: category, isAi: isAi),
+                    const SizedBox(height: 5),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: _GdS.inchiostro,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(height: 0.5, color: _GdS.sepLine,
+            margin: const EdgeInsets.symmetric(horizontal: 14)),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bollino categoria (rosso / oro)
+// ─────────────────────────────────────────────────────────────
+class _CategoryPill extends StatelessWidget {
+  final String label;
+  final bool isAi;
+  const _CategoryPill({required this.label, required this.isAi});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      color: isAi ? const Color(0xFFC9A84C) : _GdS.rosso,
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 7.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
