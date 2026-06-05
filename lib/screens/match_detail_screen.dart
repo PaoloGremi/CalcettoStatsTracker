@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
@@ -326,9 +329,37 @@ class _PlayerDetailTile extends StatelessWidget {
 //  📰  MATCH NEWSPAPER SCREEN  ──  stile Gazzetta dello Sport
 // ═══════════════════════════════════════════════════════════════
 
-class MatchNewspaperScreen extends StatelessWidget {
+/// Contenuto testuale generato dall'AI (o dal fallback statico).
+class _NewspaperContent {
+  final String headline;
+  final String subheadline;
+  final String articleBody; // paragrafo principale stile cronaca
+  final bool isAiGenerated;
+  const _NewspaperContent({
+    required this.headline,
+    required this.subheadline,
+    required this.articleBody,
+    required this.isAiGenerated,
+  });
+}
+
+class MatchNewspaperScreen extends StatefulWidget {
   final MatchModel match;
   const MatchNewspaperScreen({required this.match, super.key});
+
+  @override
+  State<MatchNewspaperScreen> createState() => _MatchNewspaperScreenState();
+}
+
+class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
+  static const _storage = FlutterSecureStorage();
+  static const _storageKey = 'openai_api_key';
+
+  _NewspaperContent? _content;
+  bool _loading = true;
+  String? _errorMsg;
+
+  // ── helpers ──────────────────────────────────────────────────
 
   String _resolveName(String id) {
     if (id.isEmpty) return '';
@@ -336,54 +367,174 @@ class MatchNewspaperScreen extends StatelessWidget {
   }
 
   String _resultLabel() {
-    if (match.scoreA > match.scoreB) return 'Vittoria Bianchi';
-    if (match.scoreB > match.scoreA) return 'Vittoria Colorati';
+    if (widget.match.scoreA > widget.match.scoreB) return 'Vittoria Bianchi';
+    if (widget.match.scoreB > widget.match.scoreA) return 'Vittoria Colorati';
     return 'Pareggio';
   }
 
-  // Genera un titolone editoriale in base al risultato
-  String _headline() {
-    final diff = (match.scoreA - match.scoreB).abs();
-    if (match.scoreA == match.scoreB) {
-      return 'NESSUNO VINCE, NESSUNO PERDE';
+  // Fallback statico (nessuna chiave API)
+  _NewspaperContent _staticContent() {
+    final diff = (widget.match.scoreA - widget.match.scoreB).abs();
+    final mvp = _resolveName(widget.match.mvp);
+    String headline;
+    if (widget.match.scoreA == widget.match.scoreB) {
+      headline = 'NESSUNO VINCE, NESSUNO PERDE';
+    } else {
+      final winner = widget.match.scoreA > widget.match.scoreB ? 'BIANCHI' : 'COLORATI';
+      if (diff >= 4) {
+        headline = '$winner DA URLO!';
+      } else if (diff >= 2) {
+        headline = '$winner DOMINANO';
+      } else {
+        headline = '$winner IN RIMONTA';
+      }
     }
-    final winner = match.scoreA > match.scoreB ? 'BIANCHI' : 'COLORATI';
-    if (diff >= 4) return '$winner DA URLO!';
-    if (diff >= 2) return '$winner DOMINANO';
-    return '$winner IN RIMONTA';
+    final sub = mvp.isNotEmpty
+        ? 'Il trascinatore? $mvp in grande spolvero.'
+        : 'Una partita da ricordare.';
+    return _NewspaperContent(
+      headline: headline,
+      subheadline: sub,
+      articleBody: '',
+      isAiGenerated: false,
+    );
   }
 
-  String _subheadline() {
-    final mvp = _resolveName(match.mvp);
-    if (mvp.isNotEmpty) return 'Il trascinatore? $mvp in grande spolvero.';
-    return 'Una partita da ricordare.';
+  // Costruisce il prompt con tutti i dati della partita
+  String _buildPrompt() {
+    final m = widget.match;
+    final allPlayers = [...m.teamA, ...m.teamB];
+
+    String teamSection(List<String> ids, String teamName) {
+      return ids.map((id) {
+        final name = _resolveName(id);
+        final voto = m.votes[id] ?? 0.0;
+        final gol = m.goals[id] ?? 0;
+        final commento = m.comments[id] ?? '';
+        final isMvp = m.mvp == id ? ' [MVP]' : '';
+        final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
+        final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
+        return '  - $name$isMvp$isHustle$isBG: voto ${voto > 0 ? voto.toStringAsFixed(1) : 'N/D'}'
+            '${gol > 0 ? ', $gol gol' : ''}'
+            '${commento.isNotEmpty ? ', nota: "$commento"' : ''}';
+      }).join('\n');
+    }
+
+    return '''
+Sei il cronista de "La Gazzetta del Gol", il giornale satirico e appassionato di una partitella di calcetto tra amici.
+Scrivi in stile Gazzetta dello Sport: drammatico, colorito, con metafore calcistiche, aggettivi forti.
+
+DATI PARTITA:
+- Data: ${DateFormat('dd MMMM yyyy · HH:mm', 'it_IT').format(m.date)}
+- Risultato: Bianchi ${m.scoreA} – ${m.scoreB} Colorati
+- Esito: ${_resultLabel()}
+
+SQUADRA BIANCHI:
+${teamSection(m.teamA, 'Bianchi')}
+
+SQUADRA COLORATI:
+${teamSection(m.teamB, 'Colorati')}
+
+Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick), così:
+{
+  "headline": "TITOLONE IN MAIUSCOLO MAX 6 PAROLE",
+  "subheadline": "Sottotitolo evocativo di 1-2 frasi",
+  "articleBody": "Cronaca della partita di 3-4 frasi stile Gazzetta. Cita giocatori per nome, usa toni epici."
+}
+''';
+  }
+
+  // Chiamata OpenAI
+  Future<void> _generateAiContent(String apiKey) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'messages': [
+            {'role': 'user', 'content': _buildPrompt()}
+          ],
+          'max_tokens': 400,
+          'temperature': 0.85,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final raw = (data['choices'][0]['message']['content'] as String).trim();
+        // Strip backtick fences se presenti
+        final clean = raw
+            .replaceAll(RegExp(r'^```json\s*', multiLine: true), '')
+            .replaceAll(RegExp(r'```$', multiLine: true), '')
+            .trim();
+        final json = jsonDecode(clean);
+        if (mounted) {
+          setState(() {
+            _content = _NewspaperContent(
+              headline: (json['headline'] as String? ?? '').toUpperCase(),
+              subheadline: json['subheadline'] as String? ?? '',
+              articleBody: json['articleBody'] as String? ?? '',
+              isAiGenerated: true,
+            );
+            _loading = false;
+          });
+        }
+      } else {
+        // Quota / auth error → fallback statico silenzioso
+        _setStaticFallback();
+      }
+    } catch (e) {
+      _setStaticFallback();
+    }
+  }
+
+  void _setStaticFallback() {
+    if (mounted) {
+      setState(() {
+        _content = _staticContent();
+        _loading = false;
+      });
+    }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final apiKey = await _storage.read(key: _storageKey);
+    if (apiKey != null && apiKey.isNotEmpty) {
+      await _generateAiContent(apiKey);
+    } else {
+      _setStaticFallback();
+    }
+  }
+
+  // ── build ─────────────────────────────────────────────────────
+
+  @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('dd MMMM yyyy', 'it_IT').format(match.date);
-    final timeStr = DateFormat('HH:mm', 'it_IT').format(match.date);
-    final mvpName = _resolveName(match.mvp);
-    final hustleName = _resolveName(match.hustlePlayer);
-    final bestGoalName = _resolveName(match.bestGoalPlayer);
+    final dateStr = DateFormat('dd MMMM yyyy', 'it_IT').format(widget.match.date);
+    final timeStr = DateFormat('HH:mm', 'it_IT').format(widget.match.date);
+    final mvpName = _resolveName(widget.match.mvp);
+    final hustleName = _resolveName(widget.match.hustlePlayer);
+    final bestGoalName = _resolveName(widget.match.bestGoalPlayer);
 
-    // Raccogli tutti i giocatori con voto, ordinati decrescente
-    final allPlayers = [...match.teamA, ...match.teamB];
-    final rated = allPlayers
-        .where((id) => (match.votes[id] ?? 0.0) > 0)
-        .toList()
-      ..sort((a, b) => (match.votes[b] ?? 0)
-          .compareTo(match.votes[a] ?? 0));
-
-    // Top scorer (più gol)
+    final allPlayers = [...widget.match.teamA, ...widget.match.teamB];
     final scorers = allPlayers
-        .where((id) => (match.goals[id] ?? 0) > 0)
+        .where((id) => (widget.match.goals[id] ?? 0) > 0)
         .toList()
       ..sort((a, b) =>
-          (match.goals[b] ?? 0).compareTo(match.goals[a] ?? 0));
+          (widget.match.goals[b] ?? 0).compareTo(widget.match.goals[a] ?? 0));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5EFE0), // carta ingiallita
+      backgroundColor: const Color(0xFFF5EFE0),
       appBar: AppBar(
         backgroundColor: const Color(0xFFD40000),
         foregroundColor: Colors.white,
@@ -399,52 +550,291 @@ class MatchNewspaperScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          // Badge AI visibile quando il contenuto è generato dall'AI
+          if (_content?.isAiGenerated == true)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.white38),
+                  ),
+                  child: const Text(
+                    'AI ✦',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Testata rossa ─────────────────────────────────
-            _NewspaperHeader(dateStr: dateStr, timeStr: timeStr),
+      body: _loading
+          ? _LoadingNewspaper(dateStr: dateStr, timeStr: timeStr)
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _NewspaperHeader(dateStr: dateStr, timeStr: timeStr),
 
-            // ── Risultato / titolone ──────────────────────────
-            _HeadlineBlock(
-              scoreA: match.scoreA,
-              scoreB: match.scoreB,
-              headline: _headline(),
-              subheadline: _subheadline(),
-              resultLabel: _resultLabel(),
+                  _HeadlineBlock(
+                    scoreA: widget.match.scoreA,
+                    scoreB: widget.match.scoreB,
+                    headline: _content!.headline,
+                    subheadline: _content!.subheadline,
+                    resultLabel: _resultLabel(),
+                  ),
+
+                  // ── Articolo AI ────────────────────────────
+                  if (_content!.articleBody.isNotEmpty)
+                    _ArticleBody(text: _content!.articleBody),
+
+                  _Ornament(),
+
+                  if (mvpName.isNotEmpty || hustleName.isNotEmpty || bestGoalName.isNotEmpty)
+                    _AwardsBlock(
+                        mvpName: mvpName,
+                        hustleName: hustleName,
+                        bestGoalName: bestGoalName),
+
+                  _Ornament(),
+
+                  if (scorers.isNotEmpty)
+                    _ScorersBlock(scorers: scorers, match: widget.match),
+
+                  _TwoColumnRatings(
+                    teamAIds: widget.match.teamA,
+                    teamBIds: widget.match.teamB,
+                    match: widget.match,
+                  ),
+
+                  _CommentsBlock(allPlayers: allPlayers, match: widget.match),
+                ],
+              ),
             ),
+    );
+  }
+}
 
-            // ── Linea decorativa ──────────────────────────────
-            _Ornament(),
+// ── Widget di loading stile giornale ─────────────────────────────
 
-            // ── Premi ─────────────────────────────────────────
-            if (mvpName.isNotEmpty || hustleName.isNotEmpty || bestGoalName.isNotEmpty)
-              _AwardsBlock(
-                  mvpName: mvpName,
-                  hustleName: hustleName,
-                  bestGoalName: bestGoalName),
+class _LoadingNewspaper extends StatefulWidget {
+  final String dateStr, timeStr;
+  const _LoadingNewspaper({required this.dateStr, required this.timeStr});
 
-            _Ornament(),
+  @override
+  State<_LoadingNewspaper> createState() => _LoadingNewspaperState();
+}
 
-            // ── Colonna marcatori ─────────────────────────────
-            if (scorers.isNotEmpty)
-              _ScorersBlock(scorers: scorers, match: match),
+class _LoadingNewspaperState extends State<_LoadingNewspaper>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
 
-            // ── Tabellino in due colonne ──────────────────────
-            _TwoColumnRatings(
-              teamAIds: match.teamA,
-              teamBIds: match.teamB,
-              match: match,
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _NewspaperHeader(
+              dateStr: widget.dateStr, timeStr: widget.timeStr),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                // Striscia rossa placeholder
+                Container(
+                  height: 16,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD40000).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Titolone placeholder animato
+                FadeTransition(
+                  opacity: _fade,
+                  child: Column(
+                    children: [
+                      _SkeletonLine(width: double.infinity, height: 34),
+                      const SizedBox(height: 8),
+                      _SkeletonLine(width: 220, height: 34),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Score placeholder
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _SkeletonLine(width: 70, height: 70),
+                    const SizedBox(width: 28),
+                    _SkeletonLine(width: 70, height: 70),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _SkeletonLine(width: 200, height: 14),
+                const SizedBox(height: 32),
+                _Ornament(),
+                const SizedBox(height: 20),
+                // Corpo articolo placeholder
+                FadeTransition(
+                  opacity: _fade,
+                  child: Column(
+                    children: [
+                      _SkeletonLine(width: double.infinity, height: 13),
+                      const SizedBox(height: 6),
+                      _SkeletonLine(width: double.infinity, height: 13),
+                      const SizedBox(height: 6),
+                      _SkeletonLine(width: 260, height: 13),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Indicatore testuale
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: Color(0xFFD40000),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FadeTransition(
+                      opacity: _fade,
+                      child: const Text(
+                        'IL CRONISTA STA SCRIVENDO...',
+                        style: TextStyle(
+                          fontFamily: 'Georgia',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                          color: Color(0xFFD40000),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            // ── Commenti / Citazioni ──────────────────────────
-            _CommentsBlock(allPlayers: allPlayers, match: match),
-          ],
+class _SkeletonLine extends StatelessWidget {
+  final double width, height;
+  const _SkeletonLine({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: const Color(0xFF1A1A1A).withOpacity(0.08),
+      borderRadius: BorderRadius.circular(4),
+    ),
+  );
+}
+
+// ── Corpo articolo AI ─────────────────────────────────────────────
+
+class _ArticleBody extends StatelessWidget {
+  final String text;
+  const _ArticleBody({required this.text});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Drop cap sul primo carattere
+        _buildBodyWithDropCap(text),
+        const SizedBox(height: 6),
+        // Firma redazione
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            'Redazione Gazzetta del Gol  ✦',
+            style: TextStyle(
+              fontFamily: 'Georgia',
+              fontSize: 9,
+              fontStyle: FontStyle.italic,
+              color: const Color(0xFFD40000).withOpacity(0.7),
+              letterSpacing: 1,
+            ),
+          ),
         ),
-      ),
+      ],
+    ),
+  );
+
+  Widget _buildBodyWithDropCap(String text) {
+    if (text.isEmpty) return const SizedBox.shrink();
+    final first = text[0];
+    final rest = text.length > 1 ? text.substring(1) : '';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Drop cap
+        Text(
+          first,
+          style: const TextStyle(
+            fontFamily: 'Georgia',
+            fontSize: 52,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFFD40000),
+            height: 0.85,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            rest,
+            style: const TextStyle(
+              fontFamily: 'Georgia',
+              fontSize: 13.5,
+              color: Color(0xFF2A2A2A),
+              height: 1.55,
+            ),
+            textAlign: TextAlign.justify,
+          ),
+        ),
+      ],
     );
   }
 }
