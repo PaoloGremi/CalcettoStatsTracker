@@ -1199,8 +1199,8 @@ static Future<List<String>> generateAiNews(DataService data) async {
 
   final prompt = '''
 Sei il ticker di Sky Sport 24. Basandoti SOLO sui seguenti dati reali di una lega di calcetto amatoriale,
-genera ESATTAMENTE 12 titoli brevi (max 18 parole ciascuno) stile breaking news / ticker TV sportivo.
-Mix consigliato: 3 risultati/statistiche, 2 classifiche/record, 3 gossip/curiosità (inventato ma ispirato ai dati veri).
+genera ESATTAMENTE 15 titoli brevi (max 22 parole ciascuno) stile breaking news / ticker TV sportivo.
+Mix consigliato: 5 risultati/statistiche, 5 classifiche/record, 5 gossip/curiosità (inventato ma ispirato ai dati veri e messi in ordine random).
 Usa tono giornalistico-sportivo italiano. NO emoji. Separa ogni titolo con il carattere | su una sola riga.
 
 DATI:
@@ -1463,59 +1463,141 @@ class _SmartNewsTickerState extends State<SmartNewsTicker> with SingleTickerProv
 // Colori Gazzetta
 // ─────────────────────────────────────────────────────────────
 class _GdS {
-  static const rosso   = Color(0xFFD00000);
-  static const crema   = Color(0xFFF5F0E8);
-  static const cremaDark = Color(0xFFEDE7D5);
-  static const inchiostro = Color(0xFF1A1A1A);
-  static const grigio  = Color(0xFF555555);
+  static const rosso       = Color(0xFFD00000);
+  static const crema       = Color(0xFFF5F0E8);
+  static const cremaDark   = Color(0xFFEDE7D5);
+  static const inchiostro  = Color(0xFF1A1A1A);
+  static const grigio      = Color(0xFF555555);
   static const grigioLight = Color(0xFF888888);
-  static const sepLine = Color(0xFFCCBFA0);
+  static const sepLine     = Color(0xFFCCBFA0);
 }
 
 // ─────────────────────────────────────────────────────────────
-// Immagini calcio usate come copertine per le notizie
-// (Unsplash – uso libero)
+// Immagini calcio (Unsplash – free to use)
 // ─────────────────────────────────────────────────────────────
 const List<String> _newsImages = [
-  'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=600&q=80', // stadio
-  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&q=80', // palla
-  'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&q=80', // giocatore
-  'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=600&q=80', // pallone erba
-  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=80', // tifosi
-  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=600&q=80', // portiere
+  // Serie originale
+  'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&q=80',
+  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80',
+  'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=800&q=80',
+  'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&q=80',
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80',
+  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80',
+  // Immagini aggiuntive – calcio / calcetto / stadio
+  'https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800&q=80',
+  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80',
+  'https://images.unsplash.com/photo-1551958219-acbc630e2914?w=800&q=80',
+  'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=800&q=80',
+  'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&q=80',
+  'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&q=80',
+  'https://images.unsplash.com/photo-1518604666860-9ed391f76460?w=800&q=80',
+  'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=800&q=80',
+  'https://images.unsplash.com/photo-1471295253337-3ceaaedca402?w=800&q=80',
+  'https://images.unsplash.com/photo-1547347298-4074fc3086f0?w=800&q=80',
+  'https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?w=800&q=80',
+  'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&q=80',
+  'https://images.unsplash.com/photo-1530128118208-89f7e4edec1e?w=800&q=80',
+  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80',
 ];
 
 // ─────────────────────────────────────────────────────────────
-// Widget: popup stile Gazzetta dello Sport
+// Mescola notizie reali e AI in modo alternato
 // ─────────────────────────────────────────────────────────────
-class _NewsJournalSheet extends StatelessWidget {
+List<String> _interleaveNews(List<String> items) {
+  final real = items.where((s) => !s.startsWith('🤖')).toList();
+  final ai   = items.where((s) =>  s.startsWith('🤖')).toList();
+  if (real.isEmpty) return ai;
+  if (ai.isEmpty)   return real;
+  final result = <String>[];
+  int r = 0, a = 0;
+  while (r < real.length && a < ai.length) {
+    result.add(real[r++]);
+    result.add(ai[a++]);
+  }
+  while (r < real.length) result.add(real[r++]);
+  while (a < ai.length)   result.add(ai[a++]);
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Suddivide le notizie in "pagine" da distribuire nel giornale
+// ─────────────────────────────────────────────────────────────
+List<List<String>> _splitIntoPages(List<String> items) {
+  if (items.isEmpty) return [];
+  final mixed = _interleaveNews(items);
+  final pages = <List<String>>[];
+  pages.add(mixed.take(3).toList());
+  int i = 3;
+  while (i < mixed.length) {
+    pages.add(mixed.sublist(i, (i + 4).clamp(0, mixed.length)));
+    i += 4;
+  }
+  return pages;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sheet principale – PageView con effetto page-flip
+// ─────────────────────────────────────────────────────────────
+class _NewsJournalSheet extends StatefulWidget {
   final List<String> items;
   const _NewsJournalSheet({required this.items});
 
-  bool _isAi(String s) => s.startsWith('🤖');
+  @override
+  State<_NewsJournalSheet> createState() => _NewsJournalSheetState();
+}
 
-  String _cleanText(String s) => s
+class _NewsJournalSheetState extends State<_NewsJournalSheet> {
+
+  late final PageController _pageCtrl;
+  int _currentPage = 0;
+
+  bool _isAi(String s) => s.startsWith('🤖');
+  String _clean(String s) => s
       .replaceFirst(RegExp(r'^🤖\s*'), '')
       .replaceFirst(RegExp(r'^⚽\s*'), '')
       .trim();
+  String _imgFor(int i) => _newsImages[i % _newsImages.length];
+  String _category(bool ai) => ai ? 'AI COACH' : 'CALCIO';
+  int _globalNum(int pi, int pos) =>
+      pi == 0 ? pos + 1 : 3 + (pi - 1) * 4 + pos + 1;
 
-  String _imageFor(int index) =>
-      _newsImages[index % _newsImages.length];
+  @override
+  void initState() {
+    super.initState();
+    _pageCtrl = PageController(viewportFraction: 0.92);
+    _pageCtrl.addListener(() {
+      final p = _pageCtrl.page?.round() ?? 0;
+      if (p != _currentPage) setState(() => _currentPage = p);
+    });
+  }
 
-  // Restituisce la categoria da mostrare sul bollino
-  String _category(bool isAi) => isAi ? 'AI COACH' : 'CALCIO';
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int page) {
+    final pages = _splitIntoPages(widget.items);
+    if (page < 0 || page >= pages.length) return;
+    _pageCtrl.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeInOutCubic,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    final today = DateTime.now();
-    final dateStr =
-        '${today.day} ${_monthIt(today.month)} ${today.year}'.toUpperCase();
+    final pages   = _splitIntoPages(widget.items);
+    final today   = DateTime.now();
+    final dateStr = '${today.day} ${_monthIt(today.month)} ${today.year}'.toUpperCase();
 
     return Container(
-      height: screenH * 0.92,
+      height: screenH * 0.94,
       decoration: const BoxDecoration(
-        color: _GdS.crema,
+        color: Color(0xFFE0D8C8), // sfondo "cassetto" leggermente più scuro
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Column(
@@ -1531,169 +1613,85 @@ class _NewsJournalSheet extends StatelessWidget {
               ),
             ),
           ),
-
-          // ── Testata ───────────────────────────────────────────
-          Container(
-            color: _GdS.rosso,
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            child: Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Pallone SVG stilizzato
-                    Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: const Center(
-                        child: Text('⚽', style: TextStyle(fontSize: 20)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Titolo testata
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'LA GAZZETTA',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2,
-                              height: 1,
-                            ),
-                          ),
-                          Text(
-                            'DEL CALCETTO',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 4,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Data
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          dateStr,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        const Text(
-                          'EDIZIONE SPECIALE',
-                          style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 7,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          _GdSHeader(
+            dateStr: dateStr,
+            pageNum: _currentPage + 1,
+            totalPages: pages.length,
           ),
 
-          // Striscia nera sotto testata
-          Container(height: 3, color: _GdS.inchiostro),
-
-          // ── Contenuto ─────────────────────────────────────────
+          // ── PageView con swipe ────────────────────────────────
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.only(bottom: 32),
-              itemCount: items.length + 1, // +1 per l'articolo hero
-              itemBuilder: (context, i) {
-                // Item 0 = articolo hero (prima notizia grande con immagine)
-                if (i == 0) {
-                  if (items.isEmpty) return const SizedBox();
-                  return _HeroArticle(
-                    text: _cleanText(items[0]),
-                    imageUrl: _imageFor(0),
-                    isAi: _isAi(items[0]),
-                    category: _category(_isAi(items[0])),
-                    number: 1,
-                  );
-                }
+            child: pages.isEmpty
+                ? const Center(child: Text('Nessuna notizia'))
+                : PageView.builder(
+                    controller: _pageCtrl,
+                    itemCount: pages.length,
+                    onPageChanged: (p) => setState(() => _currentPage = p),
+                    itemBuilder: (ctx, pi) {
+                      return AnimatedBuilder(
+                        animation: _pageCtrl,
+                        builder: (ctx, child) {
+                          // offset della pagina rispetto a quella corrente
+                          double offset = 0;
+                          if (_pageCtrl.hasClients && _pageCtrl.page != null) {
+                            offset = (_pageCtrl.page! - pi).abs().clamp(0.0, 1.0);
+                          }
+                          // Scala e ombra in base alla distanza
+                          final scale = 1.0 - offset * 0.04;
+                          final shadowBlur = 16.0 + offset * 0;
 
-                final idx = i - 1; // indice reale nella lista items
-                if (idx >= items.length) return const SizedBox();
-
-                final item = items[idx];
-                final isAi = _isAi(item);
-                final text = _cleanText(item);
-
-                // Ogni 4 notizie mostra un articolo con immagine thumbnail
-                if (idx % 4 == 0 && idx > 0) {
-                  return _ThumbArticle(
-                    text: text,
-                    imageUrl: _imageFor(idx),
-                    isAi: isAi,
-                    category: _category(isAi),
-                    number: idx + 1,
-                  );
-                }
-
-                return _TextArticle(
-                  text: text,
-                  isAi: isAi,
-                  category: _category(isAi),
-                  number: idx + 1,
-                );
-              },
-            ),
+                          return Transform.scale(
+                            scale: scale,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _GdS.crema,
+                                borderRadius: BorderRadius.circular(6),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black
+                                        .withOpacity(0.18 + offset * 0.0),
+                                    blurRadius: shadowBlur,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.hardEdge,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: pi == 0
+                            ? _FrontPage(
+                                pageItems: pages[pi],
+                                pageIndex: pi,
+                                isAi: _isAi,
+                                clean: _clean,
+                                imgFor: _imgFor,
+                                category: _category,
+                                globalNum: _globalNum,
+                              )
+                            : _InnerPage(
+                                pageItems: pages[pi],
+                                pageIndex: pi,
+                                isAi: _isAi,
+                                clean: _clean,
+                                imgFor: _imgFor,
+                                category: _category,
+                                globalNum: _globalNum,
+                              ),
+                      );
+                    },
+                  ),
           ),
 
-          // ── Footer ───────────────────────────────────────────
-          Container(
-            color: _GdS.inchiostro,
-            padding: EdgeInsets.fromLTRB(
-                16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
-            child: Row(
-              children: [
-                const Text('⚽', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 6),
-                Text(
-                  'CALCETTO TRACKER  ·  ${items.length} NOTIZIE',
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 9,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  color: _GdS.rosso,
-                  child: const Text(
-                    'LIVE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          // ── Barra navigazione ─────────────────────────────────
+          _NavBar(
+            currentPage: _currentPage,
+            totalPages: pages.length,
+            onPrev: () => _goTo(_currentPage - 1),
+            onNext: () => _goTo(_currentPage + 1),
           ),
         ],
       ),
@@ -1707,81 +1705,250 @@ class _NewsJournalSheet extends StatelessWidget {
   }
 }
 
+
 // ─────────────────────────────────────────────────────────────
-// Articolo hero (grande, con immagine a tutta larghezza)
+// Testata stile Gazzetta
 // ─────────────────────────────────────────────────────────────
-class _HeroArticle extends StatelessWidget {
-  final String text, imageUrl, category;
-  final bool isAi;
-  final int number;
-  const _HeroArticle({
-    required this.text,
-    required this.imageUrl,
-    required this.isAi,
-    required this.category,
-    required this.number,
-  });
+class _GdSHeader extends StatelessWidget {
+  final String dateStr;
+  final int pageNum, totalPages;
+  const _GdSHeader({required this.dateStr, required this.pageNum, required this.totalPages});
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Immagine hero
-        SizedBox(
-          height: 200,
-          width: double.infinity,
-          child: Stack(
-            fit: StackFit.expand,
+        Container(
+          color: _GdS.rosso,
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: _GdS.cremaDark,
-                  child: const Center(
-                    child: Icon(Icons.sports_soccer_rounded,
-                        color: _GdS.sepLine, size: 48),
-                  ),
+              Container(
+                width: 34, height: 34,
+                decoration: const BoxDecoration(
+                  color: Colors.white, shape: BoxShape.circle,
+                ),
+                child: const Center(child: Text('⚽', style: TextStyle(fontSize: 19))),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('LA GAZZETTA',
+                        style: TextStyle(color: Colors.white, fontSize: 20,
+                            fontWeight: FontWeight.w900, letterSpacing: 2, height: 1)),
+                    Text('DEL CALCETTO',
+                        style: TextStyle(color: Colors.white70, fontSize: 11,
+                            fontWeight: FontWeight.w700, letterSpacing: 4, height: 1.1)),
+                  ],
                 ),
               ),
-              // Gradiente basso
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.55),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Bollino categoria
-              Positioned(
-                top: 10, left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  color: isAi ? const Color(0xFFC9A84C) : _GdS.rosso,
-                  child: Text(
-                    category,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(dateStr,
+                      style: const TextStyle(color: Colors.white70,
+                          fontSize: 8, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
+                  Text('PAG. $pageNum / $totalPages',
+                      style: const TextStyle(color: Colors.white54,
+                          fontSize: 8, letterSpacing: 0.8, fontWeight: FontWeight.w700)),
+                ],
               ),
             ],
           ),
         ),
+        Container(height: 3, color: _GdS.inchiostro),
+      ],
+    );
+  }
+}
 
-        // Testo titolo hero con numero
+// ─────────────────────────────────────────────────────────────
+// Barra navigazione pagine
+// ─────────────────────────────────────────────────────────────
+class _NavBar extends StatelessWidget {
+  final int currentPage, totalPages;
+  final VoidCallback onPrev, onNext;
+  const _NavBar({required this.currentPage, required this.totalPages,
+      required this.onPrev, required this.onNext});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _GdS.inchiostro,
+      padding: EdgeInsets.fromLTRB(
+          14, 8, 14, MediaQuery.of(context).padding.bottom + 8),
+      child: Row(
+        children: [
+          // Freccia sinistra
+          GestureDetector(
+            onTap: currentPage > 0 ? onPrev : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: currentPage > 0 ? _GdS.rosso : Colors.white12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.chevron_left_rounded,
+                      color: currentPage > 0 ? Colors.white : Colors.white38, size: 16),
+                  Text('PREC.',
+                      style: TextStyle(
+                          color: currentPage > 0 ? Colors.white : Colors.white38,
+                          fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          // Indicatori pagina
+          Row(
+            children: List.generate(totalPages, (i) => Container(
+              width: i == currentPage ? 16 : 6,
+              height: 6,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: i == currentPage ? _GdS.rosso : Colors.white24,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            )),
+          ),
+          const Spacer(),
+          // Freccia destra
+          GestureDetector(
+            onTap: currentPage < totalPages - 1 ? onNext : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: currentPage < totalPages - 1 ? _GdS.rosso : Colors.white12,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Text('SUCC.',
+                      style: TextStyle(
+                          color: currentPage < totalPages - 1 ? Colors.white : Colors.white38,
+                          fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                  Icon(Icons.chevron_right_rounded,
+                      color: currentPage < totalPages - 1 ? Colors.white : Colors.white38, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRIMA PAGINA – layout Gazzetta (hero grande + 2 notizie spalla)
+// ─────────────────────────────────────────────────────────────
+class _FrontPage extends StatelessWidget {
+  final List<String> pageItems;
+  final int pageIndex;
+  final bool Function(String) isAi;
+  final String Function(String) clean;
+  final String Function(int) imgFor;
+  final String Function(bool) category;
+  final int Function(int, int) globalNum;
+
+  const _FrontPage({
+    required this.pageItems, required this.pageIndex,
+    required this.isAi, required this.clean, required this.imgFor,
+    required this.category, required this.globalNum,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.of(context).size.height;
+
+    return Container(
+      color: _GdS.crema,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Articolo hero ─────────────────────────────────
+            if (pageItems.isNotEmpty) ...[
+              _buildHero(context, pageItems[0], 0, h),
+            ],
+
+            // ── Linea divisoria rossa ─────────────────────────
+            Container(height: 3, color: _GdS.rosso,
+                margin: const EdgeInsets.symmetric(vertical: 10)),
+
+            // ── Notizie spalla (affiancate) ───────────────────
+            if (pageItems.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int j = 1; j < pageItems.length; j++) ...[
+                      if (j > 1)
+                        Container(width: 0.5, color: _GdS.sepLine,
+                            margin: const EdgeInsets.symmetric(horizontal: 8)),
+                      Expanded(
+                        child: _ShoulderArticle(
+                          text: clean(pageItems[j]),
+                          imgUrl: imgFor(j),
+                          isAiItem: isAi(pageItems[j]),
+                          cat: category(isAi(pageItems[j])),
+                          num: globalNum(pageIndex, j),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHero(BuildContext context, String item, int pos, double h) {
+    final ai = isAi(item);
+    final num = globalNum(pageIndex, pos);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Immagine hero grande
+        SizedBox(
+          height: h * 0.32,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(imgFor(0),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                      color: _GdS.cremaDark,
+                      child: const Icon(Icons.sports_soccer_rounded,
+                          color: _GdS.sepLine, size: 56))),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(top: 10, left: 10,
+                child: _GdSPill(label: category(ai), isAi: ai)),
+            ],
+          ),
+        ),
+        // Titolone + numero
         Container(
           color: _GdS.inchiostro,
           width: double.infinity,
@@ -1789,206 +1956,183 @@ class _HeroArticle extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '$number',
-                style: const TextStyle(
-                  color: _GdS.rosso,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              Text('$num',
+                  style: const TextStyle(color: _GdS.rosso,
+                      fontSize: 22, fontWeight: FontWeight.w900)),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    height: 1.35,
-                    letterSpacing: 0.2,
-                  ),
-                ),
+                child: Text(clean(item),
+                    style: const TextStyle(color: Colors.white,
+                        fontSize: 18, fontWeight: FontWeight.w900, height: 1.35)),
               ),
             ],
           ),
         ),
-
-        Container(height: 4, color: _GdS.rosso),
-        const SizedBox(height: 8),
       ],
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Articolo con thumbnail (immagine a destra)
+// PAGINA INTERNA – 4 notizie in layout misto
 // ─────────────────────────────────────────────────────────────
-class _ThumbArticle extends StatelessWidget {
-  final String text, imageUrl, category;
-  final bool isAi;
-  final int number;
-  const _ThumbArticle({
-    required this.text,
-    required this.imageUrl,
-    required this.isAi,
-    required this.category,
-    required this.number,
+class _InnerPage extends StatelessWidget {
+  final List<String> pageItems;
+  final int pageIndex;
+  final bool Function(String) isAi;
+  final String Function(String) clean;
+  final String Function(int) imgFor;
+  final String Function(bool) category;
+  final int Function(int, int) globalNum;
+
+  const _InnerPage({
+    required this.pageItems, required this.pageIndex,
+    required this.isAi, required this.clean, required this.imgFor,
+    required this.category, required this.globalNum,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Layout: prima notizia con thumbnail, le altre solo testo
+    return Container(
+      color: _GdS.crema,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
+        child: Column(
+          children: [
+            for (int j = 0; j < pageItems.length; j++) ...[
+              _buildItem(j),
+              if (j < pageItems.length - 1)
+                Container(height: 0.5, color: _GdS.sepLine,
+                    margin: const EdgeInsets.symmetric(vertical: 10)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItem(int pos) {
+    final item  = pageItems[pos];
+    final ai    = isAi(item);
+    final text  = clean(item);
+    final num   = globalNum(pageIndex, pos);
+    final hasImg = pos == 0 || pos == 2; // alterna presenza immagine
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Numero
+        SizedBox(
+          width: 28,
+          child: Text('$num',
+              style: const TextStyle(color: _GdS.rosso,
+                  fontSize: 16, fontWeight: FontWeight.w900)),
+        ),
+        // Corpo
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _GdSPill(label: category(ai), isAi: ai),
+              const SizedBox(height: 6),
+              if (hasImg) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: SizedBox(
+                    height: 110, width: double.infinity,
+                    child: Image.network(imgFor(num),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                            color: _GdS.cremaDark,
+                            child: const Icon(Icons.sports_soccer_rounded,
+                                color: _GdS.sepLine, size: 36))),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              Text(text,
+                  style: TextStyle(
+                    color: _GdS.inchiostro,
+                    fontSize: hasImg ? 14 : 13,
+                    fontWeight: hasImg ? FontWeight.w800 : FontWeight.w700,
+                    height: 1.4,
+                  )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Notizia spalla (prima pagina, colonna laterale)
+// ─────────────────────────────────────────────────────────────
+class _ShoulderArticle extends StatelessWidget {
+  final String text, imgUrl, cat;
+  final bool isAiItem;
+  final int num;
+  const _ShoulderArticle({
+    required this.text, required this.imgUrl, required this.isAiItem,
+    required this.cat, required this.num,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Numero rosso
-              SizedBox(
-                width: 26,
-                child: Text(
-                  '$number',
-                  style: const TextStyle(
-                    color: _GdS.rosso,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              // Testo
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CategoryPill(label: category, isAi: isAi),
-                    const SizedBox(height: 6),
-                    Text(
-                      text,
-                      style: const TextStyle(
-                        color: _GdS.inchiostro,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Thumbnail
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: SizedBox(
-                  width: 90, height: 75,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: _GdS.cremaDark,
-                      child: const Icon(Icons.sports_soccer_rounded,
-                          color: _GdS.sepLine, size: 28),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.network(imgUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                    color: _GdS.cremaDark,
+                    child: const Icon(Icons.sports_soccer_rounded,
+                        color: _GdS.sepLine, size: 28))),
           ),
         ),
-        Container(height: 0.5, color: _GdS.sepLine,
-            margin: const EdgeInsets.symmetric(horizontal: 14)),
+        const SizedBox(height: 6),
+        _GdSPill(label: cat, isAi: isAiItem),
+        const SizedBox(height: 5),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$num',
+                style: const TextStyle(color: _GdS.rosso,
+                    fontSize: 14, fontWeight: FontWeight.w900)),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(text,
+                  style: const TextStyle(color: _GdS.inchiostro,
+                      fontSize: 12, fontWeight: FontWeight.w700, height: 1.35)),
+            ),
+          ],
+        ),
       ],
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Articolo solo testo (stile notizia breve)
+// Bollino categoria
 // ─────────────────────────────────────────────────────────────
-class _TextArticle extends StatelessWidget {
-  final String text, category;
-  final bool isAi;
-  final int number;
-  const _TextArticle({
-    required this.text,
-    required this.isAi,
-    required this.category,
-    required this.number,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Numero articolo in rosso
-              SizedBox(
-                width: 26,
-                child: Text(
-                  '$number',
-                  style: const TextStyle(
-                    color: _GdS.rosso,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              // Testo
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _CategoryPill(label: category, isAi: isAi),
-                    const SizedBox(height: 5),
-                    Text(
-                      text,
-                      style: const TextStyle(
-                        color: _GdS.inchiostro,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(height: 0.5, color: _GdS.sepLine,
-            margin: const EdgeInsets.symmetric(horizontal: 14)),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Bollino categoria (rosso / oro)
-// ─────────────────────────────────────────────────────────────
-class _CategoryPill extends StatelessWidget {
+class _GdSPill extends StatelessWidget {
   final String label;
   final bool isAi;
-  const _CategoryPill({required this.label, required this.isAi});
+  const _GdSPill({required this.label, required this.isAi});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       color: isAi ? const Color(0xFFC9A84C) : _GdS.rosso,
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 7.5,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.2,
-        ),
-      ),
+      child: Text(label,
+          style: const TextStyle(color: Colors.white, fontSize: 7.5,
+              fontWeight: FontWeight.w900, letterSpacing: 1.2)),
     );
   }
 }
