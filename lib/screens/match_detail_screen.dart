@@ -55,11 +55,7 @@ class MatchDetailScreen extends StatelessWidget {
             tooltip: 'Prima Pagina',
             icon: const Icon(Icons.newspaper_rounded,
                 color: AppTheme.accentGold),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => MatchNewspaperScreen(match: match),
-              ),
-            ),
+            onPressed: () => _showGenerationMenu(context),
           ),
         ],
         bottom: PreferredSize(
@@ -144,6 +140,77 @@ class MatchDetailScreen extends StatelessWidget {
       ),
     );
   }
+  void _showGenerationMenu(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: AppTheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(
+                child: FifaLabel(
+                  'Scegli il formato della Prima Pagina',
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: const Icon(Icons.article_rounded, color: AppTheme.accentGold, size: 28),
+                title: const Text(
+                  'Cronaca Testuale AI',
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Genera il testo in stile Gazzetta dello Sport',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                onTap: () {
+                  Navigator.pop(context); // Chiude il bottom sheet
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MatchNewspaperScreen(match: match),
+                    ),
+                  );
+                },
+              ),
+              const Divider(color: AppTheme.border, height: 20),
+              ListTile(
+                leading: const Icon(Icons.image_rounded, color: AppTheme.accentGreen, size: 28),
+                title: const Text(
+                  'Copertina Illustrata AI',
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Genera una vignetta/immagine epica della partita',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                onTap: () {
+                  Navigator.pop(context); // Chiude il bottom sheet
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MatchImageGenerationScreen(match: match),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 }
 
 class _ScoreBox extends StatelessWidget {
@@ -421,7 +488,7 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
     }
 
     return '''
-Sei il cronista de "La Gazzetta del Gol", il giornale satirico e appassionato di una partitella di calcetto tra amici.
+Sei il cronista de "La Gazzetta del Calcetto", il giornale satirico e appassionato di una partitella di calcetto tra amici.
 Scrivi in stile Gazzetta dello Sport: drammatico, colorito, con metafore calcistiche, aggettivi forti.
 
 DATI PARTITA:
@@ -540,7 +607,7 @@ Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick), così:
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'LA GAZZETTA DEL GOL',
+          'LA GAZZETTA DEL CALCETTO',
           style: TextStyle(
             fontFamily: 'Georgia',
             fontWeight: FontWeight.w900,
@@ -789,7 +856,7 @@ class _ArticleBody extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            'Redazione Gazzetta del Gol  ✦',
+            'Redazione Gazzetta del Calcetto  ✦',
             style: TextStyle(
               fontFamily: 'Georgia',
               fontSize: 9,
@@ -1331,6 +1398,172 @@ class _CommentsBlock extends StatelessWidget {
             );
           }),
         ],
+      ),
+    );
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  🎨  MATCH IMAGE GENERATION SCREEN  ──  Generazione DALL-E
+// ═══════════════════════════════════════════════════════════════
+
+class MatchImageGenerationScreen extends StatefulWidget {
+  final MatchModel match;
+  const MatchImageGenerationScreen({required this.match, super.key});
+
+  @override
+  State<MatchImageGenerationScreen> createState() => _MatchImageGenerationScreenState();
+}
+
+class _MatchImageGenerationScreenState extends State<MatchImageGenerationScreen> {
+  static const _storage = FlutterSecureStorage();
+  static const _storageKey = 'openai_api_key';
+
+  bool _loading = true;
+  String? _base64Image;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateImage();
+  }
+
+  String _buildImagePrompt() {
+    // Costruisci una descrizione epica basandoti sul risultato per darla in pasto a DALL-E
+    final m = widget.match;
+    String descrizioneEsito = m.scoreA == m.scoreB 
+        ? "un pareggio combattuto per ${m.scoreA}-${m.scoreB}" 
+        : "una vittoria della squadra ${m.scoreA > m.scoreB ? 'Bianca' : 'Colorata'} per ${m.scoreA}-${m.scoreB}";
+
+    String _resolveName(String id) {
+    if (id.isEmpty) return '';
+    return HiveBoxes.playersBox.get(id)?.name ?? id;
+  }
+    String teamSection(List<String> ids, String teamName) {
+      return ids.map((id) {
+        final name = _resolveName(id);
+        final voto = m.votes[id] ?? 0.0;
+        final gol = m.goals[id] ?? 0;
+        final commento = m.comments[id] ?? '';
+        final isMvp = m.mvp == id ? ' [MVP]' : '';
+        final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
+        final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
+        return '  - $name$isMvp$isHustle$isBG: voto ${voto > 0 ? voto.toStringAsFixed(1) : 'N/D'}'
+            '${gol > 0 ? ', $gol gol' : ''}'
+            '${commento.isNotEmpty ? ', nota: "$commento"' : ''}';
+      }).join('\n');
+    }
+
+return "generami una Prima pagina della Gazzetta dello Sport, stile autentico 2026, layout classico. Sfondo rosa acceso caratteristico, grana sottile di carta stampata. Grande logo GAZZETTA DEL CALCETTO in alto con font bold condensed bianco e rosso. Foto centrale potente di una partita di calcetto, espressione intensa, luci drammatiche da stadio. Titolo enorme rosso-nero con una frase sensazionale legata alla partita; Sotto, I dati della partita : $teamSection . da mostrare come articoli della pagina di copertina";
+  }
+
+  Future<void> _generateImage() async {
+    final apiKey = await _storage.read(key: _storageKey);
+    if (apiKey == null || apiKey.isEmpty) {
+      setState(() {
+        _errorMsg = "Chiave API OpenAI non trovata nelle impostazioni.";
+        _loading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/images/generations'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-image-1',
+          'prompt': _buildImagePrompt(),
+          'n': 1,
+          'size': '1024x1536',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+  final data = jsonDecode(response.body);
+
+  final base64Image = data['data']?[0]?['b64_json'];
+
+  if (base64Image == null) {
+    setState(() {
+      _errorMsg = "Risposta API inattesa: base64Image mancante";
+      _loading = false;
+    });
+    return;
+  }
+
+  setState(() {
+    _base64Image = base64Image;
+    _loading = false;
+  });
+} else {
+  final error = jsonDecode(response.body);
+
+  setState(() {
+    _errorMsg = error['error']?['message'] ??
+        "Errore OpenAI (Status: ${response.statusCode})";
+    _loading = false;
+  });
+}
+    } catch (e) {
+      setState(() {
+        _errorMsg = "Errore di rete: $e";
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
+      appBar: AppBar(
+        title: const FifaLabel('Copertina Illustrata AI', color: AppTheme.textPrimary, fontSize: 13),
+        backgroundColor: AppTheme.surface,
+      ),
+      body: Center(
+        child: _loading
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: AppTheme.accentGreen),
+                  const SizedBox(height: 16),
+                  Text(
+                    'DALL-E STA DIPINGENDO LA COPERTINA...',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              )
+            : _errorMsg != null
+                ? Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(_errorMsg!, style: const TextStyle(color: AppTheme.accentRed), textAlign: TextAlign.center),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.memory(
+                            base64Decode(_base64Image!),
+                              fit: BoxFit.cover,
+                            ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "✦ Opera generata dall'intelligenza artificiale di OpenAI basata sui dati reali del match.",
+                          style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
