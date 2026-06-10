@@ -15,5 +15,16 @@
 	<!-- Permesso cartelle Downloads/Documents -->
 	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
+
+	<key>com.apple.security.network.client</key>
+<true/>
+
+<key>keychain-access-groups</key>
+<array>
+    <string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+</array>
+
+<key>com.apple.security.personal-information.keychain</key>
+<true/>
 </dict>
 </plist>

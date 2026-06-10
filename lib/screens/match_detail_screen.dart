@@ -7,6 +7,7 @@ import '../models/match_model.dart';
 import '../data/hive_boxes.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final MatchModel match;
@@ -55,11 +56,7 @@ class MatchDetailScreen extends StatelessWidget {
             tooltip: 'Prima Pagina',
             icon: const Icon(Icons.newspaper_rounded,
                 color: AppTheme.accentGold),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => MatchNewspaperScreen(match: match),
-              ),
-            ),
+            onPressed: () => _showGenerationMenu(context),
           ),
         ],
         bottom: PreferredSize(
@@ -144,6 +141,137 @@ class MatchDetailScreen extends StatelessWidget {
       ),
     );
   }
+  void _showGenerationMenu(BuildContext pageContext) {
+  showModalBottomSheet(
+    context: pageContext,
+    backgroundColor: AppTheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Center(
+                child: FifaLabel(
+                  'Scegli il formato della Prima Pagina',
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: const Icon(Icons.article_rounded, color: AppTheme.accentGold, size: 28),
+                title: const Text(
+                  'Cronaca Testuale AI',
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Genera il testo in stile Gazzetta dello Sport',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.of(pageContext).push(
+                    MaterialPageRoute(
+                      builder: (_) => MatchNewspaperScreen(match: match),
+                    ),
+                  );
+                },
+              ),
+              const Divider(color: AppTheme.border, height: 20),
+              ListTile(
+                leading: const Icon(Icons.image_rounded, color: AppTheme.accentGreen, size: 28),
+                title: const Text(
+                  'Copertina Illustrata AI',
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Genera una vignetta/immagine epica della partita',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  showDialog(
+                    context: pageContext,
+                    builder: (dialogContext) => AlertDialog(
+                      backgroundColor: AppTheme.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: AppTheme.accentGreen.withOpacity(0.3)),
+                      ),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.image_rounded, color: AppTheme.accentGreen, size: 20),
+                          SizedBox(width: 8),
+                          FifaLabel('GENERA COPERTINA AI',
+                              color: AppTheme.textPrimary, fontSize: 13),
+                        ],
+                      ),
+                      content: const Text(
+                        'Verrà generata un\'immagine tramite DALL·E (gpt-image-1).\n\n'
+                        'Ogni generazione ha un costo non irrisorio sulla tua chiave API OpenAI. '
+                        'Vuoi procedere?',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: const Text(
+                            'ANNULLA',
+                            style: TextStyle(
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(dialogContext);
+                            Navigator.of(pageContext).push(
+                              MaterialPageRoute(
+                                builder: (_) => MatchImageGenerationScreen(match: match),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentGreen,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'GENERA',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 }
 
 class _ScoreBox extends StatelessWidget {
@@ -333,13 +461,17 @@ class _PlayerDetailTile extends StatelessWidget {
 class _NewspaperContent {
   final String headline;
   final String subheadline;
-  final String articleBody; // paragrafo principale stile cronaca
+  final String articleBody;
   final bool isAiGenerated;
+  // mappa playerId → giudizio arricchito stile Gazzetta
+  final Map<String, String> pagelle;
+
   const _NewspaperContent({
     required this.headline,
     required this.subheadline,
     required this.articleBody,
     required this.isAiGenerated,
+    this.pagelle = const {},
   });
 }
 
@@ -402,27 +534,26 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
 
   // Costruisce il prompt con tutti i dati della partita
   String _buildPrompt() {
-    final m = widget.match;
-    final allPlayers = [...m.teamA, ...m.teamB];
+  final m = widget.match;
 
-    String teamSection(List<String> ids, String teamName) {
-      return ids.map((id) {
-        final name = _resolveName(id);
-        final voto = m.votes[id] ?? 0.0;
-        final gol = m.goals[id] ?? 0;
-        final commento = m.comments[id] ?? '';
-        final isMvp = m.mvp == id ? ' [MVP]' : '';
-        final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
-        final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
-        return '  - $name$isMvp$isHustle$isBG: voto ${voto > 0 ? voto.toStringAsFixed(1) : 'N/D'}'
-            '${gol > 0 ? ', $gol gol' : ''}'
-            '${commento.isNotEmpty ? ', nota: "$commento"' : ''}';
-      }).join('\n');
-    }
+  String teamSection(List<String> ids) {
+    return ids.map((id) {
+      final name = _resolveName(id);
+      final voto = m.votes[id] ?? 0.0;
+      final gol = m.goals[id] ?? 0;
+      final commento = m.comments[id] ?? '';
+      final isMvp = m.mvp == id ? ' [MVP]' : '';
+      final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
+      final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
+      return '  - id:"$id" nome:"$name"$isMvp$isHustle$isBG'
+          ' voto:${voto > 0 ? voto.toStringAsFixed(1) : "N/D"}'
+          '${gol > 0 ? " gol:$gol" : ""}'
+          '${commento.isNotEmpty ? ' commento_originale:"$commento"' : ""}';
+    }).join('\n');
+  }
 
-    return '''
-Sei il cronista de "La Gazzetta del Gol", il giornale satirico e appassionato di una partitella di calcetto tra amici.
-Scrivi in stile Gazzetta dello Sport: drammatico, colorito, con metafore calcistiche, aggettivi forti.
+  return '''
+Sei il cronista de "La Gazzetta del Calcetto", stile Gazzetta dello Sport: drammatico, colorito, metafore calcistiche, aggettivi forti.
 
 DATI PARTITA:
 - Data: ${DateFormat('dd MMMM yyyy · HH:mm', 'it_IT').format(m.date)}
@@ -430,68 +561,76 @@ DATI PARTITA:
 - Esito: ${_resultLabel()}
 
 SQUADRA BIANCHI:
-${teamSection(m.teamA, 'Bianchi')}
+${teamSection(m.teamA)}
 
 SQUADRA COLORATI:
-${teamSection(m.teamB, 'Colorati')}
+${teamSection(m.teamB)}
 
-Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick), così:
+Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick):
 {
   "headline": "TITOLONE IN MAIUSCOLO MAX 6 PAROLE",
   "subheadline": "Sottotitolo evocativo di 1-2 frasi",
-  "articleBody": "Cronaca della partita di 3-4 frasi stile Gazzetta. Cita giocatori per nome, usa toni epici."
-}
-''';
+  "articleBody": "Cronaca di 3-4 frasi stile Gazzetta. Cita giocatori per nome, toni epici.",
+  "pagelle": {
+    "<id_giocatore>": "<giudizio 1 frase stile Gazzetta: mantieni il senso del commento_originale se presente, arricchiscilo con tono giornalistico, cita il voto e i gol se rilevanti>"
   }
-
+}
+Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti sopra.
+''';
+}
   // Chiamata OpenAI
   Future<void> _generateAiContent(String apiKey) async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o-mini',
-          'messages': [
-            {'role': 'user', 'content': _buildPrompt()}
-          ],
-          'max_tokens': 400,
-          'temperature': 0.85,
-        }),
+  try {
+    final response = await http.post(
+      Uri.parse('https://api.openai.com/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': 'gpt-4o-mini',
+        'messages': [
+          {'role': 'user', 'content': _buildPrompt()}
+        ],
+        'max_tokens': 1200,   // aumentato per contenere le pagelle
+        'temperature': 0.85,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final raw = (data['choices'][0]['message']['content'] as String).trim();
+      final clean = raw
+          .replaceAll(RegExp(r'^```json\s*', multiLine: true), '')
+          .replaceAll(RegExp(r'```$', multiLine: true), '')
+          .trim();
+      final json = jsonDecode(clean);
+
+      // Leggi pagelle come Map<String, String>
+      final pagelleRaw = json['pagelle'] as Map<String, dynamic>? ?? {};
+      final pagelle = pagelleRaw.map(
+        (k, v) => MapEntry(k, v?.toString() ?? ''),
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final raw = (data['choices'][0]['message']['content'] as String).trim();
-        // Strip backtick fences se presenti
-        final clean = raw
-            .replaceAll(RegExp(r'^```json\s*', multiLine: true), '')
-            .replaceAll(RegExp(r'```$', multiLine: true), '')
-            .trim();
-        final json = jsonDecode(clean);
-        if (mounted) {
-          setState(() {
-            _content = _NewspaperContent(
-              headline: (json['headline'] as String? ?? '').toUpperCase(),
-              subheadline: json['subheadline'] as String? ?? '',
-              articleBody: json['articleBody'] as String? ?? '',
-              isAiGenerated: true,
-            );
-            _loading = false;
-          });
-        }
-      } else {
-        // Quota / auth error → fallback statico silenzioso
-        _setStaticFallback();
+      if (mounted) {
+        setState(() {
+          _content = _NewspaperContent(
+            headline: (json['headline'] as String? ?? '').toUpperCase(),
+            subheadline: json['subheadline'] as String? ?? '',
+            articleBody: json['articleBody'] as String? ?? '',
+            isAiGenerated: true,
+            pagelle: pagelle,
+          );
+          _loading = false;
+        });
       }
-    } catch (e) {
+    } else {
       _setStaticFallback();
     }
+  } catch (e) {
+    _setStaticFallback();
   }
-
+}
   void _setStaticFallback() {
     if (mounted) {
       setState(() {
@@ -540,7 +679,7 @@ Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick), così:
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          'LA GAZZETTA DEL GOL',
+          'LA GAZZETTA DEL CALCETTO',
           style: TextStyle(
             fontFamily: 'Georgia',
             fontWeight: FontWeight.w900,
@@ -615,9 +754,8 @@ Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick), così:
                     teamAIds: widget.match.teamA,
                     teamBIds: widget.match.teamB,
                     match: widget.match,
+                    pagelle: _content?.pagelle ?? {},
                   ),
-
-                  _CommentsBlock(allPlayers: allPlayers, match: widget.match),
                 ],
               ),
             ),
@@ -789,7 +927,7 @@ class _ArticleBody extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: Text(
-            'Redazione Gazzetta del Gol  ✦',
+            'Redazione Gazzetta del Calcetto  ✦',
             style: TextStyle(
               fontFamily: 'Georgia',
               fontSize: 9,
@@ -1117,10 +1255,13 @@ class _ScorersBlock extends StatelessWidget {
 class _TwoColumnRatings extends StatelessWidget {
   final List<String> teamAIds, teamBIds;
   final MatchModel match;
+  final Map<String, String> pagelle;   // ← aggiunto
   const _TwoColumnRatings(
       {required this.teamAIds,
       required this.teamBIds,
-      required this.match});
+      required this.match,
+      this.pagelle = const {}, 
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -1128,40 +1269,19 @@ class _TwoColumnRatings extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Column(
         children: [
-          // Intestazione colonne
+          // intestazione colonne — invariata
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                Expanded(
-                  child: Center(
-                    child: Text('BIANCHI',
-                        style: const TextStyle(
-                            fontFamily: 'Georgia',
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2,
-                            fontSize: 11,
-                            color: Color(0xFF1A1A1A))),
-                  ),
-                ),
+                Expanded(child: Center(child: Text('BIANCHI', style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: Color(0xFF1A1A1A))))),
                 Container(width: 1, height: 20, color: const Color(0xFF1A1A1A)),
-                Expanded(
-                  child: Center(
-                    child: Text('COLORATI',
-                        style: const TextStyle(
-                            fontFamily: 'Georgia',
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2,
-                            fontSize: 11,
-                            color: Color(0xFF1A1A1A))),
-                  ),
-                ),
+                Expanded(child: Center(child: Text('COLORATI', style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: Color(0xFF1A1A1A))))),
               ],
             ),
           ),
           Container(height: 1, color: const Color(0xFF1A1A1A)),
           const SizedBox(height: 6),
-          // Righe giocatori affiancate
           ...List.generate(
             [teamAIds.length, teamBIds.length].reduce((a, b) => a > b ? a : b),
             (i) {
@@ -1170,19 +1290,23 @@ class _TwoColumnRatings extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,   // ← start per pagelle multiriga
                   children: [
                     Expanded(
-                        child: idA != null
-                            ? _RatingRow(idA, match, alignRight: false)
-                            : const SizedBox()),
-                    Container(
-                        width: 1,
-                        height: 26,
-                        color: const Color(0xFFCCBB99)),
+                      child: idA != null
+                          ? _RatingRow(idA, match,
+                              alignRight: false,
+                              paginaAi: pagelle[idA])           // ← passa pagella
+                          : const SizedBox(),
+                    ),
+                    Container(width: 1, color: const Color(0xFFCCBB99)),
                     Expanded(
-                        child: idB != null
-                            ? _RatingRow(idB, match, alignRight: true)
-                            : const SizedBox()),
+                      child: idB != null
+                          ? _RatingRow(idB, match,
+                              alignRight: true,
+                              paginaAi: pagelle[idB])           // ← passa pagella
+                          : const SizedBox(),
+                    ),
                   ],
                 ),
               );
@@ -1199,7 +1323,12 @@ class _RatingRow extends StatelessWidget {
   final String playerId;
   final MatchModel match;
   final bool alignRight;
-  const _RatingRow(this.playerId, this.match, {required this.alignRight});
+  final String? paginaAi;   // ← aggiunto
+
+  const _RatingRow(this.playerId, this.match, {
+    required this.alignRight,
+    this.paginaAi,            // ← aggiunto
+  });
 
   Color _voteColor(double v) {
     if (v >= 8) return const Color(0xFF2E7D32);
@@ -1220,8 +1349,7 @@ class _RatingRow extends StatelessWidget {
     final nameWidget = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isMvp && !alignRight)
-          const Text('👑 ', style: TextStyle(fontSize: 10)),
+        if (isMvp && !alignRight) const Text('👑 ', style: TextStyle(fontSize: 10)),
         Flexible(
           child: Text(name.toUpperCase(),
               overflow: TextOverflow.ellipsis,
@@ -1232,17 +1360,14 @@ class _RatingRow extends StatelessWidget {
                   color: Color(0xFF1A1A1A))),
         ),
         if (goals > 0)
-          Text(' ${'⚽' * goals.clamp(0, 3)}',
-              style: const TextStyle(fontSize: 9)),
-        if (isMvp && alignRight)
-          const Text(' 👑', style: TextStyle(fontSize: 10)),
+          Text(' ${'⚽' * goals.clamp(0, 3)}', style: const TextStyle(fontSize: 9)),
+        if (isMvp && alignRight) const Text(' 👑', style: TextStyle(fontSize: 10)),
       ],
     );
 
     final scoreWidget = voto > 0
         ? Container(
-            width: 28,
-            height: 24,
+            width: 28, height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: color.withOpacity(0.12),
@@ -1250,28 +1375,45 @@ class _RatingRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(3),
             ),
             child: Text(voto.toStringAsFixed(1),
-                style: TextStyle(
-                    color: color,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900)),
+                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900)),
           )
         : const SizedBox(width: 28);
 
     return Padding(
       padding: EdgeInsets.only(
-          left: alignRight ? 8 : 4, right: alignRight ? 4 : 8),
-      child: Row(
-        mainAxisAlignment: alignRight
-            ? MainAxisAlignment.spaceBetween
-            : MainAxisAlignment.spaceBetween,
-        children: alignRight
-            ? [scoreWidget, const SizedBox(width: 6), Expanded(child: nameWidget)]
-            : [Expanded(child: nameWidget), const SizedBox(width: 6), scoreWidget],
+          left: alignRight ? 8 : 4, right: alignRight ? 4 : 8, bottom: 4),
+      child: Column(
+        crossAxisAlignment: alignRight
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.start,
+        children: [
+          // ── riga nome + voto (invariata) ──────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: alignRight
+                ? [scoreWidget, const SizedBox(width: 6), Expanded(child: nameWidget)]
+                : [Expanded(child: nameWidget), const SizedBox(width: 6), scoreWidget],
+          ),
+          // ── pagella AI (nuova) ────────────────────────────────
+          if (paginaAi != null && paginaAi!.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              paginaAi!,
+              style: const TextStyle(
+                fontFamily: 'Georgia',
+                fontStyle: FontStyle.italic,
+                fontSize: 10,
+                color: Color(0xFF555555),
+                height: 1.4,
+              ),
+              textAlign: alignRight ? TextAlign.left : TextAlign.left,
+            ),
+          ],
+        ],
       ),
     );
   }
 }
-
 class _CommentsBlock extends StatelessWidget {
   final List<String> allPlayers;
   final MatchModel match;
@@ -1306,7 +1448,7 @@ class _CommentsBlock extends StatelessWidget {
           ...withComments.map((id) {
             final player = HiveBoxes.playersBox.get(id);
             final name = player?.name ?? id;
-            final comment = match.comments[id]!;
+            final comment = match.comments[id] ?? '';
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Column(
@@ -1334,4 +1476,314 @@ class _CommentsBlock extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  🎨  MATCH IMAGE GENERATION SCREEN  ──  Generazione DALL-E
+// ═══════════════════════════════════════════════════════════════
+
+class MatchImageGenerationScreen extends StatefulWidget {
+  final MatchModel match;
+  const MatchImageGenerationScreen({required this.match, super.key});
+
+  @override
+  State<MatchImageGenerationScreen> createState() => _MatchImageGenerationScreenState();
+}
+
+class _MatchImageGenerationScreenState extends State<MatchImageGenerationScreen> {
+  static const _storage = FlutterSecureStorage();
+  static const _storageKey = 'openai_api_key';
+
+  bool _loading = true;
+  String? _base64Image;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateImage();
+  }
+
+String _buildImagePrompt() {
+  final m = widget.match;
+
+  // ── helper locale ──────────────────────────────────────────────
+  String resolveName(String id) {
+    if (id.isEmpty) return '';
+    return HiveBoxes.playersBox.get(id)?.name ?? id;
+  }
+
+  // ── Risultato ──────────────────────────────────────────────────
+  final scoreStr = '${m.scoreA}-${m.scoreB}';
+  final String risultato;
+  final String titoloCampione;
+  if (m.scoreA > m.scoreB) {
+    risultato = 'vittoria della Squadra Bianca per $scoreStr';
+    titoloCampione = 'SQUADRA BIANCA INARRESTABILE';
+  } else if (m.scoreB > m.scoreA) {
+    risultato = 'vittoria della Squadra Colorata per $scoreStr';
+    titoloCampione = 'COLORATI DA LEGGENDA';
+  } else {
+    risultato = 'pareggio spettacolare $scoreStr';
+    titoloCampione = 'NESSUNO VINCE, TUTTI EROI';
+  }
+
+  // ── Data ───────────────────────────────────────────────────────
+  final dataStr = DateFormat('dd MMMM yyyy', 'it_IT').format(m.date);
+
+  // ── MVP / Premi ────────────────────────────────────────────────
+  final mvpName       = resolveName(m.mvp);
+  final hustleName    = resolveName(m.hustlePlayer);
+  final bestGoalName  = resolveName(m.bestGoalPlayer);
+
+  // ── Goleador (tutti i giocatori con almeno 1 gol) ──────────────
+  final allPlayers = [...m.teamA, ...m.teamB];
+  final goleadorLines = allPlayers
+      .where((id) => (m.goals[id] ?? 0) > 0)
+      .map((id) {
+        final name = resolveName(id);
+        final g = m.goals[id] ?? 0;
+        return '$name ($g ${g == 1 ? 'gol' : 'gol'})';
+      })
+      .toList();
+  final goleadorStr = goleadorLines.isEmpty
+      ? 'nessun marcatore registrato'
+      : goleadorLines.join(', ');
+
+  // ── Top performer per voto ─────────────────────────────────────
+  final topPlayers = allPlayers
+      .where((id) => (m.votes[id] ?? 0.0) >= 8.0)
+      .map((id) {
+        final name = resolveName(id);
+        final v = (m.votes[id] ?? 0.0).toStringAsFixed(1);
+        return '$name (voto $v)';
+      })
+      .toList();
+  final topStr = topPlayers.isEmpty ? '' : ' Prestazioni eccellenti: ${topPlayers.join(', ')}.';
+
+  // ── Squadra A con statistiche ──────────────────────────────────
+  String buildTeamLines(List<String> ids) {
+    return ids.map((id) {
+      final name = resolveName(id);
+      final voto = m.votes[id];
+      final gol  = m.goals[id] ?? 0;
+      final tags = [
+        if (m.mvp == id) 'MVP',
+        if (m.hustlePlayer == id) 'COMBATTIVO',
+        if (m.bestGoalPlayer == id) 'BEST GOAL',
+      ].join('/');
+      final votoStr = voto != null ? voto.toStringAsFixed(1) : '-';
+      final golStr  = gol > 0 ? ', $gol gol' : '';
+      final tagStr  = tags.isNotEmpty ? ' [$tags]' : '';
+      return '$name (voto $votoStr$golStr)$tagStr';
+    }).join('; ');
+  }
+
+  final teamALines = buildTeamLines(m.teamA);
+  final teamBLines = buildTeamLines(m.teamB);
+
+  // ── Prompt finale ──────────────────────────────────────────────
+  return '''
+Crea una PRIMA PAGINA realistica di un giornale sportivo italiano, formato portrait 3:4, stile autentico della Gazzetta dello Sport edizione 2026.
+
+LAYOUT OBBLIGATORIO:
+- Testata in cima: "GAZZETTA DEL CALCETTO" in caratteri condensed bold rosso e nero su sfondo bianco/crema, con la data "$dataStr" piccola sotto.
+- Sfondo complessivo: carta rosa acceso (#FF69A0 circa), grana tipografica visibile, leggera sgualcitura da stampa reale.
+- Foto centrale grande: scena di esultanza o duello aereo su un campo di calcetto indoor, luci da palazzetto, atmosfera intensa e drammatica. NON cartoon, NON illustrazione — stile fotografico realistico.
+- Titolo principale (headline): enorme, caratteri bold condensed neri/rossi, due righe massimo:
+  "$titoloCampione"
+  seguita dal risultato "$scoreStr" in dimensione ancora maggiore, quasi come un numero da copertina.
+- Sottotitolo (occhiello): "Serata di $risultato — $dataStr"
+- Colonna sinistra: "MARCATORI: $goleadorStr"$topStr
+- Colonna destra: box "PREMI DELLA SERATA" con — MVP: ${mvpName.isNotEmpty ? mvpName : 'N/D'} / COMBATTIVO: ${hustleName.isNotEmpty ? hustleName : 'N/D'} / BEST GOAL: ${bestGoalName.isNotEmpty ? bestGoalName : 'N/D'}
+- Striscia in basso (tabellino): "BIANCHI: $teamALines | COLORATI: $teamBLines"
+- Tutto il testo deve essere in italiano, tipografia da giornale, nessun font fantasy o cartoon.
+- L'immagine deve sembrare una vera prima pagina stampata, non una grafica digitale.
+''';
+}
+
+  Future<void> _generateImage() async {
+    final apiKey = await _storage.read(key: _storageKey);
+    if (apiKey == null || apiKey.isEmpty) {
+      setState(() {
+        _errorMsg = "Chiave API OpenAI non trovata nelle impostazioni.";
+        _loading = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://api.openai.com/v1/images/generations'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-image-1',
+          'prompt': _buildImagePrompt(),
+          'n': 1,
+          'size': '1024x1536',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+  final data = jsonDecode(response.body);
+
+  final base64Image = data['data']?[0]?['b64_json'];
+
+  if (base64Image == null) {
+    setState(() {
+      _errorMsg = "Risposta API inattesa: base64Image mancante";
+      _loading = false;
+    });
+    return;
+  }
+
+  setState(() {
+    _base64Image = base64Image;
+    _loading = false;
+  });
+} else {
+  final error = jsonDecode(response.body);
+
+  setState(() {
+    _errorMsg = error['error']?['message'] ??
+        "Errore OpenAI (Status: ${response.statusCode})";
+    _loading = false;
+  });
+}
+    } catch (e) {
+      setState(() {
+        _errorMsg = "Errore di rete: $e";
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bg,
+      appBar: AppBar(
+        title: const FifaLabel('Copertina Illustrata AI', color: AppTheme.textPrimary, fontSize: 13),
+        backgroundColor: AppTheme.surface,
+      ),
+      body: Center(
+        child: _loading
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: AppTheme.accentGreen),
+                  const SizedBox(height: 16),
+                  Text(
+                    'DALL-E STA DIPINGENDO LA COPERTINA...',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              )
+            : _errorMsg != null
+                ? Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(_errorMsg!, style: const TextStyle(color: AppTheme.accentRed), textAlign: TextAlign.center),
+                  )
+                : SingleChildScrollView(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.memory(
+            base64Decode(_base64Image!),
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          "✦ Opera generata dall'intelligenza artificiale di OpenAI basata sui dati reali del match.",
+          style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontStyle: FontStyle.italic),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _saving ? null : _saveToGallery,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.black,
+                    ),
+                  )
+                : const Icon(Icons.download_rounded, color: Colors.black),
+            label: Text(
+              _saving ? 'SALVATAGGIO...' : 'SALVA NELLA GALLERIA',
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                fontSize: 13,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentGreen,
+              disabledBackgroundColor: AppTheme.accentGreen.withOpacity(0.4),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    ),
+  ),
+      ),
+    );
+  }
+
+  bool _saving = false;
+
+Future<void> _saveToGallery() async {
+  if (_base64Image == null) return;
+  setState(() => _saving = true);
+  try {
+    final bytes = base64Decode(_base64Image!);
+    final result = await ImageGallerySaver.saveImage(
+      bytes,
+      quality: 100,
+      name: 'calcetto_copertina_${DateTime.now().millisecondsSinceEpoch}',
+    );
+    final success = result['isSuccess'] == true;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
+          content: Text(
+            success
+                ? '✅ Copertina salvata nella galleria!'
+                : '❌ Salvataggio fallito: ${result['errorMessage'] ?? 'errore sconosciuto'}',
+            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.accentRed,
+          content: Text('❌ Errore: $e',
+              style: const TextStyle(color: Colors.black)),
+        ),
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _saving = false);
+  }
+}
 }
