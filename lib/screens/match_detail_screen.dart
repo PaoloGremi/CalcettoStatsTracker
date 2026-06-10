@@ -1585,21 +1585,83 @@ String _buildImagePrompt() {
 
   // ── Prompt finale ──────────────────────────────────────────────
   return '''
-Crea una PRIMA PAGINA realistica di un giornale sportivo italiano, formato portrait 3:4, stile autentico della Gazzetta dello Sport edizione 2026.
+Create a premium social media football match report graphic.
 
-LAYOUT OBBLIGATORIO:
-- Testata in cima: "GAZZETTA DEL CALCETTO" in caratteri condensed bold rosso e nero su sfondo bianco/crema, con la data "$dataStr" piccola sotto.
-- Sfondo complessivo: carta rosa acceso (#FF69A0 circa), grana tipografica visibile, leggera sgualcitura da stampa reale.
-- Foto centrale grande: scena di esultanza o duello aereo su un campo di calcetto indoor, luci da palazzetto, atmosfera intensa e drammatica. NON cartoon, NON illustrazione — stile fotografico realistico.
-- Titolo principale (headline): enorme, caratteri bold condensed neri/rossi, due righe massimo:
-  "$titoloCampione"
-  seguita dal risultato "$scoreStr" in dimensione ancora maggiore, quasi come un numero da copertina.
-- Sottotitolo (occhiello): "Serata di $risultato — $dataStr"
-- Colonna sinistra: "MARCATORI: $goleadorStr"$topStr
-- Colonna destra: box "PREMI DELLA SERATA" con — MVP: ${mvpName.isNotEmpty ? mvpName : 'N/D'} / COMBATTIVO: ${hustleName.isNotEmpty ? hustleName : 'N/D'} / BEST GOAL: ${bestGoalName.isNotEmpty ? bestGoalName : 'N/D'}
-- Striscia in basso (tabellino): "BIANCHI: $teamALines | COLORATI: $teamBLines"
-- Tutto il testo deve essere in italiano, tipografia da giornale, nessun font fantasy o cartoon.
-- L'immagine deve sembrare una vera prima pagina stampata, non una grafica digitale.
+Aspect ratio: 4:5 vertical.
+
+STYLE:
+Modern sports broadcast graphics.
+Champions League social media.
+EA Sports FC Ultimate Team.
+OneFootball premium.
+Sofascore premium.
+Ultra realistic.
+High-end sports branding.
+Clean layout.
+Professional design.
+
+MATCH DATA
+
+Date:
+$dataStr
+
+Final Score:
+BIANCHI ${m.scoreA} - ${m.scoreB} COLORATI
+
+Winner:
+${m.scoreA > m.scoreB ? 'BIANCHI' : m.scoreB > m.scoreA ? 'COLORATI' : 'DRAW'}
+
+MVP:
+${mvpName.isNotEmpty ? mvpName : 'N/A'}
+
+Best Goal:
+${bestGoalName.isNotEmpty ? bestGoalName : 'N/A'}
+
+Most Combative Player:
+${hustleName.isNotEmpty ? hustleName : 'N/A'}
+
+Scorers:
+$goleadorStr
+
+LAYOUT
+
+Top section:
+MATCH REPORT
+
+Center:
+Large final score
+
+Main visual:
+Dynamic futsal action scene.
+Victory celebration.
+Indoor football atmosphere.
+
+Award cards:
+MVP
+BEST GOAL
+COMBATIVE PLAYER
+
+Bottom section:
+Scorers list
+
+Small branding:
+Powered by Calcetto AI
+
+IMPORTANT
+
+Minimal text.
+Large typography.
+Very readable.
+No newspaper layout.
+No article columns.
+No long paragraphs.
+No excessive statistics.
+No tables.
+No clutter.
+
+Focus on visual impact, premium sports branding and social media shareability.
+
+Looks like an official post-match graphic published by UEFA, Champions League, EA Sports FC or OneFootball.
 ''';
 }
 
