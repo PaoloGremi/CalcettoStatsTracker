@@ -2,11 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../core/util/date_formatters.dart';
 import '../screens/match_promo_page.dart';
 import '../screens/fields_screen.dart';
 import '../services/data_service.dart';
-import '../models/player.dart';
-import '../widgets/player_avatar.dart';
+import '../widgets/fifa_card.dart';
+import '../widgets/team_selector.dart';
 import '../theme/app_theme.dart';
 
 class MatchPromoFormPage extends StatefulWidget {
@@ -30,7 +31,15 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
     super.dispose();
   }
 
-  static const _formats = ['3 vs 3', '4 vs 4', '5 vs 5', '6 vs 6', '8 vs 8', '9 vs 9', '11 vs 11'];
+  static const _formats = [
+    '3 vs 3',
+    '4 vs 4',
+    '5 vs 5',
+    '6 vs 6',
+    '8 vs 8',
+    '9 vs 9',
+    '11 vs 11'
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +56,17 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
         ? allFields.where((f) => f.id == fieldId).firstOrNull
         : null;
 
-    final teamAIds = selectedA.entries.where((e) => e.value).map((e) => e.key).toList();
-    final teamBIds = selectedB.entries.where((e) => e.value).map((e) => e.key).toList();
+    final teamAIds =
+        selectedA.entries.where((e) => e.value).map((e) => e.key).toList();
+    final teamBIds =
+        selectedB.entries.where((e) => e.value).map((e) => e.key).toList();
     final canGenerate = teamAIds.isNotEmpty && teamBIds.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Promuovi Partita', color: AppTheme.textPrimary, fontSize: 13),
+        title: const FifaLabel('Promuovi Partita',
+            color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppTheme.border),
@@ -63,10 +75,9 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
-
           // ── DATA E ORA ────────────────────────────────────────
           const FifaSectionHeader('Data e Ora'),
-          _FifaCard(
+          FifaCard(
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: () async {
@@ -90,19 +101,21 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                   const SizedBox(width: 12),
                   Text(
                     selectedDateTime != null
-                        ? DateFormat('EEE dd MMM yyyy · HH:mm', 'it_IT')
-                            .format(selectedDateTime!)
+                        ? formatFullDateTime(selectedDateTime!)
                         : 'Seleziona data e ora',
                     style: TextStyle(
                       color: selectedDateTime != null
-                          ? AppTheme.textPrimary : AppTheme.textMuted,
+                          ? AppTheme.textPrimary
+                          : AppTheme.textMuted,
                       fontSize: 13,
                       fontWeight: selectedDateTime != null
-                          ? FontWeight.w700 : FontWeight.normal,
+                          ? FontWeight.w700
+                          : FontWeight.normal,
                     ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 18),
+                  const Icon(Icons.chevron_right,
+                      color: AppTheme.textMuted, size: 18),
                 ],
               ),
             ),
@@ -128,7 +141,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                 width: double.infinity,
               ),
             ),
-          _FifaCard(
+          FifaCard(
             child: Column(
               children: [
                 // ── Selettore campo ──────────────────────────────
@@ -159,7 +172,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                               ),
                             )
                           : DropdownButtonFormField<String>(
-                              value: fieldId,
+                              initialValue: fieldId,
                               dropdownColor: AppTheme.surfaceAlt,
                               decoration: const InputDecoration(
                                 labelText: 'CAMPO',
@@ -178,8 +191,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             if (f.imagePath != null &&
-                                                File(f.imagePath!)
-                                                    .existsSync())
+                                                File(f.imagePath!).existsSync())
                                               Container(
                                                 width: 28,
                                                 height: 28,
@@ -235,16 +247,16 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const FieldsScreen()),
+                        MaterialPageRoute(builder: (_) => const FieldsScreen()),
                       ).then((_) => setState(() {})),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentGreen.withOpacity(0.1),
+                          color: AppTheme.accentGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppTheme.accentGreen.withOpacity(0.35)),
+                              color:
+                                  AppTheme.accentGreen.withValues(alpha: 0.35)),
                         ),
                         child: const Icon(Icons.add_location_alt_rounded,
                             color: AppTheme.accentGreen, size: 18),
@@ -254,34 +266,45 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                 ),
                 const FifaDivider(),
                 DropdownButtonFormField<String>(
-                  value: numberOfPlayers,
+                  initialValue: numberOfPlayers,
                   dropdownColor: AppTheme.surfaceAlt,
                   decoration: const InputDecoration(
                     labelText: 'FORMATO',
-                    border: InputBorder.none, enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none, contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
                   ),
-                  items: _formats.map((f) => DropdownMenuItem(
-                    value: f,
-                    child: Text(f, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
-                  )).toList(),
+                  items: _formats
+                      .map((f) => DropdownMenuItem(
+                            value: f,
+                            child: Text(f,
+                                style: const TextStyle(
+                                    color: AppTheme.textPrimary, fontSize: 13)),
+                          ))
+                      .toList(),
                   onChanged: (v) => setState(() => numberOfPlayers = v),
                 ),
                 const FifaDivider(),
                 Row(
                   children: [
-                    const Icon(Icons.euro_rounded, color: AppTheme.accentGreen, size: 18),
+                    const Icon(Icons.euro_rounded,
+                        color: AppTheme.accentGreen, size: 18),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
                         controller: _prezzoCtrl,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(color: AppTheme.textPrimary,
-                            fontSize: 13, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700),
                         decoration: const InputDecoration(
                           labelText: 'PREZZO A PERSONA',
-                          border: InputBorder.none, enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none, contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
                         ),
                       ),
                     ),
@@ -292,8 +315,9 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
           ),
 
           // ── SQUADRA BIANCA ────────────────────────────────────
-          FifaSectionHeader('Maglia Bianca (${teamAIds.length})', accent: AppTheme.accentBlue),
-          _TeamSelector(
+          FifaSectionHeader('Maglia Bianca (${teamAIds.length})',
+              accent: AppTheme.accentBlue),
+          TeamSelector(
             players: players,
             selected: selectedA,
             accent: AppTheme.accentBlue,
@@ -304,8 +328,9 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
           ),
 
           // ── SQUADRA COLORATA ──────────────────────────────────
-          FifaSectionHeader('Maglia Colorata (${teamBIds.length})', accent: AppTheme.accentOrange),
-          _TeamSelector(
+          FifaSectionHeader('Maglia Colorata (${teamBIds.length})',
+              accent: AppTheme.accentOrange),
+          TeamSelector(
             players: players,
             selected: selectedB,
             accent: AppTheme.accentOrange,
@@ -326,7 +351,9 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
           color: AppTheme.surface,
           border: Border(
             top: BorderSide(
-              color: canGenerate ? AppTheme.accentGreen.withOpacity(0.3) : AppTheme.border,
+              color: canGenerate
+                  ? AppTheme.accentGreen.withValues(alpha: 0.3)
+                  : AppTheme.border,
             ),
           ),
         ),
@@ -341,7 +368,8 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                       builder: (_) => MatchPromoPage(
                         dataOra: formattedDate,
                         fieldModel: selectedField,
-                        prezzo: _prezzoCtrl.text.isEmpty ? '—' : _prezzoCtrl.text,
+                        prezzo:
+                            _prezzoCtrl.text.isEmpty ? '—' : _prezzoCtrl.text,
                         nGiocatori: numberOfPlayers ?? '5 vs 5',
                         teamWhite: teamAIds,
                         teamBlack: teamBIds,
@@ -351,7 +379,8 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                 }
               : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: canGenerate ? AppTheme.accentGreen : AppTheme.border,
+            backgroundColor:
+                canGenerate ? AppTheme.accentGreen : AppTheme.border,
             foregroundColor: canGenerate ? Colors.black : AppTheme.textMuted,
           ),
           child: const Row(
@@ -362,388 +391,6 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
               Text('GENERA LOCANDINA'),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Widget locali
-// ─────────────────────────────────────────────────────────────
-
-class _FifaCard extends StatelessWidget {
-  final Widget child;
-  const _FifaCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: AppTheme.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppTheme.border),
-    ),
-    child: child,
-  );
-}
-
-class _TeamSelector extends StatefulWidget {
-  final List<Player> players;
-  final Map<String, bool> selected;
-  final Color accent;
-  final void Function(String, bool) onToggle;
-  const _TeamSelector({
-    required this.players, required this.selected,
-    required this.accent, required this.onToggle,
-  });
-
-  @override
-  State<_TeamSelector> createState() => _TeamSelectorState();
-}
-
-class _TeamSelectorState extends State<_TeamSelector> {
-  void _openPicker() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _PlayerPickerSheet(
-        players: widget.players,
-        selected: widget.selected,
-        accent: widget.accent,
-        onToggle: (id, val) {
-          widget.onToggle(id, val);
-          setState(() {});
-        },
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedPlayers = widget.players
-        .where((p) => widget.selected[p.id] == true)
-        .toList();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Bottone apri selezione ────────────────────────────
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: _openPicker,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-              child: Row(
-                children: [
-                  Icon(Icons.group_add_rounded, color: widget.accent, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      selectedPlayers.isEmpty
-                          ? 'Seleziona giocatori…'
-                          : '${selectedPlayers.length} giocator${selectedPlayers.length == 1 ? 'e' : 'i'} selezionat${selectedPlayers.length == 1 ? 'o' : 'i'}',
-                      style: TextStyle(
-                        color: selectedPlayers.isEmpty
-                            ? AppTheme.textMuted
-                            : AppTheme.textPrimary,
-                        fontSize: 13,
-                        fontWeight: selectedPlayers.isEmpty
-                            ? FontWeight.normal
-                            : FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.expand_more_rounded, color: widget.accent, size: 22),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Chips giocatori selezionati ───────────────────────
-          if (selectedPlayers.isNotEmpty) ...[
-            Container(height: 1, color: AppTheme.border,
-                margin: const EdgeInsets.symmetric(horizontal: 14)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: selectedPlayers.map((p) => GestureDetector(
-                  onTap: () {
-                    widget.onToggle(p.id, false);
-                    setState(() {});
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: widget.accent.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: widget.accent.withOpacity(0.4)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        PlayerAvatar(player: p, radius: 10),
-                        const SizedBox(width: 6),
-                        Text(
-                          p.name.toUpperCase(),
-                          style: TextStyle(
-                            color: widget.accent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(Icons.close_rounded, size: 12, color: widget.accent),
-                      ],
-                    ),
-                  ),
-                )).toList(),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Bottom sheet con ricerca e lista giocatori
-// ─────────────────────────────────────────────────────────────
-class _PlayerPickerSheet extends StatefulWidget {
-  final List<Player> players;
-  final Map<String, bool> selected;
-  final Color accent;
-  final void Function(String, bool) onToggle;
-
-  const _PlayerPickerSheet({
-    required this.players, required this.selected,
-    required this.accent, required this.onToggle,
-  });
-
-  @override
-  State<_PlayerPickerSheet> createState() => _PlayerPickerSheetState();
-}
-
-class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = widget.players
-        .where((p) => p.name.toLowerCase().contains(_query.toLowerCase()))
-        .toList();
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // ── Handle ───────────────────────────────────────────
-            Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 4),
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
-            // ── Titolo ───────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(Icons.group_rounded, color: widget.accent, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Seleziona giocatori',
-                    style: TextStyle(
-                      color: widget.accent,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const Spacer(),
-                  // Contatore selezionati
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: widget.accent.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${widget.selected.values.where((v) => v).length} sel.',
-                      style: TextStyle(
-                        color: widget.accent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Barra di ricerca ─────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.bg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.border),
-                ),
-                child: TextField(
-                  controller: _searchCtrl,
-                  autofocus: true,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary, fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Cerca giocatore…',
-                    hintStyle: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        color: AppTheme.textMuted, size: 18),
-                    suffixIcon: _query.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () {
-                              _searchCtrl.clear();
-                              setState(() => _query = '');
-                            },
-                            child: const Icon(Icons.close_rounded,
-                                color: AppTheme.textMuted, size: 16),
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onChanged: (v) => setState(() => _query = v),
-                ),
-              ),
-            ),
-
-            Container(height: 1, color: AppTheme.border),
-
-            // ── Lista giocatori ───────────────────────────────────
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Nessun giocatore trovato',
-                        style: const TextStyle(
-                            color: AppTheme.textMuted, fontSize: 13),
-                      ),
-                    )
-                  : ListView.separated(
-                      controller: scrollController,
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => Container(
-                        height: 1, color: AppTheme.border,
-                        margin: const EdgeInsets.symmetric(horizontal: 14),
-                      ),
-                      itemBuilder: (_, i) {
-                        final p = filtered[i];
-                        final isSelected = widget.selected[p.id] ?? false;
-                        return InkWell(
-                          onTap: () {
-                            widget.onToggle(p.id, !isSelected);
-                            _searchCtrl.clear();
-                            setState(() => _query = '');
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 11),
-                            child: Row(
-                              children: [
-                                PlayerAvatar(player: p, radius: 18),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    p.name.toUpperCase(),
-                                    style: TextStyle(
-                                      color: isSelected
-                                          ? AppTheme.textPrimary
-                                          : AppTheme.textSecondary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  ),
-                                ),
-                                FifaBadge(p.role,
-                                    color: isSelected
-                                        ? widget.accent
-                                        : AppTheme.textMuted),
-                                const SizedBox(width: 10),
-                                Container(
-                                  width: 22, height: 22,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isSelected
-                                        ? widget.accent
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? widget.accent
-                                          : AppTheme.border,
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: isSelected
-                                      ? const Icon(Icons.check_rounded,
-                                          size: 14, color: Colors.black)
-                                      : null,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-
-            // ── Bottone chiudi ────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppTheme.border)),
-              ),
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.accent,
-                  foregroundColor: Colors.black,
-                ),
-                child: const Text('CONFERMA'),
-              ),
-            ),
-          ],
         ),
       ),
     );

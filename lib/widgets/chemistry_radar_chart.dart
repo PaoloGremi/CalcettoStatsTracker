@@ -5,20 +5,20 @@
 // inversamente proporzionale al voto medio ottenuto con/contro.
 // ─────────────────────────────────────────────────────────────
 
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import '../models/player.dart';
+import 'package:provider/provider.dart';
+import '../models/player_model.dart';
 import '../models/match_model.dart';
-import '../data/hive_boxes.dart';
+import '../services/data_service.dart';
 import '../theme/app_theme.dart';
 import 'player_avatar.dart';
 
 // ── Dati aggregati per un singolo peer ───────────────────────
 
 class _PeerStat {
-  final Player peer;
+  final PlayerModel peer;
   int gamesCount = 0;
   double totalVote = 0;
   int votesCount = 0;
@@ -30,7 +30,8 @@ class _PeerStat {
   /// Distanza normalizzata [0,1]:
   /// voto alto  → distanza bassa (vicino al centro)
   /// voto basso → distanza alta (lontano dal centro)
-  double normalizedDistance({required double minVote, required double maxVote}) {
+  double normalizedDistance(
+      {required double minVote, required double maxVote}) {
     if (votesCount == 0) return 0.88; // senza voti → quasi al bordo
     if (maxVote == minVote) return 0.5;
     final normalized = (avgVote - minVote) / (maxVote - minVote); // 0..1
@@ -42,7 +43,7 @@ class _PeerStat {
 
 class ChemistryRadarChart extends StatefulWidget {
   final List<MatchModel> matches;
-  final Player player;
+  final PlayerModel player;
 
   const ChemistryRadarChart({
     required this.matches,
@@ -59,8 +60,9 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
   String? _tappedId;
 
   List<_PeerStat> _buildStats() {
+    final data = Provider.of<DataService>(context, listen: false);
     final allPlayers = {
-      for (final p in HiveBoxes.playersBox.values) p.id: p,
+      for (final p in data.getAllPlayers()) p.id: p,
     };
 
     final stats = <String, _PeerStat>{};
@@ -144,7 +146,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
             child: Text(
               'Più vicino al centro = voto medio più alto',
               style: TextStyle(
-                color: AppTheme.textMuted.withOpacity(0.55),
+                color: AppTheme.textMuted.withValues(alpha: 0.55),
                 fontSize: 9,
                 fontStyle: FontStyle.italic,
               ),
@@ -161,8 +163,8 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
                   _showTeammates
                       ? 'Nessun compagno trovato.'
                       : 'Nessun avversario trovato.',
-                  style: const TextStyle(
-                      color: AppTheme.textMuted, fontSize: 12),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 ),
               ),
             )
@@ -194,7 +196,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
                 child: Text(
                   'Tocca un avatar per i dettagli',
                   style: TextStyle(
-                    color: AppTheme.textMuted.withOpacity(0.55),
+                    color: AppTheme.textMuted.withValues(alpha: 0.55),
                     fontSize: 9,
                   ),
                 ),
@@ -234,7 +236,11 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
               border: Border.all(color: accentColor, width: 1.5),
             ),
             child: ClipOval(
-              child: PlayerAvatar(player: stat.peer, radius: 22),
+              child: PlayerAvatar(
+                  name: stat.peer.name,
+                  icon: stat.peer.icon,
+                  imagePath: stat.peer.imagePath,
+                  radius: 22),
             ),
           ),
           const SizedBox(width: 12),
@@ -282,7 +288,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
               Text(
                 'VOTO MEDIO',
                 style: TextStyle(
-                    color: voteColor.withOpacity(0.6),
+                    color: voteColor.withValues(alpha: 0.6),
                     fontSize: 8,
                     fontWeight: FontWeight.w700),
               ),
@@ -350,10 +356,9 @@ class _Tab extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: active ? color.withOpacity(0.18) : Colors.transparent,
+            color: active ? color.withValues(alpha: 0.18) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
@@ -371,7 +376,7 @@ class _Tab extends StatelessWidget {
 // ── Layout radiale ────────────────────────────────────────────
 
 class _RadialLayout extends StatelessWidget {
-  final Player centerPlayer;
+  final PlayerModel centerPlayer;
   final List<_PeerStat> peers;
   final Color accentColor;
   final String? tappedId;
@@ -419,8 +424,7 @@ class _RadialLayout extends StatelessWidget {
               ...peers.asMap().entries.map((entry) {
                 final i = entry.key;
                 final stat = entry.value;
-                final angle =
-                    (2 * math.pi / peers.length) * i - math.pi / 2;
+                final angle = (2 * math.pi / peers.length) * i - math.pi / 2;
                 final dist = stat.normalizedDistance(
                   minVote: minVote,
                   maxVote: maxVote,
@@ -482,13 +486,13 @@ class _RingsPainter extends CustomPainter {
       ..strokeWidth = 1;
 
     final radialPaint = Paint()
-      ..color = accentColor.withOpacity(0.05)
+      ..color = accentColor.withValues(alpha: 0.05)
       ..strokeWidth = 0.8;
 
     // 4 cerchi
     for (int i = 1; i <= 4; i++) {
       final r = maxR * (i / 4);
-      ringPaint.color = accentColor.withOpacity(i == 4 ? 0.12 : 0.07);
+      ringPaint.color = accentColor.withValues(alpha: i == 4 ? 0.12 : 0.07);
       canvas.drawCircle(center, r, ringPaint);
     }
 
@@ -511,7 +515,7 @@ class _RingsPainter extends CustomPainter {
 // ── Avatar centrale ───────────────────────────────────────────
 
 class _CenterAvatar extends StatelessWidget {
-  final Player player;
+  final PlayerModel player;
   final double radius;
   final Color accentColor;
 
@@ -530,14 +534,18 @@ class _CenterAvatar extends StatelessWidget {
           border: Border.all(color: accentColor, width: 2.5),
           boxShadow: [
             BoxShadow(
-              color: accentColor.withOpacity(0.4),
+              color: accentColor.withValues(alpha: 0.4),
               blurRadius: 14,
               spreadRadius: 2,
             ),
           ],
         ),
         child: ClipOval(
-          child: PlayerAvatar(player: player, radius: radius),
+          child: PlayerAvatar(
+              name: player.name,
+              icon: player.icon,
+              imagePath: player.imagePath,
+              radius: radius),
         ),
       );
 }
@@ -566,9 +574,10 @@ class _PeerAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasVote = stat.votesCount > 0;
-    final voteColor =
-        hasVote ? _voteColor(stat.avgVote) : AppTheme.textMuted;
-    final borderColor = isTapped ? voteColor : (hasVote ? voteColor : accentColor.withOpacity(0.35));
+    final voteColor = hasVote ? _voteColor(stat.avgVote) : AppTheme.textMuted;
+    final borderColor = isTapped
+        ? voteColor
+        : (hasVote ? voteColor : accentColor.withValues(alpha: 0.35));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -586,20 +595,24 @@ class _PeerAvatar extends StatelessWidget {
             boxShadow: isTapped
                 ? [
                     BoxShadow(
-                      color: voteColor.withOpacity(0.45),
+                      color: voteColor.withValues(alpha: 0.45),
                       blurRadius: 10,
                       spreadRadius: 1,
                     )
                   ]
                 : [
                     BoxShadow(
-                      color: borderColor.withOpacity(0.2),
+                      color: borderColor.withValues(alpha: 0.2),
                       blurRadius: 4,
                     )
                   ],
           ),
           child: ClipOval(
-            child: PlayerAvatar(player: stat.peer, radius: radius),
+            child: PlayerAvatar(
+                name: stat.peer.name,
+                icon: stat.peer.icon,
+                imagePath: stat.peer.imagePath,
+                radius: radius),
           ),
         ),
         const SizedBox(height: 2),
@@ -610,9 +623,8 @@ class _PeerAvatar extends StatelessWidget {
             color: AppTheme.bg,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: hasVote
-                  ? voteColor.withOpacity(0.5)
-                  : AppTheme.border,
+              color:
+                  hasVote ? voteColor.withValues(alpha: 0.5) : AppTheme.border,
               width: 0.8,
             ),
           ),

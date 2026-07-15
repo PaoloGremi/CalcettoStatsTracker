@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../core/network/openai_service.dart';
+import '../core/util/date_formatters.dart';
+import '../core/util/player_lookup.dart';
 import '../models/match_model.dart';
-import '../data/hive_boxes.dart';
+import '../services/data_service.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
@@ -32,16 +34,13 @@ class MatchDetailScreen extends StatelessWidget {
     return 'Pareggio';
   }
 
-  String _resolveName(String playerId) {
-    if (playerId.isEmpty) return '';
-    return HiveBoxes.playersBox.get(playerId)?.name ?? playerId;
-  }
+  String _resolveName(String playerId) => resolvePlayerName(playerId);
 
   @override
   Widget build(BuildContext context) {
     final accent = _resultAccent();
-    final date = DateFormat('EEEE dd MMMM yyyy · HH:mm', 'it_IT')
-        .format(match.date);
+    final date =
+        DateFormat('EEEE dd MMMM yyyy · HH:mm', 'it_IT').format(match.date);
     final mvpName = _resolveName(match.mvp);
     final hustleName = _resolveName(match.hustlePlayer);
     final bestGoalName = _resolveName(match.bestGoalPlayer);
@@ -54,8 +53,8 @@ class MatchDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Prima Pagina',
-            icon: const Icon(Icons.newspaper_rounded,
-                color: AppTheme.accentGold),
+            icon:
+                const Icon(Icons.newspaper_rounded, color: AppTheme.accentGold),
             onPressed: () => _showGenerationMenu(context),
           ),
         ],
@@ -72,10 +71,9 @@ class MatchDetailScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppTheme.surface,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: accent.withOpacity(0.3)),
+              border: Border.all(color: accent.withValues(alpha: 0.3)),
               boxShadow: [
-                BoxShadow(
-                    color: accent.withOpacity(0.12), blurRadius: 20)
+                BoxShadow(color: accent.withValues(alpha: 0.12), blurRadius: 20)
               ],
             ),
             padding: const EdgeInsets.all(20),
@@ -86,25 +84,27 @@ class MatchDetailScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _ScoreBox(match.scoreA, accent,
-                        match.scoreA > match.scoreB),
+                    _ScoreBox(
+                        match.scoreA, accent, match.scoreA > match.scoreB),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(':',
-                        style: TextStyle(
-                            color: accent.withOpacity(0.4),
-                            fontSize: 36,
-                            fontWeight: FontWeight.w200)),
+                          style: TextStyle(
+                              color: accent.withValues(alpha: 0.4),
+                              fontSize: 36,
+                              fontWeight: FontWeight.w200)),
                     ),
-                    _ScoreBox(match.scoreB, accent,
-                        match.scoreB > match.scoreA),
+                    _ScoreBox(
+                        match.scoreB, accent, match.scoreB > match.scoreA),
                   ],
                 ),
                 const SizedBox(height: 14),
                 FifaBadge(_resultLabel(), color: accent),
 
                 // Premi
-                if (mvpName.isNotEmpty || hustleName.isNotEmpty || bestGoalName.isNotEmpty) ...[
+                if (mvpName.isNotEmpty ||
+                    hustleName.isNotEmpty ||
+                    bestGoalName.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Container(height: 1, color: AppTheme.border),
                   const SizedBox(height: 14),
@@ -114,9 +114,11 @@ class MatchDetailScreen extends StatelessWidget {
                       if (mvpName.isNotEmpty)
                         _AwardChip('👑', 'MVP', mvpName, AppTheme.accentGold),
                       if (hustleName.isNotEmpty)
-                        _AwardChip('🔥', 'COMBATTIVO', hustleName, AppTheme.accentOrange),
+                        _AwardChip('🔥', 'COMBATTIVO', hustleName,
+                            AppTheme.accentOrange),
                       if (bestGoalName.isNotEmpty)
-                        _AwardChip('⚽', 'BEST GOAL', bestGoalName, AppTheme.accentGreen),
+                        _AwardChip('⚽', 'BEST GOAL', bestGoalName,
+                            AppTheme.accentGreen),
                     ],
                   ),
                 ],
@@ -141,137 +143,152 @@ class MatchDetailScreen extends StatelessWidget {
       ),
     );
   }
+
   void _showGenerationMenu(BuildContext pageContext) {
-  showModalBottomSheet(
-    context: pageContext,
-    backgroundColor: AppTheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Center(
-                child: FifaLabel(
-                  'Scegli il formato della Prima Pagina',
-                  color: AppTheme.textPrimary,
-                  fontSize: 14,
+    showModalBottomSheet(
+      context: pageContext,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Center(
+                  child: FifaLabel(
+                    'Scegli il formato della Prima Pagina',
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              ListTile(
-                leading: const Icon(Icons.article_rounded, color: AppTheme.accentGold, size: 28),
-                title: const Text(
-                  'Cronaca Testuale AI',
-                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text(
-                  'Genera il testo in stile Gazzetta dello Sport',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                ),
-                trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.of(pageContext).push(
-                    MaterialPageRoute(
-                      builder: (_) => MatchNewspaperScreen(match: match),
-                    ),
-                  );
-                },
-              ),
-              const Divider(color: AppTheme.border, height: 20),
-              ListTile(
-                leading: const Icon(Icons.image_rounded, color: AppTheme.accentGreen, size: 28),
-                title: const Text(
-                  'Copertina Illustrata AI',
-                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text(
-                  'Genera una vignetta/immagine epica della partita',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                ),
-                trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  showDialog(
-                    context: pageContext,
-                    builder: (dialogContext) => AlertDialog(
-                      backgroundColor: AppTheme.surface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: AppTheme.accentGreen.withOpacity(0.3)),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: const Icon(Icons.article_rounded,
+                      color: AppTheme.accentGold, size: 28),
+                  title: const Text(
+                    'Cronaca Testuale AI',
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Genera il testo in stile Gazzetta dello Sport',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppTheme.textMuted),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(pageContext).push(
+                      MaterialPageRoute(
+                        builder: (_) => MatchNewspaperScreen(match: match),
                       ),
-                      title: const Row(
-                        children: [
-                          Icon(Icons.image_rounded, color: AppTheme.accentGreen, size: 20),
-                          SizedBox(width: 8),
-                          FifaLabel('GENERA COPERTINA AI',
-                              color: AppTheme.textPrimary, fontSize: 13),
+                    );
+                  },
+                ),
+                const Divider(color: AppTheme.border, height: 20),
+                ListTile(
+                  leading: const Icon(Icons.image_rounded,
+                      color: AppTheme.accentGreen, size: 28),
+                  title: const Text(
+                    'Copertina Illustrata AI',
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'Genera una vignetta/immagine epica della partita',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  trailing: const Icon(Icons.chevron_right,
+                      color: AppTheme.textMuted),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    showDialog(
+                      context: pageContext,
+                      builder: (dialogContext) => AlertDialog(
+                        backgroundColor: AppTheme.surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                              color:
+                                  AppTheme.accentGreen.withValues(alpha: 0.3)),
+                        ),
+                        title: const Row(
+                          children: [
+                            Icon(Icons.image_rounded,
+                                color: AppTheme.accentGreen, size: 20),
+                            SizedBox(width: 8),
+                            FifaLabel('GENERA COPERTINA AI',
+                                color: AppTheme.textPrimary, fontSize: 13),
+                          ],
+                        ),
+                        content: const Text(
+                          'Verrà generata un\'immagine tramite DALL·E (gpt-image-1).\n\n'
+                          'Ogni generazione ha un costo non irrisorio sulla tua chiave API OpenAI. '
+                          'Vuoi procedere?',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text(
+                              'ANNULLA',
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(dialogContext);
+                              Navigator.of(pageContext).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      MatchImageGenerationScreen(match: match),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentGreen,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'GENERA',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      content: const Text(
-                        'Verrà generata un\'immagine tramite DALL·E (gpt-image-1).\n\n'
-                        'Ogni generazione ha un costo non irrisorio sulla tua chiave API OpenAI. '
-                        'Vuoi procedere?',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                          height: 1.5,
-                        ),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text(
-                            'ANNULLA',
-                            style: TextStyle(
-                              color: AppTheme.textMuted,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(dialogContext);
-                            Navigator.of(pageContext).push(
-                              MaterialPageRoute(
-                                builder: (_) => MatchImageGenerationScreen(match: match),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accentGreen,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'GENERA',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 }
 
 class _ScoreBox extends StatelessWidget {
@@ -282,29 +299,28 @@ class _ScoreBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 70, height: 70,
-    decoration: BoxDecoration(
-      color: isWinner
-          ? accent.withOpacity(0.12)
-          : AppTheme.surfaceAlt,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: isWinner
-            ? accent.withOpacity(0.55)
-            : AppTheme.border,
-        width: isWinner ? 2 : 1,
-      ),
-    ),
-    alignment: Alignment.center,
-    child: Text('$score',
-      style: TextStyle(
-        color: isWinner ? accent : AppTheme.textMuted,
-        fontSize: 40,
-        fontWeight: FontWeight.w900,
-        height: 1,
-      ),
-    ),
-  );
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          color:
+              isWinner ? accent.withValues(alpha: 0.12) : AppTheme.surfaceAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isWinner ? accent.withValues(alpha: 0.55) : AppTheme.border,
+            width: isWinner ? 2 : 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '$score',
+          style: TextStyle(
+            color: isWinner ? accent : AppTheme.textMuted,
+            fontSize: 40,
+            fontWeight: FontWeight.w900,
+            height: 1,
+          ),
+        ),
+      );
 }
 
 class _AwardChip extends StatelessWidget {
@@ -314,15 +330,15 @@ class _AwardChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-    children: [
-      Text(emoji, style: const TextStyle(fontSize: 22)),
-      const SizedBox(height: 4),
-      FifaLabel(label, color: color.withOpacity(0.6), fontSize: 9),
-      Text(name,
-        style: TextStyle(
-            color: color, fontSize: 13, fontWeight: FontWeight.w800)),
-    ],
-  );
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(height: 4),
+          FifaLabel(label, color: color.withValues(alpha: 0.6), fontSize: 9),
+          Text(name,
+              style: TextStyle(
+                  color: color, fontSize: 13, fontWeight: FontWeight.w800)),
+        ],
+      );
 }
 
 class _PlayerDetailTile extends StatelessWidget {
@@ -330,13 +346,12 @@ class _PlayerDetailTile extends StatelessWidget {
   final MatchModel match;
   final Color Function(double) voteColor;
   const _PlayerDetailTile(
-      {required this.playerId,
-      required this.match,
-      required this.voteColor});
+      {required this.playerId, required this.match, required this.voteColor});
 
   @override
   Widget build(BuildContext context) {
-    final player = HiveBoxes.playersBox.get(playerId);
+    final player = Provider.of<DataService>(context, listen: false)
+        .getPlayerById(playerId);
     final name = player?.name ?? 'Sconosciuto';
     final role = player?.role ?? '';
     final voto = match.votes[playerId] ?? 0.0;
@@ -354,11 +369,11 @@ class _PlayerDetailTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isMvp
-              ? AppTheme.accentGold.withOpacity(0.4)
+              ? AppTheme.accentGold.withValues(alpha: 0.4)
               : isHustle
-                  ? AppTheme.accentOrange.withOpacity(0.4)
+                  ? AppTheme.accentOrange.withValues(alpha: 0.4)
                   : isBestGoal
-                      ? AppTheme.accentGreen.withOpacity(0.4)
+                      ? AppTheme.accentGreen.withValues(alpha: 0.4)
                       : AppTheme.border,
         ),
       ),
@@ -367,10 +382,13 @@ class _PlayerDetailTile extends StatelessWidget {
         child: Row(
           children: [
             if (player != null)
-              PlayerAvatar(player: player, radius: 22)
+              PlayerAvatar(
+                  name: player.name,
+                  icon: player.icon,
+                  imagePath: player.imagePath,
+                  radius: 22)
             else
-              const CircleAvatar(
-                  radius: 22, child: Icon(Icons.person)),
+              const CircleAvatar(radius: 22, child: Icon(Icons.person)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -379,11 +397,11 @@ class _PlayerDetailTile extends StatelessWidget {
                   Row(
                     children: [
                       Text(name.toUpperCase(),
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2)),
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2)),
                       const SizedBox(width: 6),
                       FifaBadge(role, color: AppTheme.accentBlue),
                       if (isMvp) ...[
@@ -421,10 +439,10 @@ class _PlayerDetailTile extends StatelessWidget {
                   if (commento.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text('"$commento"',
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic)),
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic)),
                   ],
                 ],
               ),
@@ -432,19 +450,20 @@ class _PlayerDetailTile extends StatelessWidget {
             const SizedBox(width: 10),
             if (voto > 0)
               Container(
-                width: 50, height: 50,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: accent.withOpacity(0.1),
+                  color: accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: accent.withOpacity(0.4), width: 1.5),
+                      color: accent.withValues(alpha: 0.4), width: 1.5),
                 ),
                 alignment: Alignment.center,
                 child: Text(voto.toStringAsFixed(1),
-                  style: TextStyle(
-                      color: accent,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900)),
+                    style: TextStyle(
+                        color: accent,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900)),
               ),
           ],
         ),
@@ -484,19 +503,14 @@ class MatchNewspaperScreen extends StatefulWidget {
 }
 
 class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
-  static const _storage = FlutterSecureStorage();
-  static const _storageKey = 'openai_api_key';
+  final _openAiService = OpenAiService();
 
   _NewspaperContent? _content;
   bool _loading = true;
-  String? _errorMsg;
 
   // ── helpers ──────────────────────────────────────────────────
 
-  String _resolveName(String id) {
-    if (id.isEmpty) return '';
-    return HiveBoxes.playersBox.get(id)?.name ?? id;
-  }
+  String _resolveName(String id) => resolvePlayerName(id);
 
   String _resultLabel() {
     if (widget.match.scoreA > widget.match.scoreB) return 'Vittoria Bianchi';
@@ -512,7 +526,8 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
     if (widget.match.scoreA == widget.match.scoreB) {
       headline = 'NESSUNO VINCE, NESSUNO PERDE';
     } else {
-      final winner = widget.match.scoreA > widget.match.scoreB ? 'BIANCHI' : 'COLORATI';
+      final winner =
+          widget.match.scoreA > widget.match.scoreB ? 'BIANCHI' : 'COLORATI';
       if (diff >= 4) {
         headline = '$winner DA URLO!';
       } else if (diff >= 2) {
@@ -534,25 +549,25 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
 
   // Costruisce il prompt con tutti i dati della partita
   String _buildPrompt() {
-  final m = widget.match;
+    final m = widget.match;
 
-  String teamSection(List<String> ids) {
-    return ids.map((id) {
-      final name = _resolveName(id);
-      final voto = m.votes[id] ?? 0.0;
-      final gol = m.goals[id] ?? 0;
-      final commento = m.comments[id] ?? '';
-      final isMvp = m.mvp == id ? ' [MVP]' : '';
-      final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
-      final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
-      return '  - id:"$id" nome:"$name"$isMvp$isHustle$isBG'
-          ' voto:${voto > 0 ? voto.toStringAsFixed(1) : "N/D"}'
-          '${gol > 0 ? " gol:$gol" : ""}'
-          '${commento.isNotEmpty ? ' commento_originale:"$commento"' : ""}';
-    }).join('\n');
-  }
+    String teamSection(List<String> ids) {
+      return ids.map((id) {
+        final name = _resolveName(id);
+        final voto = m.votes[id] ?? 0.0;
+        final gol = m.goals[id] ?? 0;
+        final commento = m.comments[id] ?? '';
+        final isMvp = m.mvp == id ? ' [MVP]' : '';
+        final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
+        final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
+        return '  - id:"$id" nome:"$name"$isMvp$isHustle$isBG'
+            ' voto:${voto > 0 ? voto.toStringAsFixed(1) : "N/D"}'
+            '${gol > 0 ? " gol:$gol" : ""}'
+            '${commento.isNotEmpty ? ' commento_originale:"$commento"' : ""}';
+      }).join('\n');
+    }
 
-  return '''
+    return '''
 Sei il cronista de "La Gazzetta del Calcetto", stile Gazzetta dello Sport: drammatico, colorito, metafore calcistiche, aggettivi forti.
 
 DATI PARTITA:
@@ -577,29 +592,22 @@ Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick):
 }
 Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti sopra.
 ''';
-}
+  }
+
   // Chiamata OpenAI
   Future<void> _generateAiContent(String apiKey) async {
-  try {
-    final response = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4o-mini',
-        'messages': [
+    try {
+      final content = await _openAiService.chatCompletion(
+        apiKey: apiKey,
+        model: 'gpt-4o-mini',
+        maxTokens: 1200, // aumentato per contenere le pagelle
+        temperature: 0.85,
+        messages: [
           {'role': 'user', 'content': _buildPrompt()}
         ],
-        'max_tokens': 1200,   // aumentato per contenere le pagelle
-        'temperature': 0.85,
-      }),
-    );
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final raw = (data['choices'][0]['message']['content'] as String).trim();
+      final raw = content.trim();
       final clean = raw
           .replaceAll(RegExp(r'^```json\s*', multiLine: true), '')
           .replaceAll(RegExp(r'```$', multiLine: true), '')
@@ -624,13 +632,11 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
           _loading = false;
         });
       }
-    } else {
+    } catch (e) {
       _setStaticFallback();
     }
-  } catch (e) {
-    _setStaticFallback();
   }
-}
+
   void _setStaticFallback() {
     if (mounted) {
       setState(() {
@@ -647,7 +653,7 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
   }
 
   Future<void> _init() async {
-    final apiKey = await _storage.read(key: _storageKey);
+    final apiKey = await _openAiService.readApiKey();
     if (apiKey != null && apiKey.isNotEmpty) {
       await _generateAiContent(apiKey);
     } else {
@@ -659,8 +665,8 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('dd MMMM yyyy', 'it_IT').format(widget.match.date);
-    final timeStr = DateFormat('HH:mm', 'it_IT').format(widget.match.date);
+    final dateStr = formatLongDate(widget.match.date);
+    final timeStr = formatTime(widget.match.date);
     final mvpName = _resolveName(widget.match.mvp);
     final hustleName = _resolveName(widget.match.hustlePlayer);
     final bestGoalName = _resolveName(widget.match.bestGoalPlayer);
@@ -696,9 +702,10 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
               padding: const EdgeInsets.only(right: 12),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: Colors.white38),
                   ),
@@ -739,7 +746,9 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
 
                   _Ornament(),
 
-                  if (mvpName.isNotEmpty || hustleName.isNotEmpty || bestGoalName.isNotEmpty)
+                  if (mvpName.isNotEmpty ||
+                      hustleName.isNotEmpty ||
+                      bestGoalName.isNotEmpty)
                     _AwardsBlock(
                         mvpName: mvpName,
                         hustleName: hustleName,
@@ -800,8 +809,7 @@ class _LoadingNewspaperState extends State<_LoadingNewspaper>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _NewspaperHeader(
-              dateStr: widget.dateStr, timeStr: widget.timeStr),
+          _NewspaperHeader(dateStr: widget.dateStr, timeStr: widget.timeStr),
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -812,7 +820,7 @@ class _LoadingNewspaperState extends State<_LoadingNewspaper>
                   height: 16,
                   width: 120,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD40000).withOpacity(0.3),
+                    color: const Color(0xFFD40000).withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -862,7 +870,8 @@ class _LoadingNewspaperState extends State<_LoadingNewspaper>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(
-                      width: 12, height: 12,
+                      width: 12,
+                      height: 12,
                       child: CircularProgressIndicator(
                         strokeWidth: 1.5,
                         color: Color(0xFFD40000),
@@ -899,13 +908,13 @@ class _SkeletonLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: width,
-    height: height,
-    decoration: BoxDecoration(
-      color: const Color(0xFF1A1A1A).withOpacity(0.08),
-      borderRadius: BorderRadius.circular(4),
-    ),
-  );
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      );
 }
 
 // ── Corpo articolo AI ─────────────────────────────────────────────
@@ -916,30 +925,30 @@ class _ArticleBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Drop cap sul primo carattere
-        _buildBodyWithDropCap(text),
-        const SizedBox(height: 6),
-        // Firma redazione
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            'Redazione Gazzetta del Calcetto  ✦',
-            style: TextStyle(
-              fontFamily: 'Georgia',
-              fontSize: 9,
-              fontStyle: FontStyle.italic,
-              color: const Color(0xFFD40000).withOpacity(0.7),
-              letterSpacing: 1,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drop cap sul primo carattere
+            _buildBodyWithDropCap(text),
+            const SizedBox(height: 6),
+            // Firma redazione
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Redazione Gazzetta del Calcetto  ✦',
+                style: TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: 9,
+                  fontStyle: FontStyle.italic,
+                  color: const Color(0xFFD40000).withValues(alpha: 0.7),
+                  letterSpacing: 1,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _buildBodyWithDropCap(String text) {
     if (text.isEmpty) return const SizedBox.shrink();
@@ -985,32 +994,32 @@ class _NewspaperHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    color: const Color(0xFFD40000),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(dateStr.toUpperCase(),
-            style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5)),
-        const Text('⚽  IL GIORNALE DELLA PARTITA  ⚽',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2)),
-        Text('ORE $timeStr',
-            style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5)),
-      ],
-    ),
-  );
+        color: const Color(0xFFD40000),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(dateStr.toUpperCase(),
+                style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5)),
+            const Text('⚽  IL GIORNALE DELLA PARTITA  ⚽',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2)),
+            Text('ORE $timeStr',
+                style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5)),
+          ],
+        ),
+      );
 }
 
 class _HeadlineBlock extends StatelessWidget {
@@ -1063,9 +1072,7 @@ class _HeadlineBlock extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _BigScore(scoreA,
-                  highlight: isWinA,
-                  label: 'BIANCHI'),
+              _BigScore(scoreA, highlight: isWinA, label: 'BIANCHI'),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Text('-',
@@ -1075,8 +1082,7 @@ class _HeadlineBlock extends StatelessWidget {
                         color: Color(0xFF555555))),
               ),
               _BigScore(scoreB,
-                  highlight: !isWinA && !isDraw,
-                  label: 'COLORATI'),
+                  highlight: !isWinA && !isDraw, label: 'COLORATI'),
             ],
           ),
           const SizedBox(height: 10),
@@ -1102,38 +1108,39 @@ class _BigScore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-    children: [
-      Text('$score',
-          style: TextStyle(
-              fontSize: 64,
-              fontWeight: FontWeight.w900,
-              color: highlight
-                  ? const Color(0xFFD40000)
-                  : const Color(0xFF888888),
-              height: 1)),
-      Text(label,
-          style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF888888),
-              letterSpacing: 1.5)),
-    ],
-  );
+        children: [
+          Text('$score',
+              style: TextStyle(
+                  fontSize: 64,
+                  fontWeight: FontWeight.w900,
+                  color: highlight
+                      ? const Color(0xFFD40000)
+                      : const Color(0xFF888888),
+                  height: 1)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF888888),
+                  letterSpacing: 1.5)),
+        ],
+      );
 }
 
 class _Ornament extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(children: [
-      Expanded(child: Container(height: 1, color: const Color(0xFF1A1A1A))),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8),
-        child: Text('✦', style: TextStyle(color: Color(0xFFD40000), fontSize: 14)),
-      ),
-      Expanded(child: Container(height: 1, color: const Color(0xFF1A1A1A))),
-    ]),
-  );
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(children: [
+          Expanded(child: Container(height: 1, color: const Color(0xFF1A1A1A))),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('✦',
+                style: TextStyle(color: Color(0xFFD40000), fontSize: 14)),
+          ),
+          Expanded(child: Container(height: 1, color: const Color(0xFF1A1A1A))),
+        ]),
+      );
 }
 
 class _AwardsBlock extends StatelessWidget {
@@ -1145,34 +1152,34 @@ class _AwardsBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-    child: Column(
-      children: [
-        const Text('I PREMI DELLA SERATA',
-            style: TextStyle(
-                fontFamily: 'Georgia',
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-                color: Color(0xFF1A1A1A))),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Column(
           children: [
-            if (mvpName.isNotEmpty)
-              _AwardTile('👑', 'MVP', mvpName, const Color(0xFFB8860B)),
-            if (hustleName.isNotEmpty)
-              _AwardTile('🔥', 'COMBATTIVO', hustleName,
-                  const Color(0xFFD46000)),
-            if (bestGoalName.isNotEmpty)
-              _AwardTile('⚽', 'BEST GOAL', bestGoalName,
-                  const Color(0xFF2E7D32)),
+            const Text('I PREMI DELLA SERATA',
+                style: TextStyle(
+                    fontFamily: 'Georgia',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                    color: Color(0xFF1A1A1A))),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                if (mvpName.isNotEmpty)
+                  _AwardTile('👑', 'MVP', mvpName, const Color(0xFFB8860B)),
+                if (hustleName.isNotEmpty)
+                  _AwardTile(
+                      '🔥', 'COMBATTIVO', hustleName, const Color(0xFFD46000)),
+                if (bestGoalName.isNotEmpty)
+                  _AwardTile(
+                      '⚽', 'BEST GOAL', bestGoalName, const Color(0xFF2E7D32)),
+              ],
+            ),
+            const SizedBox(height: 8),
           ],
         ),
-        const SizedBox(height: 8),
-      ],
-    ),
-  );
+      );
 }
 
 class _AwardTile extends StatelessWidget {
@@ -1182,23 +1189,23 @@ class _AwardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-    children: [
-      Text(emoji, style: const TextStyle(fontSize: 26)),
-      const SizedBox(height: 4),
-      Text(label,
-          style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-              color: color)),
-      Text(name.toUpperCase(),
-          style: TextStyle(
-              fontFamily: 'Georgia',
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF1A1A1A))),
-    ],
-  );
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 26)),
+          const SizedBox(height: 4),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                  color: color)),
+          Text(name.toUpperCase(),
+              style: TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF1A1A1A))),
+        ],
+      );
 }
 
 class _ScorersBlock extends StatelessWidget {
@@ -1206,62 +1213,61 @@ class _ScorersBlock extends StatelessWidget {
   final MatchModel match;
   const _ScorersBlock({required this.scorers, required this.match});
 
-  String _name(String id) =>
-      HiveBoxes.playersBox.get(id)?.name ?? id;
+  String _name(String id) => resolvePlayerName(id);
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-    child: Column(
-      children: [
-        const Text('MARCATORI',
-            style: TextStyle(
-                fontFamily: 'Georgia',
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-                color: Color(0xFF1A1A1A))),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 12,
-          runSpacing: 6,
-          alignment: WrapAlignment.center,
-          children: scorers.map((id) {
-            final g = match.goals[id] ?? 0;
-            return RichText(
-              text: TextSpan(
-                style: const TextStyle(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Column(
+          children: [
+            const Text('MARCATORI',
+                style: TextStyle(
                     fontFamily: 'Georgia',
                     fontSize: 13,
-                    color: Color(0xFF1A1A1A)),
-                children: [
-                  TextSpan(
-                      text: _name(id).toUpperCase(),
-                      style: const TextStyle(fontWeight: FontWeight.w900)),
-                  TextSpan(
-                      text: ' ${'⚽' * g}',
-                      style: const TextStyle(fontSize: 11)),
-                ],
-              ),
-            );
-          }).toList(),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                    color: Color(0xFF1A1A1A))),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              alignment: WrapAlignment.center,
+              children: scorers.map((id) {
+                final g = match.goals[id] ?? 0;
+                return RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                        fontFamily: 'Georgia',
+                        fontSize: 13,
+                        color: Color(0xFF1A1A1A)),
+                    children: [
+                      TextSpan(
+                          text: _name(id).toUpperCase(),
+                          style: const TextStyle(fontWeight: FontWeight.w900)),
+                      TextSpan(
+                          text: ' ${'⚽' * g}',
+                          style: const TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
-        const SizedBox(height: 8),
-      ],
-    ),
-  );
+      );
 }
 
 class _TwoColumnRatings extends StatelessWidget {
   final List<String> teamAIds, teamBIds;
   final MatchModel match;
-  final Map<String, String> pagelle;   // ← aggiunto
-  const _TwoColumnRatings(
-      {required this.teamAIds,
-      required this.teamBIds,
-      required this.match,
-      this.pagelle = const {}, 
-      });
+  final Map<String, String> pagelle; // ← aggiunto
+  const _TwoColumnRatings({
+    required this.teamAIds,
+    required this.teamBIds,
+    required this.match,
+    this.pagelle = const {},
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1274,9 +1280,25 @@ class _TwoColumnRatings extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                Expanded(child: Center(child: Text('BIANCHI', style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: Color(0xFF1A1A1A))))),
+                Expanded(
+                    child: Center(
+                        child: Text('BIANCHI',
+                            style: const TextStyle(
+                                fontFamily: 'Georgia',
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 2,
+                                fontSize: 11,
+                                color: Color(0xFF1A1A1A))))),
                 Container(width: 1, height: 20, color: const Color(0xFF1A1A1A)),
-                Expanded(child: Center(child: Text('COLORATI', style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11, color: Color(0xFF1A1A1A))))),
+                Expanded(
+                    child: Center(
+                        child: Text('COLORATI',
+                            style: const TextStyle(
+                                fontFamily: 'Georgia',
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 2,
+                                fontSize: 11,
+                                color: Color(0xFF1A1A1A))))),
               ],
             ),
           ),
@@ -1290,13 +1312,14 @@ class _TwoColumnRatings extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,   // ← start per pagelle multiriga
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start, // ← start per pagelle multiriga
                   children: [
                     Expanded(
                       child: idA != null
                           ? _RatingRow(idA, match,
                               alignRight: false,
-                              paginaAi: pagelle[idA])           // ← passa pagella
+                              paginaAi: pagelle[idA]) // ← passa pagella
                           : const SizedBox(),
                     ),
                     Container(width: 1, color: const Color(0xFFCCBB99)),
@@ -1304,7 +1327,7 @@ class _TwoColumnRatings extends StatelessWidget {
                       child: idB != null
                           ? _RatingRow(idB, match,
                               alignRight: true,
-                              paginaAi: pagelle[idB])           // ← passa pagella
+                              paginaAi: pagelle[idB]) // ← passa pagella
                           : const SizedBox(),
                     ),
                   ],
@@ -1323,11 +1346,13 @@ class _RatingRow extends StatelessWidget {
   final String playerId;
   final MatchModel match;
   final bool alignRight;
-  final String? paginaAi;   // ← aggiunto
+  final String? paginaAi; // ← aggiunto
 
-  const _RatingRow(this.playerId, this.match, {
+  const _RatingRow(
+    this.playerId,
+    this.match, {
     required this.alignRight,
-    this.paginaAi,            // ← aggiunto
+    this.paginaAi, // ← aggiunto
   });
 
   Color _voteColor(double v) {
@@ -1339,7 +1364,8 @@ class _RatingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final player = HiveBoxes.playersBox.get(playerId);
+    final player = Provider.of<DataService>(context, listen: false)
+        .getPlayerById(playerId);
     final name = player?.name ?? 'Sconosciuto';
     final voto = match.votes[playerId] ?? 0.0;
     final goals = match.goals[playerId] ?? 0;
@@ -1349,7 +1375,8 @@ class _RatingRow extends StatelessWidget {
     final nameWidget = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isMvp && !alignRight) const Text('👑 ', style: TextStyle(fontSize: 10)),
+        if (isMvp && !alignRight)
+          const Text('👑 ', style: TextStyle(fontSize: 10)),
         Flexible(
           child: Text(name.toUpperCase(),
               overflow: TextOverflow.ellipsis,
@@ -1360,22 +1387,26 @@ class _RatingRow extends StatelessWidget {
                   color: Color(0xFF1A1A1A))),
         ),
         if (goals > 0)
-          Text(' ${'⚽' * goals.clamp(0, 3)}', style: const TextStyle(fontSize: 9)),
-        if (isMvp && alignRight) const Text(' 👑', style: TextStyle(fontSize: 10)),
+          Text(' ${'⚽' * goals.clamp(0, 3)}',
+              style: const TextStyle(fontSize: 9)),
+        if (isMvp && alignRight)
+          const Text(' 👑', style: TextStyle(fontSize: 10)),
       ],
     );
 
     final scoreWidget = voto > 0
         ? Container(
-            width: 28, height: 24,
+            width: 28,
+            height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              border: Border.all(color: color.withOpacity(0.5)),
+              color: color.withValues(alpha: 0.12),
+              border: Border.all(color: color.withValues(alpha: 0.5)),
               borderRadius: BorderRadius.circular(3),
             ),
             child: Text(voto.toStringAsFixed(1),
-                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900)),
+                style: TextStyle(
+                    color: color, fontSize: 10, fontWeight: FontWeight.w900)),
           )
         : const SizedBox(width: 28);
 
@@ -1383,16 +1414,23 @@ class _RatingRow extends StatelessWidget {
       padding: EdgeInsets.only(
           left: alignRight ? 8 : 4, right: alignRight ? 4 : 8, bottom: 4),
       child: Column(
-        crossAxisAlignment: alignRight
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            alignRight ? CrossAxisAlignment.start : CrossAxisAlignment.start,
         children: [
           // ── riga nome + voto (invariata) ──────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: alignRight
-                ? [scoreWidget, const SizedBox(width: 6), Expanded(child: nameWidget)]
-                : [Expanded(child: nameWidget), const SizedBox(width: 6), scoreWidget],
+                ? [
+                    scoreWidget,
+                    const SizedBox(width: 6),
+                    Expanded(child: nameWidget)
+                  ]
+                : [
+                    Expanded(child: nameWidget),
+                    const SizedBox(width: 6),
+                    scoreWidget
+                  ],
           ),
           // ── pagella AI (nuova) ────────────────────────────────
           if (paginaAi != null && paginaAi!.isNotEmpty) ...[
@@ -1414,71 +1452,6 @@ class _RatingRow extends StatelessWidget {
     );
   }
 }
-class _CommentsBlock extends StatelessWidget {
-  final List<String> allPlayers;
-  final MatchModel match;
-  const _CommentsBlock(
-      {required this.allPlayers, required this.match});
-
-  @override
-  Widget build(BuildContext context) {
-    final withComments = allPlayers
-        .where((id) => (match.comments[id] ?? '').isNotEmpty)
-        .toList();
-
-    if (withComments.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _Ornament(),
-          const SizedBox(height: 6),
-          const Center(
-            child: Text('LE VOCI DELLO SPOGLIATOIO',
-                style: TextStyle(
-                    fontFamily: 'Georgia',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                    color: Color(0xFF1A1A1A))),
-          ),
-          const SizedBox(height: 12),
-          ...withComments.map((id) {
-            final player = HiveBoxes.playersBox.get(id);
-            final name = player?.name ?? id;
-            final comment = match.comments[id] ?? '';
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('«$comment»',
-                      style: const TextStyle(
-                          fontFamily: 'Georgia',
-                          fontStyle: FontStyle.italic,
-                          fontSize: 13,
-                          color: Color(0xFF333333),
-                          height: 1.4)),
-                  const SizedBox(height: 4),
-                  Text('— ${name.toUpperCase()}',
-                      style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                          color: Color(0xFFD40000))),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-}
-
-
 // ═══════════════════════════════════════════════════════════════
 //  🎨  MATCH IMAGE GENERATION SCREEN  ──  Generazione DALL-E
 // ═══════════════════════════════════════════════════════════════
@@ -1488,12 +1461,13 @@ class MatchImageGenerationScreen extends StatefulWidget {
   const MatchImageGenerationScreen({required this.match, super.key});
 
   @override
-  State<MatchImageGenerationScreen> createState() => _MatchImageGenerationScreenState();
+  State<MatchImageGenerationScreen> createState() =>
+      _MatchImageGenerationScreenState();
 }
 
-class _MatchImageGenerationScreenState extends State<MatchImageGenerationScreen> {
-  static const _storage = FlutterSecureStorage();
-  static const _storageKey = 'openai_api_key';
+class _MatchImageGenerationScreenState
+    extends State<MatchImageGenerationScreen> {
+  final _openAiService = OpenAiService();
 
   bool _loading = true;
   String? _base64Image;
@@ -1505,86 +1479,34 @@ class _MatchImageGenerationScreenState extends State<MatchImageGenerationScreen>
     _generateImage();
   }
 
-String _buildImagePrompt() {
-  final m = widget.match;
+  String _buildImagePrompt() {
+    final m = widget.match;
 
-  // ── helper locale ──────────────────────────────────────────────
-  String resolveName(String id) {
-    if (id.isEmpty) return '';
-    return HiveBoxes.playersBox.get(id)?.name ?? id;
-  }
+    // ── helper locale ──────────────────────────────────────────────
+    String resolveName(String id) => resolvePlayerName(id);
 
-  // ── Risultato ──────────────────────────────────────────────────
-  final scoreStr = '${m.scoreA}-${m.scoreB}';
-  final String risultato;
-  final String titoloCampione;
-  if (m.scoreA > m.scoreB) {
-    risultato = 'vittoria della Squadra Bianca per $scoreStr';
-    titoloCampione = 'SQUADRA BIANCA INARRESTABILE';
-  } else if (m.scoreB > m.scoreA) {
-    risultato = 'vittoria della Squadra Colorata per $scoreStr';
-    titoloCampione = 'COLORATI DA LEGGENDA';
-  } else {
-    risultato = 'pareggio spettacolare $scoreStr';
-    titoloCampione = 'NESSUNO VINCE, TUTTI EROI';
-  }
+    // ── Data ───────────────────────────────────────────────────────
+    final dataStr = formatLongDate(m.date);
 
-  // ── Data ───────────────────────────────────────────────────────
-  final dataStr = DateFormat('dd MMMM yyyy', 'it_IT').format(m.date);
+    // ── MVP / Premi ────────────────────────────────────────────────
+    final mvpName = resolveName(m.mvp);
+    final hustleName = resolveName(m.hustlePlayer);
+    final bestGoalName = resolveName(m.bestGoalPlayer);
 
-  // ── MVP / Premi ────────────────────────────────────────────────
-  final mvpName       = resolveName(m.mvp);
-  final hustleName    = resolveName(m.hustlePlayer);
-  final bestGoalName  = resolveName(m.bestGoalPlayer);
-
-  // ── Goleador (tutti i giocatori con almeno 1 gol) ──────────────
-  final allPlayers = [...m.teamA, ...m.teamB];
-  final goleadorLines = allPlayers
-      .where((id) => (m.goals[id] ?? 0) > 0)
-      .map((id) {
-        final name = resolveName(id);
-        final g = m.goals[id] ?? 0;
-        return '$name ($g ${g == 1 ? 'gol' : 'gol'})';
-      })
-      .toList();
-  final goleadorStr = goleadorLines.isEmpty
-      ? 'nessun marcatore registrato'
-      : goleadorLines.join(', ');
-
-  // ── Top performer per voto ─────────────────────────────────────
-  final topPlayers = allPlayers
-      .where((id) => (m.votes[id] ?? 0.0) >= 8.0)
-      .map((id) {
-        final name = resolveName(id);
-        final v = (m.votes[id] ?? 0.0).toStringAsFixed(1);
-        return '$name (voto $v)';
-      })
-      .toList();
-  final topStr = topPlayers.isEmpty ? '' : ' Prestazioni eccellenti: ${topPlayers.join(', ')}.';
-
-  // ── Squadra A con statistiche ──────────────────────────────────
-  String buildTeamLines(List<String> ids) {
-    return ids.map((id) {
+    // ── Goleador (tutti i giocatori con almeno 1 gol) ──────────────
+    final allPlayers = [...m.teamA, ...m.teamB];
+    final goleadorLines =
+        allPlayers.where((id) => (m.goals[id] ?? 0) > 0).map((id) {
       final name = resolveName(id);
-      final voto = m.votes[id];
-      final gol  = m.goals[id] ?? 0;
-      final tags = [
-        if (m.mvp == id) 'MVP',
-        if (m.hustlePlayer == id) 'COMBATTIVO',
-        if (m.bestGoalPlayer == id) 'BEST GOAL',
-      ].join('/');
-      final votoStr = voto != null ? voto.toStringAsFixed(1) : '-';
-      final golStr  = gol > 0 ? ', $gol gol' : '';
-      final tagStr  = tags.isNotEmpty ? ' [$tags]' : '';
-      return '$name (voto $votoStr$golStr)$tagStr';
-    }).join('; ');
-  }
+      final g = m.goals[id] ?? 0;
+      return '$name ($g ${g == 1 ? 'gol' : 'gol'})';
+    }).toList();
+    final goleadorStr = goleadorLines.isEmpty
+        ? 'nessun marcatore registrato'
+        : goleadorLines.join(', ');
 
-  final teamALines = buildTeamLines(m.teamA);
-  final teamBLines = buildTeamLines(m.teamB);
-
-  // ── Prompt finale ──────────────────────────────────────────────
-  return '''
+    // ── Prompt finale ──────────────────────────────────────────────
+    return '''
 Create a premium social media football match report graphic.
 
 Aspect ratio: 4:5 vertical.
@@ -1663,10 +1585,10 @@ Focus on visual impact, premium sports branding and social media shareability.
 
 Looks like an official post-match graphic published by UEFA, Champions League, EA Sports FC or OneFootball.
 ''';
-}
+  }
 
   Future<void> _generateImage() async {
-    final apiKey = await _storage.read(key: _storageKey);
+    final apiKey = await _openAiService.readApiKey();
     if (apiKey == null || apiKey.isEmpty) {
       setState(() {
         _errorMsg = "Chiave API OpenAI non trovata nelle impostazioni.";
@@ -1676,46 +1598,19 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/images/generations'),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'gpt-image-1',
-          'prompt': _buildImagePrompt(),
-          'n': 1,
-          'size': '1024x1536',
-        }),
+      final base64Image = await _openAiService.generateImageBase64(
+        apiKey: apiKey,
+        prompt: _buildImagePrompt(),
       );
-
-      if (response.statusCode == 200) {
-  final data = jsonDecode(response.body);
-
-  final base64Image = data['data']?[0]?['b64_json'];
-
-  if (base64Image == null) {
-    setState(() {
-      _errorMsg = "Risposta API inattesa: base64Image mancante";
-      _loading = false;
-    });
-    return;
-  }
-
-  setState(() {
-    _base64Image = base64Image;
-    _loading = false;
-  });
-} else {
-  final error = jsonDecode(response.body);
-
-  setState(() {
-    _errorMsg = error['error']?['message'] ??
-        "Errore OpenAI (Status: ${response.statusCode})";
-    _loading = false;
-  });
-}
+      setState(() {
+        _base64Image = base64Image;
+        _loading = false;
+      });
+    } on OpenAiException catch (e) {
+      setState(() {
+        _errorMsg = e.message;
+        _loading = false;
+      });
     } catch (e) {
       setState(() {
         _errorMsg = "Errore di rete: $e";
@@ -1729,7 +1624,8 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Copertina Illustrata AI', color: AppTheme.textPrimary, fontSize: 13),
+        title: const FifaLabel('Copertina Illustrata AI',
+            color: AppTheme.textPrimary, fontSize: 13),
         backgroundColor: AppTheme.surface,
       ),
       body: Center(
@@ -1741,111 +1637,127 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
                   const SizedBox(height: 16),
                   Text(
                     'DALL-E STA DIPINGENDO LA COPERTINA...',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
               )
             : _errorMsg != null
                 ? Padding(
                     padding: const EdgeInsets.all(24.0),
-                    child: Text(_errorMsg!, style: const TextStyle(color: AppTheme.accentRed), textAlign: TextAlign.center),
+                    child: Text(_errorMsg!,
+                        style: const TextStyle(color: AppTheme.accentRed),
+                        textAlign: TextAlign.center),
                   )
                 : SingleChildScrollView(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Image.memory(
-            base64Decode(_base64Image!),
-            fit: BoxFit.cover,
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          "✦ Opera generata dall'intelligenza artificiale di OpenAI basata sui dati reali del match.",
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontStyle: FontStyle.italic),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _saving ? null : _saveToGallery,
-            icon: _saving
-                ? const SizedBox(
-                    width: 18, height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.black,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.memory(
+                            base64Decode(_base64Image!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "✦ Opera generata dall'intelligenza artificiale di OpenAI basata sui dati reali del match.",
+                          style: TextStyle(
+                              color: AppTheme.textMuted,
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _saving ? null : _saveToGallery,
+                            icon: _saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : const Icon(Icons.download_rounded,
+                                    color: Colors.black),
+                            label: Text(
+                              _saving
+                                  ? 'SALVATAGGIO...'
+                                  : 'SALVA NELLA GALLERIA',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                                fontSize: 13,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentGreen,
+                              disabledBackgroundColor:
+                                  AppTheme.accentGreen.withValues(alpha: 0.4),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
-                  )
-                : const Icon(Icons.download_rounded, color: Colors.black),
-            label: Text(
-              _saving ? 'SALVATAGGIO...' : 'SALVA NELLA GALLERIA',
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
-                fontSize: 13,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentGreen,
-              disabledBackgroundColor: AppTheme.accentGreen.withOpacity(0.4),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
-    ),
-  ),
+                  ),
       ),
     );
   }
 
   bool _saving = false;
 
-Future<void> _saveToGallery() async {
-  if (_base64Image == null) return;
-  setState(() => _saving = true);
-  try {
-    final bytes = base64Decode(_base64Image!);
-    final result = await ImageGallerySaver.saveImage(
-      bytes,
-      quality: 100,
-      name: 'calcetto_copertina_${DateTime.now().millisecondsSinceEpoch}',
-    );
-    final success = result['isSuccess'] == true;
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: success ? AppTheme.accentGreen : AppTheme.accentRed,
-          content: Text(
-            success
-                ? '✅ Copertina salvata nella galleria!'
-                : '❌ Salvataggio fallito: ${result['errorMessage'] ?? 'errore sconosciuto'}',
-            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+  Future<void> _saveToGallery() async {
+    if (_base64Image == null) return;
+    setState(() => _saving = true);
+    try {
+      final bytes = base64Decode(_base64Image!);
+      final result = await ImageGallerySaver.saveImage(
+        bytes,
+        quality: 100,
+        name: 'calcetto_copertina_${DateTime.now().millisecondsSinceEpoch}',
+      );
+      final success = result['isSuccess'] == true;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor:
+                success ? AppTheme.accentGreen : AppTheme.accentRed,
+            content: Text(
+              success
+                  ? '✅ Copertina salvata nella galleria!'
+                  : '❌ Salvataggio fallito: ${result['errorMessage'] ?? 'errore sconosciuto'}',
+              style: const TextStyle(
+                  color: Colors.black, fontWeight: FontWeight.bold),
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.accentRed,
+            content: Text('❌ Errore: $e',
+                style: const TextStyle(color: Colors.black)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppTheme.accentRed,
-          content: Text('❌ Errore: $e',
-              style: const TextStyle(color: Colors.black)),
-        ),
-      );
-    }
-  } finally {
-    if (mounted) setState(() => _saving = false);
   }
-}
 }

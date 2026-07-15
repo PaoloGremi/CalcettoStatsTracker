@@ -1,17 +1,24 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../data/player_icons.dart';
-import '../models/player.dart';
 
 /// Widget avatar riutilizzabile per un giocatore.
 /// Mostra: foto da galleria > icona asset > icona Material (in questo ordine).
 /// Lo sfondo è un colore vivace deterministico basato sul nome del giocatore.
+///
+/// Prende campi primitivi invece del modello [Player] per non dipendere dal
+/// layer dati: qualunque chiamante (screen, entity di dominio futura, ecc.)
+/// può passare i tre valori senza importare `models/player_model.dart`.
 class PlayerAvatar extends StatelessWidget {
-  final Player player;
+  final String name;
+  final String icon;
+  final String? imagePath;
   final double radius;
 
   const PlayerAvatar({
-    required this.player,
+    required this.name,
+    required this.icon,
+    this.imagePath,
     this.radius = 22,
     super.key,
   });
@@ -38,19 +45,19 @@ class PlayerAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = _colorForPlayer(player.name);
+    final bg = _colorForPlayer(name);
 
     // 1️⃣ Foto da galleria (path locale)
-    if (player.imagePath != null && player.imagePath!.isNotEmpty) {
+    if (imagePath != null && imagePath!.isNotEmpty) {
       return CircleAvatar(
         radius: radius,
-        backgroundImage: FileImage(File(player.imagePath!)),
+        backgroundImage: FileImage(File(imagePath!)),
         backgroundColor: bg,
       );
     }
 
     // 2️⃣ Icona asset
-    final iconData = getPlayerIcon(player.icon);
+    final iconData = getPlayerIcon(icon);
     if (iconData.isAsset) {
       return CircleAvatar(
         radius: radius,

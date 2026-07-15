@@ -34,27 +34,25 @@ class _SplashScreenState extends State<SplashScreen>
     _shieldCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 900));
 
-    _shieldScale = CurvedAnimation(
-        parent: _shieldCtrl, curve: Curves.elasticOut)
-      ..drive(Tween(begin: 0.4, end: 1.0));
+    _shieldScale =
+        CurvedAnimation(parent: _shieldCtrl, curve: Curves.elasticOut)
+          ..drive(Tween(begin: 0.4, end: 1.0));
 
     _shieldOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
             parent: _shieldCtrl,
             curve: const Interval(0.0, 0.5, curve: Curves.easeIn)));
 
-    _shieldSlide = Tween<Offset>(
-            begin: const Offset(0, 0.3), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _shieldCtrl, curve: Curves.easeOutCubic));
+    _shieldSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+            CurvedAnimation(parent: _shieldCtrl, curve: Curves.easeOutCubic));
 
     _textCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
 
-    _titleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-            parent: _textCtrl,
-            curve: const Interval(0.0, 0.7, curve: Curves.easeOut)));
+    _titleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+        parent: _textCtrl,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOut)));
 
     _subtitleOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
@@ -64,8 +62,8 @@ class _SplashScreenState extends State<SplashScreen>
     _overlayCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 400));
 
-    _overlayOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _overlayCtrl, curve: Curves.easeIn));
+    _overlayOpacity = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _overlayCtrl, curve: Curves.easeIn));
 
     _runSequence();
   }
@@ -104,7 +102,6 @@ class _SplashScreenState extends State<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-
           // ── Sfondo ───────────────────────────────────────────
           Image.asset(
             'assets/images/backgroundStadium.png',
@@ -118,9 +115,9 @@ class _SplashScreenState extends State<SplashScreen>
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.55),
-                  const Color(0xFF001a00).withOpacity(0.85),
-                  Colors.black.withOpacity(0.92),
+                  Colors.black.withValues(alpha: 0.55),
+                  const Color(0xFF001a00).withValues(alpha: 0.85),
+                  Colors.black.withValues(alpha: 0.92),
                 ],
                 stops: const [0.0, 0.5, 1.0],
               ),
@@ -146,7 +143,6 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
                         const Spacer(flex: 2),
 
                         // Scudo animato
@@ -171,7 +167,7 @@ class _SplashScreenState extends State<SplashScreen>
                                           BoxShadow(
                                             color: const Color.fromARGB(
                                                     33, 255, 221, 0)
-                                                .withOpacity(0.35),
+                                                .withValues(alpha: 0.35),
                                             blurRadius: 60,
                                             spreadRadius: 20,
                                           ),
@@ -229,8 +225,8 @@ class _SplashScreenState extends State<SplashScreen>
                                 horizontal: 14, vertical: 5),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                  color:
-                                      AppTheme.accentGreen.withOpacity(0.5)),
+                                  color: AppTheme.accentGreen
+                                      .withValues(alpha: 0.5)),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -257,13 +253,13 @@ class _SplashScreenState extends State<SplashScreen>
                               child: LinearProgressIndicator(
                                 backgroundColor: Colors.white10,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppTheme.accentGreen.withOpacity(0.7)),
+                                    AppTheme.accentGreen
+                                        .withValues(alpha: 0.7)),
                                 minHeight: 2,
                               ),
                             ),
                           ),
                         ),
-
                       ],
                     ),
                   ),
@@ -277,7 +273,6 @@ class _SplashScreenState extends State<SplashScreen>
             opacity: _overlayOpacity,
             child: Container(color: Colors.black),
           ),
-
         ],
       ),
     );
@@ -291,7 +286,7 @@ class _FieldLinesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.04)
+      ..color = Colors.white.withValues(alpha: 0.04)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -301,7 +296,7 @@ class _FieldLinesPainter extends CustomPainter {
     canvas.drawCircle(Offset(cx, cy), size.width * 0.22, paint);
 
     final dotPaint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = Colors.white.withValues(alpha: 0.06)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), 4, dotPaint);
 

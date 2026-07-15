@@ -4,8 +4,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'core/di/service_locator.dart';
+import 'core/migration/hive_migration_service.dart';
 import 'data/hive_boxes.dart';
-import 'models/player.dart';
 import 'models/match_model.dart';
 import 'models/field_model.dart';
 import 'screens/splash_screen.dart';
@@ -18,10 +19,11 @@ void main() async {
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await initializeDateFormatting('it_IT', null);
   await Hive.initFlutter();
-  Hive.registerAdapter(PlayerAdapter());
+  await HiveMigrationService.migratePlayersIfNeeded();
   Hive.registerAdapter(MatchModelAdapter());
   Hive.registerAdapter(FieldModelAdapter());
   await HiveBoxes.init();
+  setupServiceLocator();
 
   FlutterNativeSplash.remove(); // rimuove splash nativo, parte Flutter
 
@@ -35,7 +37,8 @@ class CalcettoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<DataService>(create: (_) => DataService()),
+        ChangeNotifierProvider<DataService>(
+            create: (_) => getIt<DataService>()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

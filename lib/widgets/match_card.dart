@@ -2,9 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../core/util/date_formatters.dart';
+import '../core/util/player_lookup.dart';
 import '../models/match_model.dart';
 import '../models/field_model.dart';
-import '../data/hive_boxes.dart';
 import '../screens/match_detail_screen.dart';
 import '../screens/edit_match_screen.dart';
 import '../services/data_service.dart';
@@ -17,32 +18,34 @@ class MatchCard extends StatelessWidget {
 
   /// Ritorna il FieldModel corrispondente a match.fieldLocation (che è l'ID).
   /// Gestisce anche i vecchi ID testuali hardcoded per retrocompatibilità.
-  FieldModel? get _field => HiveBoxes.fieldsBox.get(match.fieldLocation);
+  FieldModel? _field(BuildContext context) =>
+      Provider.of<DataService>(context, listen: false)
+          .getFieldById(match.fieldLocation);
 
   static const _legacyLabels = {
     'SanFrancesco': 'San Francesco',
-    'Montanaso':    'Montanaso',
-    'Faustina':     'Faustina Arena',
-    'Pergola':      'La Pergola',
-    'Other':        'Campo Sportivo',
+    'Montanaso': 'Montanaso',
+    'Faustina': 'Faustina Arena',
+    'Pergola': 'La Pergola',
+    'Other': 'Campo Sportivo',
   };
 
   static const _legacyBg = {
     'SanFrancesco': 'assets/images/campoSanFrancescoColorato.jpg',
-    'Montanaso':    'assets/images/montanaso.jpg',
-    'Faustina':     'assets/images/faustina.png',
-    'Pergola':      'assets/images/laPergola.jpg',
+    'Montanaso': 'assets/images/montanaso.jpg',
+    'Faustina': 'assets/images/faustina.png',
+    'Pergola': 'assets/images/laPergola.jpg',
   };
 
-  String get _locationLabel {
-    final f = _field;
+  String _locationLabel(BuildContext context) {
+    final f = _field(context);
     if (f != null) return f.name;
     return _legacyLabels[match.fieldLocation] ?? match.fieldLocation;
   }
 
   /// Ritorna null se si deve usare l'asset di fallback, altrimenti il path del file.
-  String? get _fieldImageFilePath {
-    final f = _field;
+  String? _fieldImageFilePath(BuildContext context) {
+    final f = _field(context);
     if (f != null && f.imagePath != null && File(f.imagePath!).existsSync()) {
       return f.imagePath;
     }
@@ -50,10 +53,10 @@ class MatchCard extends StatelessWidget {
   }
 
   String get _legacyAsset =>
-      _legacyBg[match.fieldLocation] ?? 'assets/images/sfondoPalloneGenerico.png';
+      _legacyBg[match.fieldLocation] ??
+      'assets/images/sfondoPalloneGenerico.png';
 
-  String _playerName(String id) =>
-      HiveBoxes.playersBox.get(id)?.name ?? '?';
+  String _playerName(String id) => resolvePlayerName(id, fallback: '?');
 
   // ── Colore risultato ─────────────────────────────────────────
 
@@ -72,21 +75,15 @@ class MatchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('EEE dd MMM yyyy', 'it_IT').format(match.date);
-    final time = DateFormat('HH:mm').format(match.date);
+    final time = formatTime(match.date);
     final teamANames = match.teamA.map(_playerName).toList();
     final teamBNames = match.teamB.map(_playerName).toList();
     final accent = _accentColor();
-    final mvpName = match.mvp.isNotEmpty
-        ? (HiveBoxes.playersBox.get(match.mvp)?.name ?? match.mvp)
-        : '';
-    final hustleName = match.hustlePlayer.isNotEmpty
-        ? (HiveBoxes.playersBox.get(match.hustlePlayer)?.name ?? match.hustlePlayer)
-        : '';
-    final bestGoalName = match.bestGoalPlayer.isNotEmpty
-        ? (HiveBoxes.playersBox.get(match.bestGoalPlayer)?.name ?? match.bestGoalPlayer)
-        : '';
+    final mvpName = resolvePlayerName(match.mvp);
+    final hustleName = resolvePlayerName(match.hustlePlayer);
+    final bestGoalName = resolvePlayerName(match.bestGoalPlayer);
 
-    final fieldImagePath = _fieldImageFilePath;
+    final fieldImagePath = _fieldImageFilePath(context);
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -99,7 +96,7 @@ class MatchCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: accent.withOpacity(0.22),
+              color: accent.withValues(alpha: 0.22),
               blurRadius: 20,
               spreadRadius: 1,
               offset: const Offset(0, 6),
@@ -114,7 +111,7 @@ class MatchCard extends StatelessWidget {
               _FieldHeader(
                 fieldImagePath: fieldImagePath,
                 fallbackAsset: _legacyAsset,
-                locationLabel: _locationLabel,
+                locationLabel: _locationLabel(context),
                 date: date,
                 time: time,
               ),
@@ -152,6 +149,7 @@ class MatchCard extends StatelessWidget {
 class _FieldHeader extends StatelessWidget {
   /// Path file locale (da FieldModel). Null se non disponibile.
   final String? fieldImagePath;
+
   /// Asset di fallback (vecchi campi hardcoded o generico).
   final String fallbackAsset;
   final String locationLabel;
@@ -185,8 +183,8 @@ class _FieldHeader extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.82),
+                  Colors.black.withValues(alpha: 0.3),
+                  Colors.black.withValues(alpha: 0.82),
                 ],
               ),
             ),
@@ -200,7 +198,8 @@ class _FieldHeader extends StatelessWidget {
                 // Nome campo
                 Row(
                   children: [
-                    const Icon(Icons.sports_soccer, color: Colors.white, size: 16),
+                    const Icon(Icons.sports_soccer,
+                        color: Colors.white, size: 16),
                     const SizedBox(width: 6),
                     Text(
                       locationLabel.toUpperCase(),
@@ -222,7 +221,7 @@ class _FieldHeader extends StatelessWidget {
                     Text(
                       date.toUpperCase(),
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
@@ -230,11 +229,13 @@ class _FieldHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         '⏰  $time',
@@ -303,18 +304,18 @@ class _ScoreSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     ...teamANames.map((name) => Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Text(
-                        name.toUpperCase(),
-                        style: const TextStyle(
-                          color: Color(0xFF666666),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            name.toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
                   ],
                 ),
               ),
@@ -324,20 +325,26 @@ class _ScoreSection extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Row(
                   children: [
-                    _ScoreBox(score: scoreA, accent: accent, isWinner: scoreA > scoreB),
+                    _ScoreBox(
+                        score: scoreA,
+                        accent: accent,
+                        isWinner: scoreA > scoreB),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
                       child: Text(
                         ':',
                         style: TextStyle(
-                          color: accent.withOpacity(0.4),
+                          color: accent.withValues(alpha: 0.4),
                           fontSize: 32,
                           fontWeight: FontWeight.w200,
                           height: 1,
                         ),
                       ),
                     ),
-                    _ScoreBox(score: scoreB, accent: accent, isWinner: scoreB > scoreA),
+                    _ScoreBox(
+                        score: scoreB,
+                        accent: accent,
+                        isWinner: scoreB > scoreA),
                   ],
                 ),
               ),
@@ -358,19 +365,19 @@ class _ScoreSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     ...teamBNames.map((name) => Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Text(
-                        name.toUpperCase(),
-                        style: const TextStyle(
-                          color: Color(0xFF666666),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                        textAlign: TextAlign.end,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            name.toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
                   ],
                 ),
               ),
@@ -383,9 +390,10 @@ class _ScoreSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
+              color: accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: accent.withOpacity(0.35), width: 1),
+              border:
+                  Border.all(color: accent.withValues(alpha: 0.35), width: 1),
             ),
             child: Text(
               resultLabel,
@@ -420,10 +428,13 @@ class _ScoreBox extends StatelessWidget {
       width: 62,
       height: 62,
       decoration: BoxDecoration(
-        color: isWinner ? accent.withOpacity(0.13) : const Color(0xFF1C1C1C),
+        color:
+            isWinner ? accent.withValues(alpha: 0.13) : const Color(0xFF1C1C1C),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isWinner ? accent.withOpacity(0.55) : const Color(0xFF2A2A2A),
+          color: isWinner
+              ? accent.withValues(alpha: 0.55)
+              : const Color(0xFF2A2A2A),
           width: isWinner ? 2 : 1,
         ),
       ),
@@ -471,28 +482,49 @@ class _FooterSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF111111),
         border: Border(
-          top: BorderSide(color: accent.withOpacity(0.18), width: 1),
+          top: BorderSide(color: accent.withValues(alpha: 0.18), width: 1),
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
           if (hasMvp)
-            Expanded(child: _AwardBadge(emoji: '👑', label: 'MVP', name: mvp, color: const Color(0xFFFFD700))),
+            Expanded(
+                child: _AwardBadge(
+                    emoji: '👑',
+                    label: 'MVP',
+                    name: mvp,
+                    color: const Color(0xFFFFD700))),
 
           if (hasMvp && (hasHustle || hasBestGoal))
-            Container(width: 1, height: 34, color: Colors.white10,
+            Container(
+                width: 1,
+                height: 34,
+                color: Colors.white10,
                 margin: const EdgeInsets.symmetric(horizontal: 8)),
 
           if (hasHustle)
-            Expanded(child: _AwardBadge(emoji: '🔥', label: 'COMBATTIVO', name: hustle, color: const Color(0xFFFF6D00))),
+            Expanded(
+                child: _AwardBadge(
+                    emoji: '🔥',
+                    label: 'COMBATTIVO',
+                    name: hustle,
+                    color: const Color(0xFFFF6D00))),
 
           if (hasHustle && hasBestGoal)
-            Container(width: 1, height: 34, color: Colors.white10,
+            Container(
+                width: 1,
+                height: 34,
+                color: Colors.white10,
                 margin: const EdgeInsets.symmetric(horizontal: 8)),
 
           if (hasBestGoal)
-            Expanded(child: _AwardBadge(emoji: '⚽', label: 'BEST GOAL', name: bestGoal, color: const Color(0xFF00E676))),
+            Expanded(
+                child: _AwardBadge(
+                    emoji: '⚽',
+                    label: 'BEST GOAL',
+                    name: bestGoal,
+                    color: const Color(0xFF00E676))),
 
           if (!hasAny)
             const Expanded(
@@ -506,18 +538,17 @@ class _FooterSection extends StatelessWidget {
           GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => EditMatchScreen(match: match)),
+              MaterialPageRoute(builder: (_) => EditMatchScreen(match: match)),
             ),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.amber.withOpacity(0.08),
+                color: Colors.amber.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.amber.withOpacity(0.25)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.25)),
               ),
-              child: const Icon(Icons.edit_rounded,
-                  color: Colors.amber, size: 20),
+              child:
+                  const Icon(Icons.edit_rounded, color: Colors.amber, size: 20),
             ),
           ),
 
@@ -549,9 +580,9 @@ class _FooterSection extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.08),
+                color: Colors.red.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.withOpacity(0.25)),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
               ),
               child: const Icon(Icons.delete_outline_rounded,
                   color: Colors.redAccent, size: 20),
@@ -594,7 +625,7 @@ class _AwardBadge extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: color.withOpacity(0.65),
+                  color: color.withValues(alpha: 0.65),
                   fontSize: 8,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.8,

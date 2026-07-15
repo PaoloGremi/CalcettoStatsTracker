@@ -1,37 +1,21 @@
 import 'package:hive/hive.dart';
 
-enum role { P, D, C, A }
+/// Record piatto con lo stesso shape del vecchio `Player` (prima della
+/// migrazione a `PlayerModel` con adapter generato). Serve solo a leggere
+/// i byte scritti dal vecchio [LegacyPlayerAdapter] durante la migrazione
+/// una-tantum in [HiveMigrationService] — non è un modello di dominio.
+class LegacyPlayerRecord {
+  final String id;
+  final String name;
+  final String role;
+  final String icon;
+  final String? imagePath;
+  final int mvpCount;
+  final int hustleCount;
+  final int bestGoalCount;
+  final int totalGoals;
 
-@HiveType(typeId: 0)
-class Player extends HiveObject {
-  @HiveField(0)
-  String id;
-
-  @HiveField(1)
-  String name;
-
-  @HiveField(2)
-  String role;
-
-  @HiveField(3)
-  String icon;
-
-  @HiveField(4)
-  String? imagePath;
-
-  @HiveField(5)
-  int mvpCount;      // quante volte MVP
-
-  @HiveField(6)
-  int hustleCount;   // quante volte Combattivo
-
-  @HiveField(7)
-  int bestGoalCount; // quante volte Best Goal
-
-  @HiveField(8)
-  int totalGoals;    // ✅ gol totali segnati in tutte le partite
-
-  Player({
+  const LegacyPlayerRecord({
     required this.id,
     required this.name,
     required this.role,
@@ -44,12 +28,18 @@ class Player extends HiveObject {
   });
 }
 
-class PlayerAdapter extends TypeAdapter<Player> {
+/// Copia byte-per-byte identica del vecchio `PlayerAdapter` scritto a mano
+/// (stesso typeId, stessa logica read/write posizionale con i fallback
+/// di retrocompatibilità), solo ritargettizzata su [LegacyPlayerRecord]
+/// invece che sul modello applicativo. Non va mai modificata: rappresenta
+/// il contratto binario dei dati già scritti su disco dagli utenti prima
+/// della migrazione a `PlayerModel`.
+class LegacyPlayerAdapter extends TypeAdapter<LegacyPlayerRecord> {
   @override
   final int typeId = 0;
 
   @override
-  Player read(BinaryReader reader) {
+  LegacyPlayerRecord read(BinaryReader reader) {
     final id = reader.readString();
     final name = reader.readString();
     final role = reader.readString();
@@ -83,14 +73,14 @@ class PlayerAdapter extends TypeAdapter<Player> {
       if (raw is int) bestGoalCount = raw;
     } catch (_) {}
 
-    // ✅ totalGoals — retrocompatibile (0 se non presente)
+    // totalGoals — retrocompatibile (0 se non presente)
     int totalGoals = 0;
     try {
       final raw = reader.read();
       if (raw is int) totalGoals = raw;
     } catch (_) {}
 
-    return Player(
+    return LegacyPlayerRecord(
       id: id,
       name: name,
       role: role,
@@ -104,7 +94,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
   }
 
   @override
-  void write(BinaryWriter writer, Player obj) {
+  void write(BinaryWriter writer, LegacyPlayerRecord obj) {
     writer.writeString(obj.id);
     writer.writeString(obj.name);
     writer.writeString(obj.role);
@@ -113,6 +103,6 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.write(obj.mvpCount);
     writer.write(obj.hustleCount);
     writer.write(obj.bestGoalCount);
-    writer.write(obj.totalGoals); // ✅
+    writer.write(obj.totalGoals);
   }
 }

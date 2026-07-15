@@ -1,26 +1,29 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:calcetto_tracker/widgets/ChemestryBubbleChart.dart';
-import 'package:calcetto_tracker/widgets/ChemistryRadarChart.dart';
+import 'package:calcetto_tracker/widgets/chemistry_bubble_chart.dart';
+import 'package:calcetto_tracker/widgets/chemistry_radar_chart.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/player.dart';
+import 'package:provider/provider.dart';
+import '../models/player_model.dart';
 import '../models/match_model.dart';
-import '../data/hive_boxes.dart';
+import '../services/data_service.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 import '../services/player_stats_calculator.dart';
+import '../core/util/date_formatters.dart';
 
 class PlayerStatsScreen extends StatelessWidget {
-  final Player player;
+  final PlayerModel player;
 
   const PlayerStatsScreen({required this.player, super.key});
 
   /// Recupera le partite del giocatore ordinate per data crescente
-  List<MatchModel> _playerMatches() {
-    final matches = HiveBoxes.matchesBox.values
+  List<MatchModel> _playerMatches(DataService data) {
+    final matches = data
+        .getAllMatches()
         .where(
             (m) => m.teamA.contains(player.id) || m.teamB.contains(player.id))
         .toList();
@@ -30,10 +33,11 @@ class PlayerStatsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final matches = _playerMatches();
+    final data = Provider.of<DataService>(context, listen: false);
+    final matches = _playerMatches(data);
 
     // Totale partite registrate nel sistema (non solo quelle del giocatore)
-    final totalRegisteredMatches = HiveBoxes.matchesBox.length;
+    final totalRegisteredMatches = data.matchCount;
 
     // Prepara i dati per i grafici
     final votePoints = <FlSpot>[];
@@ -46,7 +50,7 @@ class PlayerStatsScreen extends StatelessWidget {
       final goals = m.goals[player.id] ?? 0;
       if (vote != null) votePoints.add(FlSpot(i.toDouble(), vote));
       goalPoints.add(FlSpot(i.toDouble(), goals.toDouble()));
-      dateLabels.add(DateFormat('dd/MM', 'it_IT').format(m.date));
+      dateLabels.add(formatShortDate(m.date));
     }
 
     // Statistiche aggregate
@@ -71,12 +75,13 @@ class PlayerStatsScreen extends StatelessWidget {
       final inTeamA = m.teamA.contains(player.id);
       final playerScore = inTeamA ? m.scoreA : m.scoreB;
       final oppScore = inTeamA ? m.scoreB : m.scoreA;
-      if (playerScore > oppScore)
+      if (playerScore > oppScore) {
         wins++;
-      else if (playerScore == oppScore)
+      } else if (playerScore == oppScore) {
         draws++;
-      else
+      } else {
         losses++;
+      }
     }
 
     // ── Statistiche aggiuntive ────────────────────────────────
@@ -107,10 +112,11 @@ class PlayerStatsScreen extends StatelessWidget {
         final ps = inTeamA ? m.scoreA : m.scoreB;
         final os = inTeamA ? m.scoreB : m.scoreA;
         final r = ps > os ? 'V' : (ps == os ? 'P' : 'S');
-        if (r == lastResult)
+        if (r == lastResult) {
           streakCount++;
-        else
+        } else {
           break;
+        }
       }
       currentStreak = '$streakCount$lastResult';
     }
@@ -163,16 +169,17 @@ class PlayerStatsScreen extends StatelessWidget {
     };
     for (final s in votePoints) {
       final v = s.y;
-      if (v <= 2)
+      if (v <= 2) {
         voteDistribution['1-2'] = voteDistribution['1-2']! + 1;
-      else if (v <= 4)
+      } else if (v <= 4) {
         voteDistribution['3-4'] = voteDistribution['3-4']! + 1;
-      else if (v <= 6)
+      } else if (v <= 6) {
         voteDistribution['5-6'] = voteDistribution['5-6']! + 1;
-      else if (v <= 8)
+      } else if (v <= 8) {
         voteDistribution['7-8'] = voteDistribution['7-8']! + 1;
-      else
+      } else {
         voteDistribution['9-10'] = voteDistribution['9-10']! + 1;
+      }
     }
 
     // ── Voto medio per mese ───────────────────────────────────
@@ -201,18 +208,17 @@ class PlayerStatsScreen extends StatelessWidget {
     }
 
     // ── Media mobile voti (finestra 5 partite) ───────────────
-    const _movingWindow = 5;
+    const movingWindow = 5;
     final movingAvgPoints = <FlSpot>[];
-    for (int i = _movingWindow - 1; i < votePoints.length; i++) {
-      final window = votePoints.sublist(i - _movingWindow + 1, i + 1);
-      final avg = window.map((s) => s.y).reduce((a, b) => a + b) / _movingWindow;
+    for (int i = movingWindow - 1; i < votePoints.length; i++) {
+      final window = votePoints.sublist(i - movingWindow + 1, i + 1);
+      final avg = window.map((s) => s.y).reduce((a, b) => a + b) / movingWindow;
       movingAvgPoints.add(FlSpot(votePoints[i].x, avg));
     }
 
     // ── Form recente (ultime 10 partite) ─────────────────────
-    final recentMatches = matches.length > 10
-        ? matches.sublist(matches.length - 10)
-        : matches;
+    final recentMatches =
+        matches.length > 10 ? matches.sublist(matches.length - 10) : matches;
     final recentResults = <_RecentResult>[];
     for (int i = 0; i < recentMatches.length; i++) {
       final m = recentMatches[i];
@@ -225,7 +231,7 @@ class PlayerStatsScreen extends StatelessWidget {
         index: i,
         result: result,
         vote: vote,
-        date: DateFormat('dd/MM', 'it_IT').format(m.date),
+        date: formatShortDate(m.date),
       ));
     }
 
@@ -238,11 +244,11 @@ class PlayerStatsScreen extends StatelessWidget {
     final sortedGoalMonthKeys = goalsByMonth.keys.toList()..sort();
 
     // ── Win-rate rolling (finestra 5 partite) ────────────────
-    const _winWindow = 5;
+    const winWindow = 5;
     final winRatePoints = <FlSpot>[];
     final winRateLabels = <String>[];
-    for (int i = _winWindow - 1; i < matches.length; i++) {
-      final window = matches.sublist(i - _winWindow + 1, i + 1);
+    for (int i = winWindow - 1; i < matches.length; i++) {
+      final window = matches.sublist(i - winWindow + 1, i + 1);
       int wWins = 0;
       for (final m in window) {
         final inTeamA = m.teamA.contains(player.id);
@@ -250,7 +256,7 @@ class PlayerStatsScreen extends StatelessWidget {
         final os = inTeamA ? m.scoreB : m.scoreA;
         if (ps > os) wWins++;
       }
-      winRatePoints.add(FlSpot(i.toDouble(), wWins / _winWindow * 100));
+      winRatePoints.add(FlSpot(i.toDouble(), wWins / winWindow * 100));
       winRateLabels.add(dateLabels[i]);
     }
 
@@ -262,18 +268,19 @@ class PlayerStatsScreen extends StatelessWidget {
       final inTeamA = m.teamA.contains(player.id);
       final ps = inTeamA ? m.scoreA : m.scoreB;
       final os = inTeamA ? m.scoreB : m.scoreA;
-      if (ps > os)
+      if (ps > os) {
         votesByResult['V']!.add(vote);
-      else if (ps == os)
+      } else if (ps == os) {
         votesByResult['P']!.add(vote);
-      else
+      } else {
         votesByResult['S']!.add(vote);
+      }
     }
-    double _avg(List<double> list) =>
+    double avg0(List<double> list) =>
         list.isEmpty ? 0.0 : list.reduce((a, b) => a + b) / list.length;
-    final avgVoteWin = _avg(votesByResult['V']!);
-    final avgVoteDraw = _avg(votesByResult['P']!);
-    final avgVoteLoss = _avg(votesByResult['S']!);
+    final avgVoteWin = avg0(votesByResult['V']!);
+    final avgVoteDraw = avg0(votesByResult['P']!);
+    final avgVoteLoss = avg0(votesByResult['S']!);
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
@@ -306,7 +313,11 @@ class PlayerStatsScreen extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      PlayerAvatar(player: player, radius: 32),
+                      PlayerAvatar(
+                          name: player.name,
+                          icon: player.icon,
+                          imagePath: player.imagePath,
+                          radius: 32),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -519,7 +530,8 @@ class PlayerStatsScreen extends StatelessWidget {
                             ),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: AppTheme.accentGold.withOpacity(0.08),
+                              color:
+                                  AppTheme.accentGold.withValues(alpha: 0.08),
                             ),
                           ),
                           // Linea media tratteggiata
@@ -531,7 +543,8 @@ class PlayerStatsScreen extends StatelessWidget {
                                     (matches.length - 1).toDouble(), avgVote),
                               ],
                               isCurved: false,
-                              color: AppTheme.accentGold.withOpacity(0.35),
+                              color:
+                                  AppTheme.accentGold.withValues(alpha: 0.35),
                               barWidth: 1,
                               dashArray: [6, 4],
                               dotData: const FlDotData(show: false),
@@ -540,8 +553,9 @@ class PlayerStatsScreen extends StatelessWidget {
                         lineTouchData: LineTouchData(
                           touchTooltipData: LineTouchTooltipData(
                             getTooltipItems: (spots) => spots.map((s) {
-                              if (s.barIndex == 1)
+                              if (s.barIndex == 1) {
                                 return null; // nascondi tooltip media
+                              }
                               final i = s.x.toInt();
                               final date =
                                   i < dateLabels.length ? dateLabels[i] : '';
@@ -563,7 +577,7 @@ class PlayerStatsScreen extends StatelessWidget {
                   Center(
                     child: FifaLabel(
                       '— media ${avgVote.toStringAsFixed(1)}',
-                      color: AppTheme.accentGold.withOpacity(0.5),
+                      color: AppTheme.accentGold.withValues(alpha: 0.5),
                       fontSize: 9,
                     ),
                   ),
@@ -599,8 +613,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble())
+                                if (v != v.floorToDouble()) {
                                   return const SizedBox();
+                                }
                                 return Text(
                                   v.toInt().toString(),
                                   style: const TextStyle(
@@ -615,8 +630,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= dateLabels.length)
+                                if (i < 0 || i >= dateLabels.length) {
                                   return const SizedBox();
+                                }
                                 // mostra solo ogni N label per non sovraffollare
                                 final step =
                                     (matches.length / 5).ceil().clamp(1, 99);
@@ -791,8 +807,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble())
+                                if (v != v.floorToDouble()) {
                                   return const SizedBox();
+                                }
                                 return Text(
                                   v.toInt().toString(),
                                   style: const TextStyle(
@@ -807,8 +824,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= sortedMonthKeys.length)
+                                if (i < 0 || i >= sortedMonthKeys.length) {
                                   return const SizedBox();
+                                }
                                 final step = (sortedMonthKeys.length / 5)
                                     .ceil()
                                     .clamp(1, 99);
@@ -818,7 +836,7 @@ class PlayerStatsScreen extends StatelessWidget {
                                 final dt = DateTime(
                                     int.parse(parts[0]), int.parse(parts[1]));
                                 return Text(
-                                  DateFormat('MMM yy', 'it_IT').format(dt),
+                                  formatMonthYearShort(dt),
                                   style: const TextStyle(
                                       color: AppTheme.textMuted, fontSize: 9),
                                 );
@@ -855,8 +873,7 @@ class PlayerStatsScreen extends StatelessWidget {
                               final parts = key.split('-');
                               final dt = DateTime(
                                   int.parse(parts[0]), int.parse(parts[1]));
-                              final label =
-                                  DateFormat('MMMM yyyy', 'it_IT').format(dt);
+                              final label = formatMonthYearFull(dt);
                               final count = matchesByMonth[key]!;
                               return BarTooltipItem(
                                 '$label\n$count partite',
@@ -902,8 +919,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble())
+                                if (v != v.floorToDouble()) {
                                   return const SizedBox();
+                                }
                                 return Text(v.toInt().toString(),
                                     style: const TextStyle(
                                         color: AppTheme.textMuted,
@@ -924,8 +942,9 @@ class PlayerStatsScreen extends StatelessWidget {
                                   '9-10'
                                 ];
                                 final i = v.toInt();
-                                if (i < 0 || i >= labels.length)
+                                if (i < 0 || i >= labels.length) {
                                   return const SizedBox();
+                                }
                                 return Text(labels[i],
                                     style: const TextStyle(
                                         color: AppTheme.textMuted,
@@ -1028,8 +1047,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= sortedVoteMonthKeys.length)
+                                if (i < 0 || i >= sortedVoteMonthKeys.length) {
                                   return const SizedBox();
+                                }
                                 final step = (sortedVoteMonthKeys.length / 4)
                                     .ceil()
                                     .clamp(1, 99);
@@ -1038,7 +1058,7 @@ class PlayerStatsScreen extends StatelessWidget {
                                 final dt = DateTime(
                                     int.parse(parts[0]), int.parse(parts[1]));
                                 return Text(
-                                  DateFormat('MMM yy', 'it_IT').format(dt),
+                                  formatMonthYearShort(dt),
                                   style: const TextStyle(
                                       color: AppTheme.textMuted, fontSize: 9),
                                 );
@@ -1073,7 +1093,8 @@ class PlayerStatsScreen extends StatelessWidget {
                             ),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: AppTheme.accentGold.withOpacity(0.08),
+                              color:
+                                  AppTheme.accentGold.withValues(alpha: 0.08),
                             ),
                           ),
                         ],
@@ -1081,8 +1102,9 @@ class PlayerStatsScreen extends StatelessWidget {
                           touchTooltipData: LineTouchTooltipData(
                             getTooltipItems: (spots) => spots.map((s) {
                               final i = s.x.toInt();
-                              if (i < 0 || i >= sortedVoteMonthKeys.length)
+                              if (i < 0 || i >= sortedVoteMonthKeys.length) {
                                 return null;
+                              }
                               final parts = sortedVoteMonthKeys[i].split('-');
                               final dt = DateTime(
                                   int.parse(parts[0]), int.parse(parts[1]));
@@ -1125,8 +1147,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               showTitles: true,
                               reservedSize: 28,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble())
+                                if (v != v.floorToDouble()) {
                                   return const SizedBox();
+                                }
                                 return Text(v.toInt().toString(),
                                     style: const TextStyle(
                                         color: AppTheme.textMuted,
@@ -1140,8 +1163,9 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= dateLabels.length)
+                                if (i < 0 || i >= dateLabels.length) {
                                   return const SizedBox();
+                                }
                                 final step =
                                     (matches.length / 5).ceil().clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
@@ -1166,7 +1190,7 @@ class PlayerStatsScreen extends StatelessWidget {
                             dotData: const FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: AppTheme.accentRed.withOpacity(0.1),
+                              color: AppTheme.accentRed.withValues(alpha: 0.1),
                             ),
                           ),
                         ],
@@ -1247,8 +1271,9 @@ class PlayerStatsScreen extends StatelessWidget {
                                         'Sconfitte'
                                       ];
                                       final i = v.toInt();
-                                      if (i < 0 || i >= labels.length)
+                                      if (i < 0 || i >= labels.length) {
                                         return const SizedBox();
+                                      }
                                       return Text(labels[i],
                                           style: const TextStyle(
                                               color: AppTheme.textMuted,
@@ -1412,7 +1437,7 @@ class PlayerStatsScreen extends StatelessWidget {
                 ],
 
                 // ── Trend Voto con Media Mobile ───────────────────
-                if (votePoints.length >= _movingWindow) ...[
+                if (votePoints.length >= movingWindow) ...[
                   const FifaSectionHeader('Trend Voto (Media Mobile)',
                       accent: AppTheme.accentGold),
                   _ChartCard(
@@ -1424,8 +1449,8 @@ class PlayerStatsScreen extends StatelessWidget {
                           show: true,
                           drawVerticalLine: false,
                           horizontalInterval: 2,
-                          getDrawingHorizontalLine: (_) => FlLine(
-                              color: AppTheme.border, strokeWidth: 1),
+                          getDrawingHorizontalLine: (_) =>
+                              FlLine(color: AppTheme.border, strokeWidth: 1),
                         ),
                         borderData: FlBorderData(show: false),
                         titlesData: FlTitlesData(
@@ -1447,14 +1472,16 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= dateLabels.length)
+                                if (i < 0 || i >= dateLabels.length) {
                                   return const SizedBox();
+                                }
                                 final step =
                                     (matches.length / 5).ceil().clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
                                 return Text(dateLabels[i],
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 9));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 9));
                               },
                             ),
                           ),
@@ -1468,14 +1495,15 @@ class PlayerStatsScreen extends StatelessWidget {
                           LineChartBarData(
                             spots: votePoints,
                             isCurved: false,
-                            color: AppTheme.textMuted.withOpacity(0.35),
+                            color: AppTheme.textMuted.withValues(alpha: 0.35),
                             barWidth: 1.5,
                             dotData: FlDotData(
                               show: true,
                               getDotPainter: (spot, _, __, ___) =>
                                   FlDotCirclePainter(
                                 radius: 2.5,
-                                color: AppTheme.textMuted.withOpacity(0.5),
+                                color:
+                                    AppTheme.textMuted.withValues(alpha: 0.5),
                                 strokeWidth: 0,
                                 strokeColor: Colors.transparent,
                               ),
@@ -1490,7 +1518,7 @@ class PlayerStatsScreen extends StatelessWidget {
                             dotData: const FlDotData(show: false),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: AppTheme.accentGold.withOpacity(0.1),
+                              color: AppTheme.accentGold.withValues(alpha: 0.1),
                             ),
                           ),
                         ],
@@ -1528,7 +1556,7 @@ class PlayerStatsScreen extends StatelessWidget {
                         Container(
                             width: 24,
                             height: 2,
-                            color: AppTheme.textMuted.withOpacity(0.4)),
+                            color: AppTheme.textMuted.withValues(alpha: 0.4)),
                         const SizedBox(width: 6),
                         const Text('Voto singola partita',
                             style: TextStyle(
@@ -1576,7 +1604,8 @@ class PlayerStatsScreen extends StatelessWidget {
                                     : AppTheme.accentRed;
                             return Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 2),
                                 child: Column(
                                   children: [
                                     // Voto sopra
@@ -1597,10 +1626,11 @@ class PlayerStatsScreen extends StatelessWidget {
                                     Container(
                                       height: 36,
                                       decoration: BoxDecoration(
-                                        color: color.withOpacity(0.15),
+                                        color: color.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                            color: color.withOpacity(0.4)),
+                                            color:
+                                                color.withValues(alpha: 0.4)),
                                       ),
                                       alignment: Alignment.center,
                                       child: Text(
@@ -1630,12 +1660,15 @@ class PlayerStatsScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         // Riepilogo forma
                         Builder(builder: (context) {
-                          final recentWins =
-                              recentResults.where((r) => r.result == 'V').length;
-                          final recentDraws =
-                              recentResults.where((r) => r.result == 'P').length;
-                          final recentLosses =
-                              recentResults.where((r) => r.result == 'S').length;
+                          final recentWins = recentResults
+                              .where((r) => r.result == 'V')
+                              .length;
+                          final recentDraws = recentResults
+                              .where((r) => r.result == 'P')
+                              .length;
+                          final recentLosses = recentResults
+                              .where((r) => r.result == 'S')
+                              .length;
                           final recentVotes = recentResults
                               .where((r) => r.vote != null)
                               .map((r) => r.vote!)
@@ -1701,11 +1734,13 @@ class PlayerStatsScreen extends StatelessWidget {
                               interval: 1,
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
-                                if (v != v.floorToDouble())
+                                if (v != v.floorToDouble()) {
                                   return const SizedBox();
+                                }
                                 return Text(v.toInt().toString(),
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 10));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 10));
                               },
                             ),
                           ),
@@ -1715,20 +1750,20 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 24,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= sortedGoalMonthKeys.length)
+                                if (i < 0 || i >= sortedGoalMonthKeys.length) {
                                   return const SizedBox();
+                                }
                                 final step = (sortedGoalMonthKeys.length / 5)
                                     .ceil()
                                     .clamp(1, 99);
                                 if (i % step != 0) return const SizedBox();
-                                final parts =
-                                    sortedGoalMonthKeys[i].split('-');
-                                final dt = DateTime(int.parse(parts[0]),
-                                    int.parse(parts[1]));
-                                return Text(
-                                    DateFormat('MMM yy', 'it_IT').format(dt),
+                                final parts = sortedGoalMonthKeys[i].split('-');
+                                final dt = DateTime(
+                                    int.parse(parts[0]), int.parse(parts[1]));
+                                return Text(formatMonthYearShort(dt),
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 9));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 9));
                               },
                             ),
                           ),
@@ -1767,8 +1802,7 @@ class PlayerStatsScreen extends StatelessWidget {
                               final parts = key.split('-');
                               final dt = DateTime(
                                   int.parse(parts[0]), int.parse(parts[1]));
-                              final label =
-                                  DateFormat('MMMM yyyy', 'it_IT').format(dt);
+                              final label = formatMonthYearFull(dt);
                               final count = goalsByMonth[key] ?? 0;
                               return BarTooltipItem(
                                 '$label\n$count ⚽',
@@ -1802,7 +1836,8 @@ class PlayerStatsScreen extends StatelessWidget {
                           getDrawingHorizontalLine: (v) {
                             if (v == 50) {
                               return FlLine(
-                                  color: AppTheme.accentGold.withOpacity(0.5),
+                                  color: AppTheme.accentGold
+                                      .withValues(alpha: 0.5),
                                   strokeWidth: 1,
                                   dashArray: [4, 4]);
                             }
@@ -1830,19 +1865,21 @@ class PlayerStatsScreen extends StatelessWidget {
                               reservedSize: 22,
                               getTitlesWidget: (v, _) {
                                 final i = v.toInt();
-                                if (i < 0 || i >= winRateLabels.length)
+                                if (i < 0 || i >= winRateLabels.length) {
                                   return const SizedBox();
+                                }
                                 final step = (winRateLabels.length / 5)
                                     .ceil()
                                     .clamp(1, 99);
                                 // allinea all'indice originale
-                                final origIdx = i - (_winWindow - 1);
-                                if (origIdx < 0 || origIdx % step != 0)
+                                final origIdx = i - (winWindow - 1);
+                                if (origIdx < 0 || origIdx % step != 0) {
                                   return const SizedBox();
-                                return Text(
-                                    dateLabels[i],
+                                }
+                                return Text(dateLabels[i],
                                     style: const TextStyle(
-                                        color: AppTheme.textMuted, fontSize: 9));
+                                        color: AppTheme.textMuted,
+                                        fontSize: 9));
                               },
                             ),
                           ),
@@ -1864,8 +1901,8 @@ class PlayerStatsScreen extends StatelessWidget {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  AppTheme.accentGreen.withOpacity(0.2),
-                                  AppTheme.accentGreen.withOpacity(0.0),
+                                  AppTheme.accentGreen.withValues(alpha: 0.2),
+                                  AppTheme.accentGreen.withValues(alpha: 0.0),
                                 ],
                               ),
                             ),
@@ -1875,9 +1912,8 @@ class PlayerStatsScreen extends StatelessWidget {
                           touchTooltipData: LineTouchTooltipData(
                             getTooltipItems: (spots) => spots.map((s) {
                               final i = s.x.toInt();
-                              final date = i < dateLabels.length
-                                  ? dateLabels[i]
-                                  : '';
+                              final date =
+                                  i < dateLabels.length ? dateLabels[i] : '';
                               return LineTooltipItem(
                                 '$date\n${s.y.toStringAsFixed(0)}% vittorie',
                                 const TextStyle(
@@ -1900,7 +1936,7 @@ class PlayerStatsScreen extends StatelessWidget {
                           width: 20,
                           height: 1.5,
                           decoration: BoxDecoration(
-                            color: AppTheme.accentGold.withOpacity(0.6),
+                            color: AppTheme.accentGold.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -1961,7 +1997,7 @@ class _StatBox extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -1980,7 +2016,8 @@ class _StatBox extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              FifaLabel(label, color: color.withOpacity(0.6), fontSize: 8),
+              FifaLabel(label,
+                  color: color.withValues(alpha: 0.6), fontSize: 8),
             ],
           ),
         ),
@@ -2078,7 +2115,7 @@ class _ResultAvgBadge extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          FifaLabel(label, color: color.withOpacity(0.7), fontSize: 8),
+          FifaLabel(label, color: color.withValues(alpha: 0.7), fontSize: 8),
           const SizedBox(height: 1),
           FifaLabel('($count partite)', color: AppTheme.textMuted, fontSize: 8),
         ],
@@ -2196,7 +2233,7 @@ class _RadarCardState extends State<_RadarCard> {
                 gridBorderData:
                     const BorderSide(color: AppTheme.border, width: 1),
                 tickBorderData: BorderSide(
-                    color: AppTheme.border.withOpacity(0.4), width: 1),
+                    color: AppTheme.border.withValues(alpha: 0.4), width: 1),
                 titleTextStyle: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 11,
@@ -2206,7 +2243,7 @@ class _RadarCardState extends State<_RadarCard> {
                     RadarChartTitle(text: labels[index]),
                 dataSets: [
                   RadarDataSet(
-                    fillColor: accentColor.withOpacity(0.18),
+                    fillColor: accentColor.withValues(alpha: 0.18),
                     borderColor: accentColor,
                     borderWidth: 2,
                     entryRadius: 4,
@@ -2257,17 +2294,29 @@ class _RadarCardState extends State<_RadarCard> {
               alignment: WrapAlignment.center,
               children: [
                 _RadarLegendItem(
-                    label: 'VEL', value: '${f.vel}', color: AppTheme.accentGold),
+                    label: 'VEL',
+                    value: '${f.vel}',
+                    color: AppTheme.accentGold),
                 _RadarLegendItem(
-                    label: 'TIR', value: '${f.tir}', color: AppTheme.accentGold),
+                    label: 'TIR',
+                    value: '${f.tir}',
+                    color: AppTheme.accentGold),
                 _RadarLegendItem(
-                    label: 'PAS', value: '${f.pas}', color: AppTheme.accentGold),
+                    label: 'PAS',
+                    value: '${f.pas}',
+                    color: AppTheme.accentGold),
                 _RadarLegendItem(
-                    label: 'DRI', value: '${f.dri}', color: AppTheme.accentGold),
+                    label: 'DRI',
+                    value: '${f.dri}',
+                    color: AppTheme.accentGold),
                 _RadarLegendItem(
-                    label: 'DIF', value: '${f.dif}', color: AppTheme.accentGold),
+                    label: 'DIF',
+                    value: '${f.dif}',
+                    color: AppTheme.accentGold),
                 _RadarLegendItem(
-                    label: 'FIS', value: '${f.fis}', color: AppTheme.accentGold),
+                    label: 'FIS',
+                    value: '${f.fis}',
+                    color: AppTheme.accentGold),
               ],
             ),
           ],
@@ -2297,10 +2346,11 @@ class _TabButton extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: selected ? color.withOpacity(0.15) : Colors.transparent,
+              color:
+                  selected ? color.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(7),
               border: selected
-                  ? Border.all(color: color.withOpacity(0.5), width: 1)
+                  ? Border.all(color: color.withValues(alpha: 0.5), width: 1)
                   : null,
             ),
             alignment: Alignment.center,
@@ -2365,10 +2415,11 @@ class _FieldStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = Provider.of<DataService>(context, listen: false);
     // Aggrega dati per campo
     final fieldData = <String, _FieldStat>{};
     for (final m in matches) {
-      final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
+      final field = data.getFieldById(m.fieldLocation);
       final loc = field?.name ??
           (m.fieldLocation.isEmpty ? 'Sconosciuto' : m.fieldLocation);
       final imagePath = field?.imagePath;
@@ -2380,12 +2431,13 @@ class _FieldStatsCard extends StatelessWidget {
       final inTeamA = m.teamA.contains(playerId);
       final ps = inTeamA ? m.scoreA : m.scoreB;
       final os = inTeamA ? m.scoreB : m.scoreA;
-      if (ps > os)
+      if (ps > os) {
         stat.wins++;
-      else if (ps == os)
+      } else if (ps == os) {
         stat.draws++;
-      else
+      } else {
         stat.losses++;
+      }
 
       final vote = m.votes[playerId];
       if (vote != null) {
@@ -2441,8 +2493,8 @@ class _FieldStatsCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: hasImage
                         ? [
-                            Colors.black.withOpacity(0.45),
-                            Colors.black.withOpacity(0.72),
+                            Colors.black.withValues(alpha: 0.45),
+                            Colors.black.withValues(alpha: 0.72),
                           ]
                         : [
                             AppTheme.surface,
@@ -2489,7 +2541,7 @@ class _FieldStatsCard extends StatelessWidget {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: Colors.black
-                                .withOpacity(hasImage ? 0.35 : 0.08),
+                                .withValues(alpha: hasImage ? 0.35 : 0.08),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -2634,14 +2686,20 @@ class _MilestonesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final milestones = <({DateTime date, String title, String subtitle, Color color, String icon})>[];
+    final milestones = <({
+      DateTime date,
+      String title,
+      String subtitle,
+      Color color,
+      String icon
+    })>[];
 
     // ── Prima partita ────────────────────────────────────────
     if (matches.isNotEmpty) {
       milestones.add((
         date: matches.first.date,
         title: 'Prima partita',
-        subtitle: DateFormat('d MMM yyyy', 'it_IT').format(matches.first.date),
+        subtitle: formatDayMonthYear(matches.first.date),
         color: AppTheme.accentBlue,
         icon: '🎮',
       ));
@@ -2655,7 +2713,7 @@ class _MilestonesCard extends StatelessWidget {
         milestones.add((
           date: m.date,
           title: '$target partite giocate',
-          subtitle: DateFormat('d MMM yyyy', 'it_IT').format(m.date),
+          subtitle: formatDayMonthYear(m.date),
           color: AppTheme.accentBlue,
           icon: target >= 50 ? '🏟️' : '⚽',
         ));
@@ -2674,7 +2732,7 @@ class _MilestonesCard extends StatelessWidget {
         milestones.add((
           date: m.date,
           title: target == 1 ? 'Primo gol ⚽' : '$target gol in carriera',
-          subtitle: DateFormat('d MMM yyyy', 'it_IT').format(m.date),
+          subtitle: formatDayMonthYear(m.date),
           color: AppTheme.accentRed,
           icon: target == 1 ? '🥅' : '🔥',
         ));
@@ -2696,7 +2754,7 @@ class _MilestonesCard extends StatelessWidget {
       milestones.add((
         date: bestVoteDate,
         title: 'Voto record — ${bestVote.toStringAsFixed(1)}',
-        subtitle: DateFormat('d MMM yyyy', 'it_IT').format(bestVoteDate),
+        subtitle: formatDayMonthYear(bestVoteDate),
         color: AppTheme.accentGold,
         icon: '⭐',
       ));
@@ -2706,7 +2764,8 @@ class _MilestonesCard extends StatelessWidget {
     milestones.sort((a, b) => a.date.compareTo(b.date));
 
     // ── Premi (senza data precisa) ───────────────────────────
-    final prizes = <({String title, String subtitle, Color color, String icon})>[];
+    final prizes =
+        <({String title, String subtitle, Color color, String icon})>[];
     if (mvpCount > 0) {
       prizes.add((
         title: 'MVP',
@@ -2758,8 +2817,7 @@ class _MilestonesCard extends StatelessWidget {
                         width: 32,
                         child: Column(
                           children: [
-                            Text(ms.icon,
-                                style: const TextStyle(fontSize: 16)),
+                            Text(ms.icon, style: const TextStyle(fontSize: 16)),
                             if (!isLast)
                               Expanded(
                                 child: Container(
@@ -2776,8 +2834,7 @@ class _MilestonesCard extends StatelessWidget {
                       // Testo
                       Expanded(
                         child: Padding(
-                          padding:
-                              EdgeInsets.only(bottom: isLast ? 0 : 16),
+                          padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -2813,25 +2870,23 @@ class _MilestonesCard extends StatelessWidget {
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 8),
-            child: FifaLabel('PREMI',
-                color: AppTheme.textMuted, fontSize: 10),
+            child: FifaLabel('PREMI', color: AppTheme.textMuted, fontSize: 10),
           ),
           Row(
             children: prizes.map((p) {
               return Expanded(
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: p.color.withOpacity(0.35)),
+                    border: Border.all(color: p.color.withValues(alpha: 0.35)),
                   ),
                   child: Column(
                     children: [
-                      Text(p.icon,
-                          style: const TextStyle(fontSize: 22)),
+                      Text(p.icon, style: const TextStyle(fontSize: 22)),
                       const SizedBox(height: 4),
                       Text(
                         p.subtitle,
@@ -2843,7 +2898,7 @@ class _MilestonesCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       FifaLabel(p.title,
-                          color: p.color.withOpacity(0.7), fontSize: 9),
+                          color: p.color.withValues(alpha: 0.7), fontSize: 9),
                     ],
                   ),
                 ),
@@ -2895,9 +2950,9 @@ class _ConsistencyCard extends StatelessWidget {
     final realStdDev = n > 1
         ? math.sqrt(
             votePoints
-                .map((s) => (s.y - mean) * (s.y - mean))
-                .reduce((a, b) => a + b) /
-            (n - 1),
+                    .map((s) => (s.y - mean) * (s.y - mean))
+                    .reduce((a, b) => a + b) /
+                (n - 1),
           )
         : 0.0;
 
@@ -2933,11 +2988,12 @@ class _ConsistencyCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
-                  color: labelColor.withOpacity(0.12),
+                  color: labelColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: labelColor.withOpacity(0.3)),
+                  border: Border.all(color: labelColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   'range ${range.toStringAsFixed(1)}',
@@ -2963,7 +3019,7 @@ class _ConsistencyCard extends StatelessWidget {
                   Container(
                     height: 12,
                     decoration: BoxDecoration(
-                      color: AppTheme.border.withOpacity(0.3),
+                      color: AppTheme.border.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -2975,10 +3031,10 @@ class _ConsistencyCard extends StatelessWidget {
                     bottom: 0,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppTheme.accentBlue.withOpacity(0.35),
+                        color: AppTheme.accentBlue.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: AppTheme.accentBlue.withOpacity(0.5),
+                            color: AppTheme.accentBlue.withValues(alpha: 0.5),
                             width: 1),
                       ),
                     ),
@@ -3019,16 +3075,16 @@ class _ConsistencyCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('min ${worstVote.toStringAsFixed(1)}',
-                  style: const TextStyle(
-                      color: AppTheme.textMuted, fontSize: 10)),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
               Text('media',
                   style: const TextStyle(
                       color: AppTheme.accentBlue,
                       fontSize: 10,
                       fontWeight: FontWeight.w700)),
               Text('max ${bestVote.toStringAsFixed(1)}',
-                  style: const TextStyle(
-                      color: AppTheme.textMuted, fontSize: 10)),
+                  style:
+                      const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
             ],
           ),
           const SizedBox(height: 16),
@@ -3096,13 +3152,10 @@ class _ConsistStat extends StatelessWidget {
         children: [
           Text(value,
               style: TextStyle(
-                  color: color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900)),
+                  color: color, fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(
-                  color: AppTheme.textMuted, fontSize: 10)),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
         ],
       );
 }

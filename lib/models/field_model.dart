@@ -28,8 +28,8 @@ class FieldModelAdapter extends TypeAdapter<FieldModel> {
 
   @override
   FieldModel read(BinaryReader reader) {
-    final id      = reader.readString();
-    final name    = reader.readString();
+    final id = reader.readString();
+    final name = reader.readString();
     final address = reader.readString();
 
     String? imagePath;
@@ -38,7 +38,8 @@ class FieldModelAdapter extends TypeAdapter<FieldModel> {
       if (raw is String && raw.isNotEmpty) imagePath = raw;
     } catch (_) {}
 
-    return FieldModel(id: id, name: name, address: address, imagePath: imagePath);
+    return FieldModel(
+        id: id, name: name, address: address, imagePath: imagePath);
   }
 
   @override

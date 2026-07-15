@@ -2,12 +2,16 @@ import '../data/hive_boxes.dart';
 
 /// Statistiche FIFA calcolate automaticamente dai dati reali delle partite.
 class ComputedFifaStats {
-  final int vel; // Velocità  → frequenza recente (30%) + gol/partita (40%) + partite ad alto scoring (30%)
+  final int
+      vel; // Velocità  → frequenza recente (30%) + gol/partita (40%) + partite ad alto scoring (30%)
   final int tir; // Tiro      → gol/partita + bonus premi MVP/BestGoal
-  final int pas; // Passaggio → gol squadra (30%) + gol subiti inverso (25%) + presenze (20%) + gol compagni (25%)
-  final int dri; // Dribbling → gol fatti (30%) + gol subiti squadra (25%) + MVP (25%) + alto scoring (20%)
+  final int
+      pas; // Passaggio → gol squadra (30%) + gol subiti inverso (25%) + presenze (20%) + gol compagni (25%)
+  final int
+      dri; // Dribbling → gol fatti (30%) + gol subiti squadra (25%) + MVP (25%) + alto scoring (20%)
   final int dif; // Difesa    → premio Combattivo + voto medio nelle sconfitte
-  final int fis; // Fisico    → basso scoring (25%) + presenze (25%) + striscia vittorie (20%) + Hustle (20%) + ruolo (10%)
+  final int
+      fis; // Fisico    → basso scoring (25%) + presenze (25%) + striscia vittorie (20%) + Hustle (20%) + ruolo (10%)
 
   const ComputedFifaStats({
     required this.vel,
@@ -23,7 +27,12 @@ class ComputedFifaStats {
 
   /// Fallback con stat neutrali (nessuna partita registrata)
   factory ComputedFifaStats.empty() => const ComputedFifaStats(
-        vel: 60, tir: 60, pas: 60, dri: 60, dif: 60, fis: 60,
+        vel: 60,
+        tir: 60,
+        pas: 60,
+        dri: 60,
+        dif: 60,
+        fis: 60,
       );
 }
 
@@ -78,7 +87,6 @@ class PlayerStatsCalculator {
     final totalRegistered = HiveBoxes.matchesBox.length;
 
     // ── Raccolta dati partita per partita ──────────────────────────────────
-    int wins = 0;
     int totalGoals = 0;
     final allVotes = <double>[];
     final votesInLoss = <double>[];
@@ -92,10 +100,8 @@ class PlayerStatsCalculator {
       final inTeamA = m.teamA.contains(playerId);
       final myScore = inTeamA ? m.scoreA : m.scoreB;
       final oppScore = inTeamA ? m.scoreB : m.scoreA;
-      final isWin = myScore > oppScore;
       final isLoss = myScore < oppScore;
 
-      if (isWin) wins++;
       totalGoals += m.goals[playerId] ?? 0;
 
       final vote = m.votes[playerId];
@@ -103,13 +109,11 @@ class PlayerStatsCalculator {
         allVotes.add(vote);
         if (isLoss) votesInLoss.add(vote);
       }
-
     }
 
     final votedGames = allVotes.length;
-    final avgVote = votedGames > 0
-        ? allVotes.reduce((a, b) => a + b) / votedGames
-        : 6.0;
+    final avgVote =
+        votedGames > 0 ? allVotes.reduce((a, b) => a + b) / votedGames : 6.0;
 
     // ── VEL: frequenza recente + gol/partita + partite ad alto scoring ───────
     //
@@ -128,13 +132,14 @@ class PlayerStatsCalculator {
     if (allMatchesSorted.length >= 2) {
       final firstDate = allMatchesSorted.first.date;
       final lastDate = allMatchesSorted.last.date;
-      final monthsActive =
-          ((lastDate.difference(firstDate).inDays) / 30.0).clamp(1.0, double.infinity);
+      final monthsActive = ((lastDate.difference(firstDate).inDays) / 30.0)
+          .clamp(1.0, double.infinity);
       groupMonthlyAvg = allMatchesSorted.length / monthsActive;
     }
     // Il giocatore ha giocato X partite in 2 mesi → confronto con 2× mensile
     final recentExpected = groupMonthlyAvg * 2;
-    final velRecent = _scale(recentGames.toDouble(), 0.0, recentExpected, 40, 99);
+    final velRecent =
+        _scale(recentGames.toDouble(), 0.0, recentExpected, 40, 99);
 
     // Componente 2 (40%): gol/partita
     final goalsPerGame = totalGoals / totalGames;
@@ -164,7 +169,7 @@ class PlayerStatsCalculator {
     final presenceRate = (totalGames / totalRegistered).clamp(0.0, 1.0);
 
     // Raccolta dati di squadra nelle partite del giocatore
-    int totalTeamGoals = 0;   // gol segnati dalla squadra del giocatore
+    int totalTeamGoals = 0; // gol segnati dalla squadra del giocatore
     // totalConceded già calcolato nel blocco DRI — lo ricalcoliamo qui
     // per chiarezza (stesso loop, nessun impatto sulle performance)
     int pasTotalConceded = 0;
@@ -227,7 +232,10 @@ class PlayerStatsCalculator {
     //   Riutilizza highScoringRate già calcolato per VEL.
     final driHighScore = _scale(highScoringRate, 0.0, 1.0, 40, 99);
 
-    final dri = (driGoals * 0.30 + driConceded * 0.25 + driMvp * 0.25 + driHighScore * 0.20)
+    final dri = (driGoals * 0.30 +
+            driConceded * 0.25 +
+            driMvp * 0.25 +
+            driHighScore * 0.20)
         .toInt()
         .clamp(40, 99);
 
@@ -322,11 +330,19 @@ class PlayerStatsCalculator {
   //   ATT(accante) / ALA  → 0  (nessun bonus)
   static int _defRoleBonus(String role) {
     final r = role.toUpperCase();
-    if (r.contains('DIF') || r.contains('TER') || r.contains('LIB') ||
-        r.contains('STO')) return 6;
+    if (r.contains('DIF') ||
+        r.contains('TER') ||
+        r.contains('LIB') ||
+        r.contains('STO')) {
+      return 6;
+    }
     if (r.contains('POR')) return 4;
-    if (r.contains('CEN') || r.contains('MED') || r.contains('INT') ||
-        r.contains('TRE')) return 3;
+    if (r.contains('CEN') ||
+        r.contains('MED') ||
+        r.contains('INT') ||
+        r.contains('TRE')) {
+      return 3;
+    }
     return 0;
   }
 }

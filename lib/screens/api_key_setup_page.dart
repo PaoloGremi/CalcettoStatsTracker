@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
+import '../core/network/openai_service.dart';
 import 'ai_coach_page.dart';
 
 class ApiKeySetupPage extends StatefulWidget {
@@ -12,13 +10,11 @@ class ApiKeySetupPage extends StatefulWidget {
 }
 
 class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
-  final _storage = const FlutterSecureStorage();
+  final _openAiService = OpenAiService();
   final _keyController = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
   String? _savedKey;
-
-  static const _storageKey = 'openai_api_key';
 
   @override
   void initState() {
@@ -26,8 +22,14 @@ class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
     _loadKey();
   }
 
+  @override
+  void dispose() {
+    _keyController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadKey() async {
-    final key = await _storage.read(key: _storageKey);
+    final key = await _openAiService.readApiKey();
     setState(() => _savedKey = key);
   }
 
@@ -38,7 +40,7 @@ class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
     setState(() => _loading = true);
 
     // Valida la chiave con chiamata di test
-    final isValid = await _validateKey(key);
+    final isValid = await _openAiService.validateApiKey(key);
 
     if (!isValid) {
       setState(() => _loading = false);
@@ -53,7 +55,7 @@ class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
       return;
     }
 
-    await _storage.write(key: _storageKey, value: key);
+    await _openAiService.writeApiKey(key);
     setState(() {
       _savedKey = key;
       _loading = false;
@@ -67,50 +69,8 @@ class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
     }
   }
 
-  Future<bool> _validateKey(String key) async {
-  try {
-    final response = await http.post(
-      Uri.parse('https://api.openai.com/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $key',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4o-mini',
-        'messages': [
-          {'role': 'user', 'content': 'ping'}
-        ],
-        'max_tokens': 1,
-      }),
-    );
-
-    // ✅ SUCCESSO
-    if (response.statusCode == 200) return true;
-
-    final body = jsonDecode(response.body);
-
-    // 🔴 ERRORE AUTENTICAZIONE → chiave davvero invalida
-    if (response.statusCode == 401) return false;
-
-    // 🟡 QUOTA / BILLING / MODELLO → chiave valida ma problema diverso
-    if (response.statusCode == 429 || response.statusCode == 400) {
-      print("Chiave valida ma problema API: ${body['error']}");
-      return true;
-    }
-
-    // 🟡 altri errori → assumiamo valida (evita falsi negativi)
-    print("Errore inatteso: ${response.body}");
-    return true;
-
-  } catch (e) {
-    // 🌐 errore rete → NON invalidare la chiave
-    print("Errore rete: $e");
-    return true;
-  }
-}
-
   Future<void> _deleteKey() async {
-    await _storage.delete(key: _storageKey);
+    await _openAiService.deleteApiKey();
     setState(() => _savedKey = null);
     _keyController.clear();
   }
@@ -136,7 +96,8 @@ class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    Icon(Icons.info_outline,
+                        color: Colors.blue.shade700, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'Come funziona',
@@ -231,7 +192,8 @@ class _ApiKeySetupPageState extends State<ApiKeySetupPage> {
                   hintText: 'sk-proj-...',
                   prefixIcon: const Icon(Icons.key),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                    icon: Icon(
+                        _obscure ? Icons.visibility : Icons.visibility_off),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                   border: OutlineInputBorder(

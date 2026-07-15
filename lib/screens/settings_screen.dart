@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/data_service.dart';
+import '../widgets/fifa_card.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 
@@ -13,17 +14,17 @@ import '../theme/app_theme.dart';
 // Chiavi SharedPreferences
 // ─────────────────────────────────────────────────────────────
 class SettingsKeys {
-  static const mainPlayerId   = 'main_player_id';
-  static const birthDate      = 'info_birth_date';
-  static const foot           = 'info_foot';
-  static const nationality    = 'info_nationality';
-  static const favoriteTeam   = 'info_favorite_team';
-  static const jerseyNumber   = 'info_jersey_number';
+  static const mainPlayerId = 'main_player_id';
+  static const birthDate = 'info_birth_date';
+  static const foot = 'info_foot';
+  static const nationality = 'info_nationality';
+  static const favoriteTeam = 'info_favorite_team';
+  static const jerseyNumber = 'info_jersey_number';
   // Obiettivi annuali
-  static const goalMatches    = 'goal_matches';
-  static const goalWins       = 'goal_wins';
-  static const goalGoals      = 'goal_goals';
-  static const goalMvp        = 'goal_mvp';
+  static const goalMatches = 'goal_matches';
+  static const goalWins = 'goal_wins';
+  static const goalGoals = 'goal_goals';
+  static const goalMvp = 'goal_mvp';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -51,35 +52,55 @@ class AppSettings {
   static Future<AppSettings> load() async {
     final prefs = await SharedPreferences.getInstance();
     return AppSettings(
-      mainPlayerId:  prefs.getString(SettingsKeys.mainPlayerId),
-      birthDate:     prefs.getString(SettingsKeys.birthDate) ?? '',
-      foot:          prefs.getString(SettingsKeys.foot) ?? 'Destro',
-      nationality:   prefs.getString(SettingsKeys.nationality) ?? '',
-      favoriteTeam:  prefs.getString(SettingsKeys.favoriteTeam) ?? '',
-      jerseyNumber:  prefs.getString(SettingsKeys.jerseyNumber) ?? '',
-      goalMatches:   prefs.getInt(SettingsKeys.goalMatches) ?? 0,
-      goalWins:      prefs.getInt(SettingsKeys.goalWins) ?? 0,
-      goalGoals:     prefs.getInt(SettingsKeys.goalGoals) ?? 0,
-      goalMvp:       prefs.getInt(SettingsKeys.goalMvp) ?? 0,
+      mainPlayerId: prefs.getString(SettingsKeys.mainPlayerId),
+      birthDate: prefs.getString(SettingsKeys.birthDate) ?? '',
+      foot: prefs.getString(SettingsKeys.foot) ?? 'Destro',
+      nationality: prefs.getString(SettingsKeys.nationality) ?? '',
+      favoriteTeam: prefs.getString(SettingsKeys.favoriteTeam) ?? '',
+      jerseyNumber: prefs.getString(SettingsKeys.jerseyNumber) ?? '',
+      goalMatches: prefs.getInt(SettingsKeys.goalMatches) ?? 0,
+      goalWins: prefs.getInt(SettingsKeys.goalWins) ?? 0,
+      goalGoals: prefs.getInt(SettingsKeys.goalGoals) ?? 0,
+      goalMvp: prefs.getInt(SettingsKeys.goalMvp) ?? 0,
     );
   }
 
   static Future<void> save({
     String? mainPlayerId,
-    String? birthDate, String? foot, String? nationality,
-    String? favoriteTeam, String? jerseyNumber,
-    int? goalMatches, int? goalWins, int? goalGoals, int? goalMvp,
+    String? birthDate,
+    String? foot,
+    String? nationality,
+    String? favoriteTeam,
+    String? jerseyNumber,
+    int? goalMatches,
+    int? goalWins,
+    int? goalGoals,
+    int? goalMvp,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    if (mainPlayerId != null) await prefs.setString(SettingsKeys.mainPlayerId, mainPlayerId);
-    if (birthDate != null) await prefs.setString(SettingsKeys.birthDate, birthDate);
+    if (mainPlayerId != null) {
+      await prefs.setString(SettingsKeys.mainPlayerId, mainPlayerId);
+    }
+    if (birthDate != null) {
+      await prefs.setString(SettingsKeys.birthDate, birthDate);
+    }
     if (foot != null) await prefs.setString(SettingsKeys.foot, foot);
-    if (nationality != null) await prefs.setString(SettingsKeys.nationality, nationality);
-    if (favoriteTeam != null) await prefs.setString(SettingsKeys.favoriteTeam, favoriteTeam);
-    if (jerseyNumber != null) await prefs.setString(SettingsKeys.jerseyNumber, jerseyNumber);
-    if (goalMatches != null) await prefs.setInt(SettingsKeys.goalMatches, goalMatches);
+    if (nationality != null) {
+      await prefs.setString(SettingsKeys.nationality, nationality);
+    }
+    if (favoriteTeam != null) {
+      await prefs.setString(SettingsKeys.favoriteTeam, favoriteTeam);
+    }
+    if (jerseyNumber != null) {
+      await prefs.setString(SettingsKeys.jerseyNumber, jerseyNumber);
+    }
+    if (goalMatches != null) {
+      await prefs.setInt(SettingsKeys.goalMatches, goalMatches);
+    }
     if (goalWins != null) await prefs.setInt(SettingsKeys.goalWins, goalWins);
-    if (goalGoals != null) await prefs.setInt(SettingsKeys.goalGoals, goalGoals);
+    if (goalGoals != null) {
+      await prefs.setInt(SettingsKeys.goalGoals, goalGoals);
+    }
     if (goalMvp != null) await prefs.setInt(SettingsKeys.goalMvp, goalMvp);
   }
 }
@@ -101,17 +122,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _mainPlayerId;
 
   // Info personali
-  final _birthCtrl      = TextEditingController();
-  String _nationality   = '';
-  final _teamCtrl       = TextEditingController();
-  final _jerseyCtrl     = TextEditingController();
+  final _birthCtrl = TextEditingController();
+  String _nationality = '';
+  final _teamCtrl = TextEditingController();
+  final _jerseyCtrl = TextEditingController();
   String _foot = 'Destro';
 
   // Obiettivi annuali
-  final _goalMatchesCtrl  = TextEditingController();
-  final _goalWinsCtrl     = TextEditingController();
-  final _goalGoalsCtrl    = TextEditingController();
-  final _goalMvpCtrl      = TextEditingController();
+  final _goalMatchesCtrl = TextEditingController();
+  final _goalWinsCtrl = TextEditingController();
+  final _goalGoalsCtrl = TextEditingController();
+  final _goalMvpCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -121,33 +142,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final s = await AppSettings.load();
+    if (!mounted) return;
     setState(() {
-      _mainPlayerId    = s.mainPlayerId;
-      _birthCtrl.text       = s.birthDate;
-      _foot                 = s.foot;
-      _nationality          = s.nationality;
-      _teamCtrl.text        = s.favoriteTeam;
-      _jerseyCtrl.text      = s.jerseyNumber;
-      _goalMatchesCtrl.text  = s.goalMatches > 0 ? '${s.goalMatches}' : '';
-      _goalWinsCtrl.text     = s.goalWins    > 0 ? '${s.goalWins}'    : '';
-      _goalGoalsCtrl.text    = s.goalGoals   > 0 ? '${s.goalGoals}'   : '';
-      _goalMvpCtrl.text      = s.goalMvp     > 0 ? '${s.goalMvp}'     : '';
+      _mainPlayerId = s.mainPlayerId;
+      _birthCtrl.text = s.birthDate;
+      _foot = s.foot;
+      _nationality = s.nationality;
+      _teamCtrl.text = s.favoriteTeam;
+      _jerseyCtrl.text = s.jerseyNumber;
+      _goalMatchesCtrl.text = s.goalMatches > 0 ? '${s.goalMatches}' : '';
+      _goalWinsCtrl.text = s.goalWins > 0 ? '${s.goalWins}' : '';
+      _goalGoalsCtrl.text = s.goalGoals > 0 ? '${s.goalGoals}' : '';
+      _goalMvpCtrl.text = s.goalMvp > 0 ? '${s.goalMvp}' : '';
       _loading = false;
     });
   }
 
   Future<void> _save() async {
     await AppSettings.save(
-      mainPlayerId:  _mainPlayerId ?? '',
-      birthDate:    _birthCtrl.text.trim(),
-      foot:         _foot,
-      nationality:  _nationality,
+      mainPlayerId: _mainPlayerId ?? '',
+      birthDate: _birthCtrl.text.trim(),
+      foot: _foot,
+      nationality: _nationality,
       favoriteTeam: _teamCtrl.text.trim(),
       jerseyNumber: _jerseyCtrl.text.trim(),
-      goalMatches:  int.tryParse(_goalMatchesCtrl.text.trim()) ?? 0,
-      goalWins:     int.tryParse(_goalWinsCtrl.text.trim()) ?? 0,
-      goalGoals:    int.tryParse(_goalGoalsCtrl.text.trim()) ?? 0,
-      goalMvp:      int.tryParse(_goalMvpCtrl.text.trim()) ?? 0,
+      goalMatches: int.tryParse(_goalMatchesCtrl.text.trim()) ?? 0,
+      goalWins: int.tryParse(_goalWinsCtrl.text.trim()) ?? 0,
+      goalGoals: int.tryParse(_goalGoalsCtrl.text.trim()) ?? 0,
+      goalMvp: int.tryParse(_goalMvpCtrl.text.trim()) ?? 0,
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -159,7 +181,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Icon(Icons.check_circle_rounded, color: Colors.black, size: 18),
           SizedBox(width: 8),
           Text('Impostazioni salvate',
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+              style:
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
         ]),
       ),
     );
@@ -170,15 +193,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_mainPlayerId == null) return;
     final data = Provider.of<DataService>(context, listen: false);
     final picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery, imageQuality: 85, maxWidth: 512, maxHeight: 512);
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 512,
+        maxHeight: 512);
     if (picked == null) return;
     final appDir = await getApplicationDocumentsDirectory();
-    final fileName = 'player_${DateTime.now().millisecondsSinceEpoch}${p.extension(picked.path)}';
+    final fileName =
+        'player_${DateTime.now().millisecondsSinceEpoch}${p.extension(picked.path)}';
     final dest = p.join(appDir.path, fileName);
     await File(picked.path).copy(dest);
-    final player = data.getAllPlayers().firstWhere((p) => p.id == _mainPlayerId);
+    final player =
+        data.getAllPlayers().firstWhere((p) => p.id == _mainPlayerId);
     player.imagePath = dest;
     await data.updatePlayer(player);
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -206,27 +235,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Impostazioni', color: AppTheme.textPrimary, fontSize: 13),
+        title: const FifaLabel('Impostazioni',
+            color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppTheme.border),
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accentGreen))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.accentGreen))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
               children: [
-
                 // ── GIOCATORE PRINCIPALE ──────────────────────────
                 const FifaSectionHeader('Giocatore Principale',
                     accent: AppTheme.accentGold),
-                _FifaCard(
+                FifaCard(
                   child: Column(
                     children: [
                       // Selezione giocatore
                       DropdownButtonFormField<String>(
-                        value: _mainPlayerId,
+                        initialValue: _mainPlayerId,
                         dropdownColor: AppTheme.surfaceAlt,
                         decoration: const InputDecoration(
                           labelText: 'SELEZIONA GIOCATORE',
@@ -235,16 +265,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           focusedBorder: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        items: players.map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Row(children: [
-                            PlayerAvatar(player: p, radius: 14),
-                            const SizedBox(width: 10),
-                            Text(p.name,
-                                style: const TextStyle(
-                                    color: AppTheme.textPrimary, fontSize: 13)),
-                          ]),
-                        )).toList(),
+                        items: players
+                            .map((p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Row(children: [
+                                    PlayerAvatar(
+                                        name: p.name,
+                                        icon: p.icon,
+                                        imagePath: p.imagePath,
+                                        radius: 14),
+                                    const SizedBox(width: 10),
+                                    Text(p.name,
+                                        style: const TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontSize: 13)),
+                                  ]),
+                                ))
+                            .toList(),
                         onChanged: (v) => setState(() => _mainPlayerId = v),
                       ),
 
@@ -258,17 +295,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                    color: AppTheme.accentGold.withOpacity(0.4),
+                                    color: AppTheme.accentGold
+                                        .withValues(alpha: 0.4),
                                     width: 2),
                               ),
-                              child: PlayerAvatar(player: mainPlayer, radius: 32),
+                              child: PlayerAvatar(
+                                  name: mainPlayer.name,
+                                  icon: mainPlayer.icon,
+                                  imagePath: mainPlayer.imagePath,
+                                  radius: 32),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(mainPlayer.name.toUpperCase(),
+                                  Text(
+                                    mainPlayer.name.toUpperCase(),
                                     style: const TextStyle(
                                       color: AppTheme.textPrimary,
                                       fontSize: 15,
@@ -277,7 +320,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  FifaBadge(mainPlayer.role, color: AppTheme.accentBlue),
+                                  FifaBadge(mainPlayer.role,
+                                      color: AppTheme.accentBlue),
                                 ],
                               ),
                             ),
@@ -288,10 +332,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.accentGold.withOpacity(0.1),
+                                  color: AppTheme.accentGold
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                      color: AppTheme.accentGold.withOpacity(0.35)),
+                                      color: AppTheme.accentGold
+                                          .withValues(alpha: 0.35)),
                                 ),
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -319,7 +365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // ── OBIETTIVI ANNUALI ─────────────────────────────
                 const FifaSectionHeader('Obiettivi Annuali',
                     accent: AppTheme.accentGreen),
-                _FifaCard(
+                FifaCard(
                   child: Column(
                     children: [
                       _InfoField(
@@ -363,10 +409,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // ── INFO PERSONALI ────────────────────────────────
                 const FifaSectionHeader('Info Personali',
                     accent: AppTheme.accentBlue),
-                _FifaCard(
+                FifaCard(
                   child: Column(
                     children: [
-                      _InfoField(label: 'DATA DI NASCITA',
+                      _InfoField(
+                          label: 'DATA DI NASCITA',
                           controller: _birthCtrl,
                           hint: 'es. 10 Agosto 1991',
                           icon: Icons.cake_rounded),
@@ -379,7 +426,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _foot,
+                              initialValue: _foot,
                               dropdownColor: AppTheme.surfaceAlt,
                               decoration: const InputDecoration(
                                 labelText: 'PIEDE',
@@ -390,14 +437,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               items: ['Destro', 'Sinistro', 'Entrambi']
                                   .map((f) => DropdownMenuItem(
-                                    value: f,
-                                    child: Text(f,
-                                        style: const TextStyle(
-                                            color: AppTheme.textPrimary,
-                                            fontSize: 13)),
-                                  ))
+                                        value: f,
+                                        child: Text(f,
+                                            style: const TextStyle(
+                                                color: AppTheme.textPrimary,
+                                                fontSize: 13)),
+                                      ))
                                   .toList(),
-                              onChanged: (v) => setState(() => _foot = v ?? _foot),
+                              onChanged: (v) =>
+                                  setState(() => _foot = v ?? _foot),
                             ),
                           ),
                         ],
@@ -405,16 +453,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const FifaDivider(),
                       _NationalityDropdown(
                         value: _nationality,
-                        onChanged: (v) => setState(() => _nationality = v ?? ''),
+                        onChanged: (v) =>
+                            setState(() => _nationality = v ?? ''),
                       ),
                       const FifaDivider(),
-                      _InfoField(label: 'SQUADRA DEL CUORE',
+                      _InfoField(
+                          label: 'SQUADRA DEL CUORE',
                           controller: _teamCtrl,
                           hint: 'es. Juventus',
                           icon: Icons.favorite_rounded,
                           iconColor: AppTheme.accentRed),
                       const FifaDivider(),
-                      _InfoField(label: 'NUMERO DI MAGLIA',
+                      _InfoField(
+                          label: 'NUMERO DI MAGLIA',
                           controller: _jerseyCtrl,
                           hint: 'es. 10',
                           icon: Icons.tag_rounded,
@@ -447,22 +498,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 // Widget locali
 // ─────────────────────────────────────────────────────────────
 
-class _FifaCard extends StatelessWidget {
-  final Widget child;
-  const _FifaCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: AppTheme.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppTheme.border),
-    ),
-    child: child,
-  );
-}
-
 class _InfoField extends StatelessWidget {
   final String label, hint;
   final TextEditingController controller;
@@ -470,35 +505,41 @@ class _InfoField extends StatelessWidget {
   final Color iconColor;
   final TextInputType keyboardType;
   const _InfoField({
-    required this.label, required this.controller, required this.hint,
-    required this.icon, this.iconColor = AppTheme.textMuted,
+    required this.label,
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    this.iconColor = AppTheme.textMuted,
     this.keyboardType = TextInputType.text,
   });
 
   @override
   Widget build(BuildContext context) => Row(
-    children: [
-      Icon(icon, color: iconColor, size: 18),
-      const SizedBox(width: 12),
-      Expanded(
-        child: TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: const TextStyle(
-              color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: hint,
-            hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
+        children: [
+          Icon(icon, color: iconColor, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                labelText: label,
+                hintText: hint,
+                hintStyle:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
           ),
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -506,68 +547,192 @@ class _InfoField extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 
 const List<(String, String)> kCountries = [
-  ('🇦🇫', 'Afghana'),    ('🇦🇱', 'Albanese'),   ('🇩🇿', 'Algerina'),
-  ('🇦🇩', 'Andorrana'),  ('🇦🇴', 'Angolana'),    ('🇦🇬', 'Antiguiana'),
-  ('🇦🇷', 'Argentina'),  ('🇦🇲', 'Armena'),      ('🇦🇺', 'Australiana'),
-  ('🇦🇹', 'Austriaca'),  ('🇦🇿', 'Azerbaigiana'),('🇧🇸', 'Bahamense'),
-  ('🇧🇭', 'Bahreinia'),  ('🇧🇩', 'Bangladese'),  ('🇧🇧', 'Barbadiana'),
-  ('🇧🇾', 'Bielorussa'), ('🇧🇪', 'Belga'),        ('🇧🇿', 'Beliziana'),
-  ('🇧🇯', 'Beninese'),   ('🇧🇹', 'Bhutanese'),   ('🇧🇴', 'Boliviana'),
-  ('🇧🇦', 'Bosniaca'),   ('🇧🇼', 'Botswaniana'), ('🇧🇷', 'Brasiliana'),
-  ('🇧🇳', 'Bruneiese'),  ('🇧🇬', 'Bulgara'),     ('🇧🇫', 'Burkinabè'),
-  ('🇧🇮', 'Burundese'),  ('🇰🇭', 'Cambogiana'),  ('🇨🇲', 'Camerunense'),
-  ('🇨🇦', 'Canadese'),   ('🇨🇻', 'Capoverdiana'),('🇨🇫', 'Centrafricana'),
-  ('🇹🇩', 'Ciadiana'),   ('🇨🇱', 'Cilena'),      ('🇨🇳', 'Cinese'),
-  ('🇨🇾', 'Cipriota'),   ('🇨🇴', 'Colombiana'),  ('🇰🇲', 'Comoriana'),
-  ('🇨🇬', 'Congolese'),  ('🇰🇷', 'Coreana del Sud'),('🇰🇵', 'Coreana del Nord'),
-  ('🇨🇷', 'Costaricana'),('🇭🇷', 'Croata'),      ('🇨🇺', 'Cubana'),
-  ('🇩🇰', 'Danese'),     ('🇩🇯', 'Gibutiana'),   ('🇩🇲', 'Dominicana'),
-  ('🇪🇨', 'Ecuadoriana'),('🇪🇬', 'Egiziana'),    ('🇸🇻', 'Salvadoregna'),
-  ('🇦🇪', 'Emiratina'),  ('🇪🇷', 'Eritrea'),     ('🇪🇪', 'Estone'),
-  ('🇸🇿', 'Swazilande'), ('🇪🇹', 'Etiope'),      ('🇫🇯', 'Figiana'),
-  ('🇵🇭', 'Filippina'),  ('🇫🇮', 'Finlandese'),  ('🇫🇷', 'Francese'),
-  ('🇬🇦', 'Gabonese'),   ('🇬🇲', 'Gambiana'),    ('🇬🇪', 'Georgiana'),
-  ('🇩🇪', 'Tedesca'),    ('🇬🇭', 'Ghanese'),     ('🇯🇲', 'Giamaicana'),
-  ('🇯🇵', 'Giapponese'), ('🇬🇮', 'Gibraltana'),  ('🇬🇷', 'Greca'),
-  ('🇬🇩', 'Grenadina'),  ('🇬🇹', 'Guatemalteca'),('🇬🇳', 'Guineana'),
-  ('🇬🇼', 'Guinea-Bissau'),('🇬🇾', 'Guyanese'),  ('🇭🇹', 'Haitiana'),
-  ('🇭🇳', 'Honduregna'), ('🇮🇳', 'Indiana'),     ('🇮🇩', 'Indonesiana'),
-  ('🇮🇷', 'Iraniana'),   ('🇮🇶', 'Irachena'),    ('🇮🇪', 'Irlandese'),
-  ('🇮🇸', 'Islandese'),  ('🇮🇱', 'Israeliana'),  ('🇮🇹', 'Italiana'),
-  ('🇰🇿', 'Kazaka'),     ('🇰🇪', 'Keniota'),     ('🇰🇬', 'Kirghisa'),
-  ('🇰🇮', 'Kiribatiana'),('🇽🇰', 'Kosovara'),    ('🇰🇼', 'Kuwaitiana'),
-  ('🇱🇦', 'Laotiana'),   ('🇱🇻', 'Lettone'),     ('🇱🇧', 'Libanese'),
-  ('🇱🇷', 'Liberiana'),  ('🇱🇾', 'Libica'),      ('🇱🇮', 'Liechtensteiniana'),
-  ('🇱🇹', 'Lituana'),    ('🇱🇺', 'Lussemburghese'),('🇲🇰', 'Macedone'),
-  ('🇲🇬', 'Malgascia'),  ('🇲🇼', 'Malawiana'),   ('🇲🇾', 'Malese'),
-  ('🇲🇻', 'Maldiviana'), ('🇲🇱', 'Maliana'),     ('🇲🇹', 'Maltese'),
-  ('🇲🇦', 'Marocchina'), ('🇲🇷', 'Mauritana'),   ('🇲🇺', 'Mauriziana'),
-  ('🇲🇽', 'Messicana'),  ('🇫🇲', 'Micronesiana'),('🇲🇩', 'Moldava'),
-  ('🇲🇨', 'Monegasca'),  ('🇲🇳', 'Mongola'),     ('🇲🇪', 'Montenegrina'),
-  ('🇲🇿', 'Mozambicana'),('🇲🇲', 'Birmana'),     ('🇳🇦', 'Namibiana'),
-  ('🇳🇷', 'Nauruiana'),  ('🇳🇵', 'Nepalese'),    ('🇳🇮', 'Nicaraguense'),
-  ('🇳🇪', 'Nigerina'),   ('🇳🇬', 'Nigeriana'),   ('🇳🇴', 'Norvegese'),
-  ('🇳🇿', 'Neozelandese'),('🇴🇲', 'Omanita'),    ('🇳🇱', 'Olandese'),
-  ('🇵🇰', 'Pakistana'),  ('🇵🇼', 'Palauiana'),   ('🇵🇦', 'Panamense'),
-  ('🇵🇬', 'Papua'),      ('🇵🇾', 'Paraguaiana'), ('🇵🇪', 'Peruviana'),
-  ('🇵🇱', 'Polacca'),    ('🇵🇹', 'Portoghese'),  ('🇶🇦', 'Qatariota'),
-  ('🇬🇧', 'Britannica'), ('🇨🇿', 'Ceca'),        ('🇷🇴', 'Rumena'),
-  ('🇷🇼', 'Ruandese'),   ('🇷🇺', 'Russa'),       ('🇰🇳', 'Kittitiana'),
-  ('🇱🇨', 'Santa Luciana'),('🇻🇨', 'Vincenziana'),('🇼🇸', 'Samoana'),
-  ('🇸🇲', 'Sammarinese'),('🇸🇹', 'Santomasense'),('🇸🇦', 'Saudita'),
-  ('🇸🇳', 'Senegalese'), ('🇷🇸', 'Serba'),       ('🇸🇨', 'Seychellese'),
-  ('🇸🇱', 'Sierra Leonese'),('🇸🇬', 'Singaporiana'),('🇸🇾', 'Siriana'),
-  ('🇸🇰', 'Slovacca'),   ('🇸🇮', 'Slovena'),     ('🇸🇴', 'Somala'),
-  ('🇪🇸', 'Spagnola'),   ('🇱🇰', 'Sri Lankese'), ('🇺🇸', 'Americana'),
-  ('🇿🇦', 'Sudafricana'),('🇸🇩', 'Sudanese'),    ('🇸🇸', 'Sud Sudanese'),
-  ('🇸🇪', 'Svedese'),    ('🇨🇭', 'Svizzera'),    ('🇸🇷', 'Surinamese'),
-  ('🇹🇯', 'Tagika'),     ('🇹🇿', 'Tanzaniana'),  ('🇹🇭', 'Tailandese'),
-  ('🇹🇱', 'Timorese'),   ('🇹🇬', 'Togolese'),    ('🇹🇴', 'Tongana'),
-  ('🇹🇹', 'Trinidadiana'),('🇹🇳', 'Tunisina'),   ('🇹🇷', 'Turca'),
-  ('🇹🇲', 'Turkmena'),   ('🇹🇻', 'Tuvaluana'),   ('🇺🇦', 'Ucraina'),
-  ('🇺🇬', 'Ugandese'),   ('🇭🇺', 'Ungherese'),   ('🇺🇾', 'Uruguaiana'),
-  ('🇺🇿', 'Uzbeka'),     ('🇻🇺', 'Vanuatuana'),  ('🇻🇪', 'Venezuelana'),
-  ('🇻🇳', 'Vietnamita'), ('🇾🇪', 'Yemenita'),    ('🇿🇲', 'Zambiana'),
+  ('🇦🇫', 'Afghana'),
+  ('🇦🇱', 'Albanese'),
+  ('🇩🇿', 'Algerina'),
+  ('🇦🇩', 'Andorrana'),
+  ('🇦🇴', 'Angolana'),
+  ('🇦🇬', 'Antiguiana'),
+  ('🇦🇷', 'Argentina'),
+  ('🇦🇲', 'Armena'),
+  ('🇦🇺', 'Australiana'),
+  ('🇦🇹', 'Austriaca'),
+  ('🇦🇿', 'Azerbaigiana'),
+  ('🇧🇸', 'Bahamense'),
+  ('🇧🇭', 'Bahreinia'),
+  ('🇧🇩', 'Bangladese'),
+  ('🇧🇧', 'Barbadiana'),
+  ('🇧🇾', 'Bielorussa'),
+  ('🇧🇪', 'Belga'),
+  ('🇧🇿', 'Beliziana'),
+  ('🇧🇯', 'Beninese'),
+  ('🇧🇹', 'Bhutanese'),
+  ('🇧🇴', 'Boliviana'),
+  ('🇧🇦', 'Bosniaca'),
+  ('🇧🇼', 'Botswaniana'),
+  ('🇧🇷', 'Brasiliana'),
+  ('🇧🇳', 'Bruneiese'),
+  ('🇧🇬', 'Bulgara'),
+  ('🇧🇫', 'Burkinabè'),
+  ('🇧🇮', 'Burundese'),
+  ('🇰🇭', 'Cambogiana'),
+  ('🇨🇲', 'Camerunense'),
+  ('🇨🇦', 'Canadese'),
+  ('🇨🇻', 'Capoverdiana'),
+  ('🇨🇫', 'Centrafricana'),
+  ('🇹🇩', 'Ciadiana'),
+  ('🇨🇱', 'Cilena'),
+  ('🇨🇳', 'Cinese'),
+  ('🇨🇾', 'Cipriota'),
+  ('🇨🇴', 'Colombiana'),
+  ('🇰🇲', 'Comoriana'),
+  ('🇨🇬', 'Congolese'),
+  ('🇰🇷', 'Coreana del Sud'),
+  ('🇰🇵', 'Coreana del Nord'),
+  ('🇨🇷', 'Costaricana'),
+  ('🇭🇷', 'Croata'),
+  ('🇨🇺', 'Cubana'),
+  ('🇩🇰', 'Danese'),
+  ('🇩🇯', 'Gibutiana'),
+  ('🇩🇲', 'Dominicana'),
+  ('🇪🇨', 'Ecuadoriana'),
+  ('🇪🇬', 'Egiziana'),
+  ('🇸🇻', 'Salvadoregna'),
+  ('🇦🇪', 'Emiratina'),
+  ('🇪🇷', 'Eritrea'),
+  ('🇪🇪', 'Estone'),
+  ('🇸🇿', 'Swazilande'),
+  ('🇪🇹', 'Etiope'),
+  ('🇫🇯', 'Figiana'),
+  ('🇵🇭', 'Filippina'),
+  ('🇫🇮', 'Finlandese'),
+  ('🇫🇷', 'Francese'),
+  ('🇬🇦', 'Gabonese'),
+  ('🇬🇲', 'Gambiana'),
+  ('🇬🇪', 'Georgiana'),
+  ('🇩🇪', 'Tedesca'),
+  ('🇬🇭', 'Ghanese'),
+  ('🇯🇲', 'Giamaicana'),
+  ('🇯🇵', 'Giapponese'),
+  ('🇬🇮', 'Gibraltana'),
+  ('🇬🇷', 'Greca'),
+  ('🇬🇩', 'Grenadina'),
+  ('🇬🇹', 'Guatemalteca'),
+  ('🇬🇳', 'Guineana'),
+  ('🇬🇼', 'Guinea-Bissau'),
+  ('🇬🇾', 'Guyanese'),
+  ('🇭🇹', 'Haitiana'),
+  ('🇭🇳', 'Honduregna'),
+  ('🇮🇳', 'Indiana'),
+  ('🇮🇩', 'Indonesiana'),
+  ('🇮🇷', 'Iraniana'),
+  ('🇮🇶', 'Irachena'),
+  ('🇮🇪', 'Irlandese'),
+  ('🇮🇸', 'Islandese'),
+  ('🇮🇱', 'Israeliana'),
+  ('🇮🇹', 'Italiana'),
+  ('🇰🇿', 'Kazaka'),
+  ('🇰🇪', 'Keniota'),
+  ('🇰🇬', 'Kirghisa'),
+  ('🇰🇮', 'Kiribatiana'),
+  ('🇽🇰', 'Kosovara'),
+  ('🇰🇼', 'Kuwaitiana'),
+  ('🇱🇦', 'Laotiana'),
+  ('🇱🇻', 'Lettone'),
+  ('🇱🇧', 'Libanese'),
+  ('🇱🇷', 'Liberiana'),
+  ('🇱🇾', 'Libica'),
+  ('🇱🇮', 'Liechtensteiniana'),
+  ('🇱🇹', 'Lituana'),
+  ('🇱🇺', 'Lussemburghese'),
+  ('🇲🇰', 'Macedone'),
+  ('🇲🇬', 'Malgascia'),
+  ('🇲🇼', 'Malawiana'),
+  ('🇲🇾', 'Malese'),
+  ('🇲🇻', 'Maldiviana'),
+  ('🇲🇱', 'Maliana'),
+  ('🇲🇹', 'Maltese'),
+  ('🇲🇦', 'Marocchina'),
+  ('🇲🇷', 'Mauritana'),
+  ('🇲🇺', 'Mauriziana'),
+  ('🇲🇽', 'Messicana'),
+  ('🇫🇲', 'Micronesiana'),
+  ('🇲🇩', 'Moldava'),
+  ('🇲🇨', 'Monegasca'),
+  ('🇲🇳', 'Mongola'),
+  ('🇲🇪', 'Montenegrina'),
+  ('🇲🇿', 'Mozambicana'),
+  ('🇲🇲', 'Birmana'),
+  ('🇳🇦', 'Namibiana'),
+  ('🇳🇷', 'Nauruiana'),
+  ('🇳🇵', 'Nepalese'),
+  ('🇳🇮', 'Nicaraguense'),
+  ('🇳🇪', 'Nigerina'),
+  ('🇳🇬', 'Nigeriana'),
+  ('🇳🇴', 'Norvegese'),
+  ('🇳🇿', 'Neozelandese'),
+  ('🇴🇲', 'Omanita'),
+  ('🇳🇱', 'Olandese'),
+  ('🇵🇰', 'Pakistana'),
+  ('🇵🇼', 'Palauiana'),
+  ('🇵🇦', 'Panamense'),
+  ('🇵🇬', 'Papua'),
+  ('🇵🇾', 'Paraguaiana'),
+  ('🇵🇪', 'Peruviana'),
+  ('🇵🇱', 'Polacca'),
+  ('🇵🇹', 'Portoghese'),
+  ('🇶🇦', 'Qatariota'),
+  ('🇬🇧', 'Britannica'),
+  ('🇨🇿', 'Ceca'),
+  ('🇷🇴', 'Rumena'),
+  ('🇷🇼', 'Ruandese'),
+  ('🇷🇺', 'Russa'),
+  ('🇰🇳', 'Kittitiana'),
+  ('🇱🇨', 'Santa Luciana'),
+  ('🇻🇨', 'Vincenziana'),
+  ('🇼🇸', 'Samoana'),
+  ('🇸🇲', 'Sammarinese'),
+  ('🇸🇹', 'Santomasense'),
+  ('🇸🇦', 'Saudita'),
+  ('🇸🇳', 'Senegalese'),
+  ('🇷🇸', 'Serba'),
+  ('🇸🇨', 'Seychellese'),
+  ('🇸🇱', 'Sierra Leonese'),
+  ('🇸🇬', 'Singaporiana'),
+  ('🇸🇾', 'Siriana'),
+  ('🇸🇰', 'Slovacca'),
+  ('🇸🇮', 'Slovena'),
+  ('🇸🇴', 'Somala'),
+  ('🇪🇸', 'Spagnola'),
+  ('🇱🇰', 'Sri Lankese'),
+  ('🇺🇸', 'Americana'),
+  ('🇿🇦', 'Sudafricana'),
+  ('🇸🇩', 'Sudanese'),
+  ('🇸🇸', 'Sud Sudanese'),
+  ('🇸🇪', 'Svedese'),
+  ('🇨🇭', 'Svizzera'),
+  ('🇸🇷', 'Surinamese'),
+  ('🇹🇯', 'Tagika'),
+  ('🇹🇿', 'Tanzaniana'),
+  ('🇹🇭', 'Tailandese'),
+  ('🇹🇱', 'Timorese'),
+  ('🇹🇬', 'Togolese'),
+  ('🇹🇴', 'Tongana'),
+  ('🇹🇹', 'Trinidadiana'),
+  ('🇹🇳', 'Tunisina'),
+  ('🇹🇷', 'Turca'),
+  ('🇹🇲', 'Turkmena'),
+  ('🇹🇻', 'Tuvaluana'),
+  ('🇺🇦', 'Ucraina'),
+  ('🇺🇬', 'Ugandese'),
+  ('🇭🇺', 'Ungherese'),
+  ('🇺🇾', 'Uruguaiana'),
+  ('🇺🇿', 'Uzbeka'),
+  ('🇻🇺', 'Vanuatuana'),
+  ('🇻🇪', 'Venezuelana'),
+  ('🇻🇳', 'Vietnamita'),
+  ('🇾🇪', 'Yemenita'),
+  ('🇿🇲', 'Zambiana'),
   ('🇿🇼', 'Zimbabwese'),
 ];
 
@@ -591,6 +756,7 @@ class _NationalityDropdownState extends State<_NationalityDropdown> {
       ),
       builder: (_) => _CountryPickerSheet(selected: widget.value),
     );
+    if (!mounted) return;
     if (result != null) widget.onChanged(result);
   }
 
@@ -618,12 +784,9 @@ class _NationalityDropdownState extends State<_NationalityDropdown> {
                 Text(
                   hasValue ? widget.value : 'Seleziona paese…',
                   style: TextStyle(
-                    color: hasValue
-                        ? AppTheme.textPrimary
-                        : AppTheme.textMuted,
+                    color: hasValue ? AppTheme.textPrimary : AppTheme.textMuted,
                     fontSize: 13,
-                    fontWeight:
-                        hasValue ? FontWeight.w700 : FontWeight.normal,
+                    fontWeight: hasValue ? FontWeight.w700 : FontWeight.normal,
                   ),
                 ),
               ],
@@ -651,9 +814,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
   List<(String, String)> get _filtered {
     if (_query.isEmpty) return kCountries;
     final q = _query.toLowerCase();
-    return kCountries
-        .where((c) => c.$2.toLowerCase().contains(q))
-        .toList();
+    return kCountries.where((c) => c.$2.toLowerCase().contains(q)).toList();
   }
 
   @override
@@ -667,7 +828,8 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
           // Handle
           Container(
             margin: const EdgeInsets.only(top: 10, bottom: 8),
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
               color: AppTheme.border,
               borderRadius: BorderRadius.circular(2),
@@ -678,12 +840,11 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: TextField(
               autofocus: true,
-              style: const TextStyle(
-                  color: AppTheme.textPrimary, fontSize: 14),
+              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Cerca paese…',
-                hintStyle: const TextStyle(
-                    color: AppTheme.textMuted, fontSize: 14),
+                hintStyle:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 14),
                 prefixIcon: const Icon(Icons.search_rounded,
                     color: AppTheme.textMuted, size: 20),
                 filled: true,
@@ -709,17 +870,15 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 final isSelected = widget.selected == label;
                 return ListTile(
                   dense: true,
-                  leading: Text(flag,
-                      style: const TextStyle(fontSize: 22)),
+                  leading: Text(flag, style: const TextStyle(fontSize: 22)),
                   title: Text(name,
                       style: TextStyle(
                         color: isSelected
                             ? AppTheme.accentGreen
                             : AppTheme.textPrimary,
                         fontSize: 13,
-                        fontWeight: isSelected
-                            ? FontWeight.w900
-                            : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.w900 : FontWeight.w500,
                       )),
                   trailing: isSelected
                       ? const Icon(Icons.check_rounded,

@@ -45,7 +45,8 @@ class _BackupScreenState extends State<BackupScreen> {
       _showError(result.errorMessage ?? 'Errore sconosciuto');
       return;
     }
-    _showSnack('$label importati: ${result.imported}  •  saltati: ${result.skipped}');
+    _showSnack(
+        '$label importati: ${result.imported}  •  saltati: ${result.skipped}');
     // Forza rebuild del provider
     if (mounted) {
       Provider.of<DataService>(context, listen: false).notifyListeners();
@@ -146,13 +147,15 @@ class _BackupScreenState extends State<BackupScreen> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.4)),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange, size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -199,7 +202,8 @@ class _BackupScreenState extends State<BackupScreen> {
               _ActionCard(
                 icon: Icons.rate_review_rounded,
                 title: 'Importa Voti & Commenti',
-                subtitle: 'Seleziona votes_comments.csv — richiede le partite già importate',
+                subtitle:
+                    'Seleziona votes_comments.csv — richiede le partite già importate',
                 color: Colors.orange,
                 onTap: () => _run(() async {
                   final result = await _csvService.importVotes();
@@ -219,7 +223,8 @@ class _BackupScreenState extends State<BackupScreen> {
                   children: [
                     CircularProgressIndicator(),
                     SizedBox(height: 16),
-                    Text('Elaborazione in corso...', style: TextStyle(color: Colors.white)),
+                    Text('Elaborazione in corso...',
+                        style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),
@@ -292,7 +297,7 @@ class _ActionCard extends StatelessWidget {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: color.withOpacity(0.15),
+                backgroundColor: color.withValues(alpha: 0.15),
                 child: Icon(icon, color: color, size: 22),
               ),
               const SizedBox(width: 14),
@@ -305,8 +310,8 @@ class _ActionCard extends StatelessWidget {
                             fontWeight: FontWeight.bold, fontSize: 15)),
                     const SizedBox(height: 3),
                     Text(subtitle,
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey[500])),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[500])),
                   ],
                 ),
               ),

@@ -1,21 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
+import 'package:calcetto_tracker/core/network/openai_service.dart';
+import 'package:calcetto_tracker/core/util/player_lookup.dart';
 import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:calcetto_tracker/screens/api_key_setup_page.dart';
-import 'package:calcetto_tracker/models/player.dart';
+import 'package:calcetto_tracker/models/player_model.dart';
 import 'package:calcetto_tracker/widgets/player_avatar.dart';
-import 'package:calcetto_tracker/theme/app_theme.dart';
-import 'package:calcetto_tracker/data/hive_boxes.dart';
 
-import 'package:fl_chart/fl_chart.dart';  // <-- assicurati di avere questo import
+import 'package:fl_chart/fl_chart.dart'; // <-- assicurati di avere questo import
+
 // ─── Palette FIFA-style ───────────────────────────────────────────────────────
 class _FifaColors {
-
   static const bgDeep = Color(0xFF0A0E1A);
   static const bgCard = Color(0xFF111827);
   static const bgInput = Color(0xFF1C2536);
@@ -63,7 +61,7 @@ class AiCoachPage extends StatefulWidget {
 
 class _AiCoachPageState extends State<AiCoachPage>
     with TickerProviderStateMixin {
-  final _storage = const FlutterSecureStorage();
+  final _openAiService = OpenAiService();
   String? _apiKey;
 
   late final AnimationController _headerAnim;
@@ -86,7 +84,7 @@ class _AiCoachPageState extends State<AiCoachPage>
   }
 
   Future<void> _checkApiKey() async {
-    final key = await _storage.read(key: 'openai_api_key');
+    final key = await _openAiService.readApiKey();
     if (!mounted) return;
     if (key == null || key.isEmpty) {
       Navigator.pushReplacement(
@@ -140,8 +138,8 @@ class _AiCoachPageState extends State<AiCoachPage>
             Expanded(
               child: _apiKey == null
                   ? const Center(
-                      child: CircularProgressIndicator(
-                          color: _FifaColors.green))
+                      child:
+                          CircularProgressIndicator(color: _FifaColors.green))
                   : _ModeSelectionBody(
                       onChatTap: _openChat,
                       onTeamBuilderTap: _openTeamBuilder,
@@ -223,7 +221,8 @@ class _ModeSelectionBody extends StatelessWidget {
             _ModeCard(
               emoji: '🏆',
               title: 'FAI LE SQUADRE',
-              subtitle: 'Scegli i giocatori disponibili e l\'AI crea squadre equilibrate con statistiche e pronostico',
+              subtitle:
+                  'Scegli i giocatori disponibili e l\'AI crea squadre equilibrate con statistiche e pronostico',
               accentColor: _FifaColors.gold,
               onTap: onTeamBuilderTap,
               isHighlighted: true,
@@ -235,7 +234,8 @@ class _ModeSelectionBody extends StatelessWidget {
             _ModeCard(
               emoji: '💬',
               title: 'CHIEDI AL COACH',
-              subtitle: 'Analisi dati, statistiche giocatori, consigli tattici e qualsiasi domanda sulla squadra',
+              subtitle:
+                  'Analisi dati, statistiche giocatori, consigli tattici e qualsiasi domanda sulla squadra',
               accentColor: _FifaColors.green,
               onTap: onChatTap,
               isHighlighted: false,
@@ -274,12 +274,12 @@ class _ModeCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isHighlighted
-              ? accentColor.withOpacity(0.08)
+              ? accentColor.withValues(alpha: 0.08)
               : _FifaColors.bgCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isHighlighted
-                ? accentColor.withOpacity(0.5)
+                ? accentColor.withValues(alpha: 0.5)
                 : _FifaColors.divider,
             width: isHighlighted ? 1.5 : 1,
           ),
@@ -290,9 +290,9 @@ class _ModeCard extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.12),
+                color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accentColor.withOpacity(0.3)),
+                border: Border.all(color: accentColor.withValues(alpha: 0.3)),
               ),
               child: Center(
                 child: Text(emoji, style: const TextStyle(fontSize: 26)),
@@ -306,9 +306,8 @@ class _ModeCard extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      color: isHighlighted
-                          ? accentColor
-                          : _FifaColors.textPrimary,
+                      color:
+                          isHighlighted ? accentColor : _FifaColors.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 2,
@@ -329,7 +328,7 @@ class _ModeCard extends StatelessWidget {
             const SizedBox(width: 12),
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: accentColor.withOpacity(0.6),
+              color: accentColor.withValues(alpha: 0.6),
               size: 16,
             ),
           ],
@@ -352,6 +351,7 @@ class TeamBuilderPage extends StatefulWidget {
 }
 
 class _TeamBuilderPageState extends State<TeamBuilderPage> {
+  final _openAiService = OpenAiService();
   final Set<String> _selectedIds = {};
   final TextEditingController _searchCtrl = TextEditingController();
   String _query = '';
@@ -365,10 +365,10 @@ class _TeamBuilderPageState extends State<TeamBuilderPage> {
     super.dispose();
   }
 
-  List<Player> get _allPlayers => widget.dataService.getAllPlayers()
+  List<PlayerModel> get _allPlayers => widget.dataService.getAllPlayers()
     ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
-  List<Player> get _filteredPlayers {
+  List<PlayerModel> get _filteredPlayers {
     final all = _allPlayers;
     if (_query.isEmpty) return all;
     final q = _query.toLowerCase();
@@ -383,7 +383,8 @@ class _TeamBuilderPageState extends State<TeamBuilderPage> {
       _hasResult = false;
     });
 
-    final selected = _allPlayers.where((p) => _selectedIds.contains(p.id)).toList();
+    final selected =
+        _allPlayers.where((p) => _selectedIds.contains(p.id)).toList();
     final allMatches = widget.dataService.getAllMatches();
 
     // Raccoglie statistiche per ogni giocatore selezionato
@@ -457,17 +458,12 @@ ${jsonEncode(playerStats)}
 ''';
 
     try {
-      final request = http.Request(
-        'POST',
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-      );
-      request.headers.addAll({
-        'Authorization': 'Bearer ${widget.apiKey}',
-        'Content-Type': 'application/json',
-      });
-      request.body = jsonEncode({
-        'model': 'gpt-4.1-mini',
-        'messages': [
+      final responseBuffer = StringBuffer();
+      final stream = _openAiService.chatCompletionStream(
+        apiKey: widget.apiKey,
+        model: 'gpt-4.1-mini',
+        temperature: 0.4,
+        messages: [
           {'role': 'system', 'content': systemPrompt},
           {
             'role': 'user',
@@ -475,48 +471,27 @@ ${jsonEncode(playerStats)}
                 'Crea le squadre con i ${selected.length} giocatori forniti.'
           }
         ],
-        'temperature': 0.4,
-        'stream': true,
-      });
+      );
 
-      final streamedResponse = await http.Client().send(request);
-      if (streamedResponse.statusCode != 200) {
-        setState(() {
-          _result = 'Errore API: ${streamedResponse.statusCode}';
-          _loading = false;
-          _hasResult = true;
-        });
-        return;
-      }
-
-      final responseBuffer = StringBuffer();
-      String lineBuffer = '';
-
-      await for (final chunk
-          in streamedResponse.stream.transform(utf8.decoder)) {
-        lineBuffer += chunk;
-        while (lineBuffer.contains('\n')) {
-          final newlineIndex = lineBuffer.indexOf('\n');
-          final line = lineBuffer.substring(0, newlineIndex).trim();
-          lineBuffer = lineBuffer.substring(newlineIndex + 1);
-          if (!line.startsWith('data: ')) continue;
-          final jsonStr = line.substring(6);
-          if (jsonStr == '[DONE]') break;
-          try {
-            final data = jsonDecode(jsonStr);
-            final delta =
-                data['choices'][0]['delta']['content'] as String? ?? '';
-            if (delta.isEmpty) continue;
-            responseBuffer.write(delta);
-            if (mounted) {
-              setState(() => _result = responseBuffer.toString());
-            }
-          } catch (_) {}
+      await for (final delta in stream) {
+        responseBuffer.write(delta);
+        if (mounted) {
+          setState(() => _result = responseBuffer.toString());
         }
       }
 
       if (mounted) {
         setState(() {
+          _loading = false;
+          _hasResult = true;
+        });
+      }
+    } on OpenAiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _result = e.statusCode != null
+              ? 'Errore API: ${e.statusCode}'
+              : 'Errore di connessione: $e';
           _loading = false;
           _hasResult = true;
         });
@@ -593,8 +568,7 @@ ${jsonEncode(playerStats)}
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               decoration: const BoxDecoration(
                 color: _FifaColors.bgCard,
-                border: Border(
-                    bottom: BorderSide(color: _FifaColors.divider)),
+                border: Border(bottom: BorderSide(color: _FifaColors.divider)),
               ),
               child: Column(
                 children: [
@@ -627,8 +601,7 @@ ${jsonEncode(playerStats)}
                       ),
                       if (_selectedIds.isNotEmpty)
                         TextButton(
-                          onPressed: () =>
-                              setState(() => _selectedIds.clear()),
+                          onPressed: () => setState(() => _selectedIds.clear()),
                           child: const Text(
                             'DESELEZIONA TUTTI',
                             style: TextStyle(
@@ -664,8 +637,7 @@ ${jsonEncode(playerStats)}
                                   setState(() => _query = '');
                                 },
                                 child: const Icon(Icons.close_rounded,
-                                    color: _FifaColors.textSecondary,
-                                    size: 16),
+                                    color: _FifaColors.textSecondary, size: 16),
                               )
                             : null,
                         border: InputBorder.none,
@@ -701,30 +673,29 @@ ${jsonEncode(playerStats)}
                           child: Text(
                             'Nessun giocatore trovato',
                             style: TextStyle(
-                                color: _FifaColors.textSecondary,
-                                fontSize: 13),
+                                color: _FifaColors.textSecondary, fontSize: 13),
                           ),
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
-                      itemCount: _filteredPlayers.length,
-                      itemBuilder: (context, i) {
-                        final p = _filteredPlayers[i];
-                        final isSelected = _selectedIds.contains(p.id);
-                        return _PlayerSelectTile(
-                          player: p,
-                          isSelected: isSelected,
-                          onTap: () => setState(() {
-                            if (isSelected) {
-                              _selectedIds.remove(p.id);
-                            } else {
-                              _selectedIds.add(p.id);
-                            }
-                          }),
-                        );
-                      },
-                    ),
+                          itemCount: _filteredPlayers.length,
+                          itemBuilder: (context, i) {
+                            final p = _filteredPlayers[i];
+                            final isSelected = _selectedIds.contains(p.id);
+                            return _PlayerSelectTile(
+                              player: p,
+                              isSelected: isSelected,
+                              onTap: () => setState(() {
+                                if (isSelected) {
+                                  _selectedIds.remove(p.id);
+                                } else {
+                                  _selectedIds.add(p.id);
+                                }
+                              }),
+                            );
+                          },
+                        ),
             ),
 
             // Bottone genera
@@ -733,8 +704,7 @@ ${jsonEncode(playerStats)}
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                 decoration: const BoxDecoration(
                   color: _FifaColors.bgCard,
-                  border: Border(
-                      top: BorderSide(color: _FifaColors.divider)),
+                  border: Border(top: BorderSide(color: _FifaColors.divider)),
                 ),
                 child: _loading
                     ? Container(
@@ -742,8 +712,8 @@ ${jsonEncode(playerStats)}
                         decoration: BoxDecoration(
                           color: _FifaColors.bgInput,
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: _FifaColors.green.withOpacity(0.3)),
+                          border: Border.all(
+                              color: _FifaColors.green.withValues(alpha: 0.3)),
                         ),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -776,12 +746,12 @@ ${jsonEncode(playerStats)}
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
                             color: canGenerate
-                                ? _FifaColors.gold.withOpacity(0.15)
+                                ? _FifaColors.gold.withValues(alpha: 0.15)
                                 : _FifaColors.bgInput,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: canGenerate
-                                  ? _FifaColors.gold.withOpacity(0.5)
+                                  ? _FifaColors.gold.withValues(alpha: 0.5)
                                   : _FifaColors.divider,
                               width: canGenerate ? 1.5 : 1,
                             ),
@@ -824,9 +794,9 @@ ${jsonEncode(playerStats)}
   }
 }
 
-// ─── Player Select Tile ───────────────────────────────────────────────────────
+// ─── PlayerModel Select Tile ───────────────────────────────────────────────────────
 class _PlayerSelectTile extends StatelessWidget {
-  final Player player;
+  final PlayerModel player;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -843,16 +813,15 @@ class _PlayerSelectTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.only(bottom: 8),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: isSelected
-              ? _FifaColors.green.withOpacity(0.08)
+              ? _FifaColors.green.withValues(alpha: 0.08)
               : _FifaColors.bgCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? _FifaColors.green.withOpacity(0.5)
+                ? _FifaColors.green.withValues(alpha: 0.5)
                 : _FifaColors.divider,
             width: isSelected ? 1.5 : 1,
           ),
@@ -860,7 +829,11 @@ class _PlayerSelectTile extends StatelessWidget {
         child: Row(
           children: [
             // Avatar
-            PlayerAvatar(player: player, radius: 20),
+            PlayerAvatar(
+                name: player.name,
+                icon: player.icon,
+                imagePath: player.imagePath,
+                radius: 20),
             const SizedBox(width: 12),
             // Nome + ruolo
             Expanded(
@@ -887,8 +860,7 @@ class _PlayerSelectTile extends StatelessWidget {
                         Text(
                           '👑×${player.mvpCount}',
                           style: const TextStyle(
-                              fontSize: 11,
-                              color: _FifaColors.textSecondary),
+                              fontSize: 11, color: _FifaColors.textSecondary),
                         ),
                       ],
                     ],
@@ -903,13 +875,9 @@ class _PlayerSelectTile extends StatelessWidget {
               height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected
-                    ? _FifaColors.green
-                    : Colors.transparent,
+                color: isSelected ? _FifaColors.green : Colors.transparent,
                 border: Border.all(
-                  color: isSelected
-                      ? _FifaColors.green
-                      : _FifaColors.divider,
+                  color: isSelected ? _FifaColors.green : _FifaColors.divider,
                   width: 1.5,
                 ),
               ),
@@ -942,9 +910,9 @@ class _RoleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _color.withOpacity(0.1),
+        color: _color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _color.withOpacity(0.4)),
+        border: Border.all(color: _color.withValues(alpha: 0.4)),
       ),
       child: Text(
         role,
@@ -977,12 +945,10 @@ class _ResultView extends StatelessWidget {
       children: [
         // Barra azioni
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: const BoxDecoration(
             color: _FifaColors.bgCard,
-            border: Border(
-                bottom: BorderSide(color: _FifaColors.divider)),
+            border: Border(bottom: BorderSide(color: _FifaColors.divider)),
           ),
           child: Row(
             children: [
@@ -998,8 +964,7 @@ class _ResultView extends StatelessWidget {
               Text(
                 loading ? 'ANALISI IN CORSO...' : 'ANALISI COMPLETATA',
                 style: TextStyle(
-                  color:
-                      loading ? _FifaColors.gold : _FifaColors.green,
+                  color: loading ? _FifaColors.gold : _FifaColors.green,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2,
@@ -1010,8 +975,8 @@ class _ResultView extends StatelessWidget {
                 GestureDetector(
                   onTap: onReset,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _FifaColors.bgInput,
                       borderRadius: BorderRadius.circular(8),
@@ -1078,8 +1043,10 @@ class _ResultCard extends StatelessWidget {
       final trimmed = line.trim();
       if (trimmed.isEmpty) continue;
 
-      if (trimmed.startsWith('⚽') || trimmed.startsWith('⚖️') ||
-          trimmed.startsWith('🔮') || trimmed.startsWith('📊')) {
+      if (trimmed.startsWith('⚽') ||
+          trimmed.startsWith('⚖️') ||
+          trimmed.startsWith('🔮') ||
+          trimmed.startsWith('📊')) {
         if (current != null) sections.add(current);
         current = _Section(header: trimmed, lines: []);
       } else if (current != null) {
@@ -1120,12 +1087,10 @@ class _SectionWidget extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isTeam
-            ? color.withOpacity(0.06)
-            : _FifaColors.bgCard,
+        color: isTeam ? color.withValues(alpha: 0.06) : _FifaColors.bgCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: color.withOpacity(isTeam ? 0.35 : 0.2),
+          color: color.withValues(alpha: isTeam ? 0.35 : 0.2),
           width: isTeam ? 1.5 : 1,
         ),
       ),
@@ -1134,8 +1099,7 @@ class _SectionWidget extends StatelessWidget {
         children: [
           if (section.header.isNotEmpty)
             Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
               child: Text(
                 section.header,
                 style: TextStyle(
@@ -1149,22 +1113,17 @@ class _SectionWidget extends StatelessWidget {
           if (section.header.isNotEmpty && section.lines.isNotEmpty)
             Container(
                 height: 1,
-                color: color.withOpacity(0.15),
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 14)),
+                color: color.withValues(alpha: 0.15),
+                margin: const EdgeInsets.symmetric(horizontal: 14)),
           ...section.lines.map(
             (line) => Padding(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
               child: Text(
                 line,
                 style: TextStyle(
-                  color: isStats
-                      ? color
-                      : _FifaColors.textPrimary,
+                  color: isStats ? color : _FifaColors.textPrimary,
                   fontSize: isStats ? 12 : 13,
-                  fontWeight: isStats
-                      ? FontWeight.w700
-                      : FontWeight.w400,
+                  fontWeight: isStats ? FontWeight.w700 : FontWeight.w400,
                   height: 1.5,
                 ),
               ),
@@ -1179,8 +1138,7 @@ class _SectionWidget extends StatelessWidget {
 
 class _TypingIndicatorSmall extends StatefulWidget {
   @override
-  State<_TypingIndicatorSmall> createState() =>
-      _TypingIndicatorSmallState();
+  State<_TypingIndicatorSmall> createState() => _TypingIndicatorSmallState();
 }
 
 class _TypingIndicatorSmallState extends State<_TypingIndicatorSmall>
@@ -1230,20 +1188,19 @@ class _ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
+  final _openAiService = OpenAiService();
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final List<_ChatMessage> _messages = [];
   bool _loading = false;
 
   late final AnimationController _headerAnim;
-  late final Animation<double> _headerFade;
 
   @override
   void initState() {
     super.initState();
     _headerAnim = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
-    _headerFade = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
     _headerAnim.forward();
 
     _messages.add(_ChatMessage(
@@ -1261,17 +1218,14 @@ class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // Legge SEMPRE direttamente da HiveBoxes per dati 100% aggiornati,
-  // indipendentemente dallo stato del DataService provider.
+  // DataService legge sempre live da Hive (nessun caching), quindi i dati
+  // sono aggiornati indipendentemente da quando il Provider è stato creato.
   String _buildSystemPrompt() {
-    final allPlayers = HiveBoxes.playersBox.values.toList();
-    final allMatches = HiveBoxes.matchesBox.values.toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final data = Provider.of<DataService>(context, listen: false);
+    final allPlayers = data.getAllPlayers();
+    final allMatches = data.getAllMatches();
 
-    String resolveName(String id) {
-      if (id.isEmpty) return '';
-      return HiveBoxes.playersBox.get(id)?.name ?? id;
-    }
+    String resolveName(String id) => resolvePlayerName(id);
 
     // Statistiche aggregate per giocatore
     final playerStats = allPlayers.map((p) {
@@ -1286,9 +1240,13 @@ class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
         games++;
         final myScore = inA ? m.scoreA : m.scoreB;
         final oppScore = inA ? m.scoreB : m.scoreA;
-        if (myScore > oppScore) wins++;
-        else if (myScore == oppScore) draws++;
-        else losses++;
+        if (myScore > oppScore) {
+          wins++;
+        } else if (myScore == oppScore) {
+          draws++;
+        } else {
+          losses++;
+        }
         if (m.votes.containsKey(p.id)) {
           totalVotes += m.votes[p.id]!;
           votesCount++;
@@ -1303,8 +1261,11 @@ class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
         'vittorie': wins,
         'pareggi': draws,
         'sconfitte': losses,
-        'win_rate_pct': games > 0 ? (wins / games * 100).toStringAsFixed(1) : '0',
-        'voto_medio': votesCount > 0 ? (totalVotes / votesCount).toStringAsFixed(2) : null,
+        'win_rate_pct':
+            games > 0 ? (wins / games * 100).toStringAsFixed(1) : '0',
+        'voto_medio': votesCount > 0
+            ? (totalVotes / votesCount).toStringAsFixed(2)
+            : null,
         'gol_totali': goalsScored,
         'premi_mvp': p.mvpCount,
         'premi_combattivo': p.hustleCount,
@@ -1326,12 +1287,14 @@ class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
           if (name.isNotEmpty) goalsNamed[name] = entry.value;
         }
       }
-      final field = HiveBoxes.fieldsBox.get(m.fieldLocation);
+      final field = data.getFieldById(m.fieldLocation);
       return {
         'data': m.date.toIso8601String().substring(0, 10),
         'campo': field?.name ?? m.fieldLocation,
-        'squadra_bianca': m.teamA.map(resolveName).where((n) => n.isNotEmpty).toList(),
-        'squadra_colorata': m.teamB.map(resolveName).where((n) => n.isNotEmpty).toList(),
+        'squadra_bianca':
+            m.teamA.map(resolveName).where((n) => n.isNotEmpty).toList(),
+        'squadra_colorata':
+            m.teamB.map(resolveName).where((n) => n.isNotEmpty).toList(),
         'risultato': '${m.scoreA}-${m.scoreB}',
         'voti': votesNamed,
         'gol': goalsNamed,
@@ -1347,9 +1310,9 @@ class _ChatPageState extends State<_ChatPage> with TickerProviderStateMixin {
     };
 
     return '''
-Sei un esperto di calcetto e data analyst che assiste l\'utente nella gestione del proprio gruppo di Calcetto.
+Sei un esperto di calcetto e data analyst che assiste l'utente nella gestione del proprio gruppo di Calcetto.
 Il tuo obiettivo è:
-- Analizzare i dati dei giocatori registrati nell\'app
+- Analizzare i dati dei giocatori registrati nell'app
 - Fornire consigli tecnici
 - Rispondere a domande sulle performance
 
@@ -1372,7 +1335,7 @@ REGOLE:
 
 Non includere testo fuori dal JSON.
 
-DATI (NON MOSTRARLI ALL\'UTENTE):
+DATI (NON MOSTRARLI ALL'UTENTE):
 ${jsonEncode(contextJson)}
 ''';
   }
@@ -1382,7 +1345,8 @@ ${jsonEncode(contextJson)}
       _messages.clear();
       _messages.add(_ChatMessage(
         role: 'assistant',
-        content: '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati aggiornati della squadra. Come posso aiutarti oggi?',
+        content:
+            '⚽ Ciao! Sono il tuo Coach AI.\nHo analizzato i dati aggiornati della squadra. Come posso aiutarti oggi?',
       ));
     });
   }
@@ -1411,52 +1375,20 @@ ${jsonEncode(contextJson)}
             .map((m) => {'role': m.role, 'content': m.content}),
       ];
 
-      final request = http.Request(
-        'POST',
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-      );
-      request.headers.addAll({
-        'Authorization': 'Bearer ${widget.apiKey}',
-        'Content-Type': 'application/json',
-      });
-      request.body = jsonEncode({
-        'model': 'gpt-4.1-mini',
-        'messages': apiMessages,
-        'temperature': 0.3,
-        'stream': true,
-      });
-
-      final streamedResponse = await http.Client().send(request);
-      if (streamedResponse.statusCode != 200) {
-        _showError('Errore API: ${streamedResponse.statusCode}');
-        return;
-      }
-
       final responseBuffer = StringBuffer();
-      String lineBuffer = '';
+      final stream = _openAiService.chatCompletionStream(
+        apiKey: widget.apiKey,
+        model: 'gpt-4.1-mini',
+        temperature: 0.3,
+        messages: apiMessages,
+      );
 
-      await for (final chunk
-          in streamedResponse.stream.transform(utf8.decoder)) {
-        lineBuffer += chunk;
-        while (lineBuffer.contains('\n')) {
-          final newlineIndex = lineBuffer.indexOf('\n');
-          final line = lineBuffer.substring(0, newlineIndex).trim();
-          lineBuffer = lineBuffer.substring(newlineIndex + 1);
-          if (!line.startsWith('data: ')) continue;
-          final jsonStr = line.substring(6);
-          if (jsonStr == '[DONE]') break;
-          try {
-            final data = jsonDecode(jsonStr);
-            final delta = data['choices'][0]['delta']['content'] as String? ?? '';
-            if (delta.isEmpty) continue;
-
-            // Accumula sempre il testo durante lo streaming
-            responseBuffer.write(delta);
-            if (mounted) {
-              setState(() => assistantMessage.content = responseBuffer.toString());
-              _scrollToBottom();
-            }
-          } catch (_) {}
+      await for (final delta in stream) {
+        // Accumula sempre il testo durante lo streaming
+        responseBuffer.write(delta);
+        if (mounted) {
+          setState(() => assistantMessage.content = responseBuffer.toString());
+          _scrollToBottom();
         }
       }
 
@@ -1482,6 +1414,11 @@ ${jsonEncode(contextJson)}
       if (fullResponse.isEmpty) {
         setState(() => assistantMessage.content = '(nessuna risposta)');
       }
+    } on OpenAiException catch (e) {
+      _showError(e.statusCode != null
+          ? 'Errore API: ${e.statusCode}'
+          : 'Errore di connessione: $e');
+      return;
     } catch (e) {
       _showError('Errore di connessione: $e');
     }
@@ -1577,13 +1514,14 @@ ${jsonEncode(contextJson)}
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: _messages.length +
                     (_loading && _messages.last.content.isEmpty ? 1 : 0),
                 itemBuilder: (context, index) {
-                  if (index == _messages.length)
+                  if (index == _messages.length) {
                     return const _TypingIndicator();
+                  }
                   return _MessageBubble(message: _messages[index]);
                 },
               ),
@@ -1629,8 +1567,8 @@ class _FifaAppBar extends StatelessWidget {
                 color: _FifaColors.greenDark,
                 border: Border.all(color: _FifaColors.green, width: 2),
               ),
-              child:
-                  const Center(child: Text('⚽', style: TextStyle(fontSize: 20))),
+              child: const Center(
+                  child: Text('⚽', style: TextStyle(fontSize: 20))),
             ),
             const SizedBox(width: 14),
             const Column(
@@ -1665,13 +1603,12 @@ class _FifaAppBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: _FifaColors.green.withOpacity(0.15),
+                color: _FifaColors.green.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: _FifaColors.green.withOpacity(0.4)),
+                border:
+                    Border.all(color: _FifaColors.green.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
@@ -1746,8 +1683,7 @@ class _MessageBubble extends StatelessWidget {
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
                 color: isError
                     ? _FifaColors.errorBg
@@ -1762,43 +1698,41 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 border: Border.all(
                   color: isError
-                      ? Colors.red.withOpacity(0.4)
+                      ? Colors.red.withValues(alpha: 0.4)
                       : isUser
-                          ? _FifaColors.green.withOpacity(0.25)
+                          ? _FifaColors.green.withValues(alpha: 0.25)
                           : _FifaColors.divider,
                   width: 1,
                 ),
               ),
               child: Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    // Testo normale
-    if (message.content.isNotEmpty)
-      Text(
-        message.content,
-        style: TextStyle(
-          color: isError
-              ? Colors.red.shade300
-              : _FifaColors.textPrimary,
-          fontSize: 14.5,
-          height: 1.5,
-        ),
-      ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Testo normale
+                  if (message.content.isNotEmpty)
+                    Text(
+                      message.content,
+                      style: TextStyle(
+                        color: isError
+                            ? Colors.red.shade300
+                            : _FifaColors.textPrimary,
+                        fontSize: 14.5,
+                        height: 1.5,
+                      ),
+                    ),
 
-    // --- GRAFICO ---
-    if (message.chartData != null) ...[
-      const SizedBox(height: 12),
-      _ChartWidget(
-        type: message.chartType!,
-        data: message.chartData!,
-      ),
-    ],
-  ],
-),
-               
+                  // --- GRAFICO ---
+                  if (message.chartData != null) ...[
+                    const SizedBox(height: 12),
+                    _ChartWidget(
+                      type: message.chartType!,
+                      data: message.chartData!,
+                    ),
+                  ],
+                ],
               ),
             ),
-          
+          ),
           if (isUser) ...[
             const SizedBox(width: 8),
             _Avatar(isUser: true, isError: false),
@@ -1808,7 +1742,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 }
-
 
 class _ChartWidget extends StatelessWidget {
   final String type;
@@ -1857,7 +1790,9 @@ class _ChartWidget extends StatelessWidget {
                   final y = (e.value["y"] as num).toDouble();
                   return BarChartGroupData(
                     x: i.toInt(),
-                    barRods: [BarChartRodData(toY: y, color: Colors.greenAccent)],
+                    barRods: [
+                      BarChartRodData(toY: y, color: Colors.greenAccent)
+                    ],
                   );
                 },
               ).toList(),
@@ -1886,8 +1821,8 @@ class _Avatar extends StatelessWidget {
         color: isUser ? _FifaColors.userBubble : _FifaColors.greenDark,
         border: Border.all(
           color: isUser
-              ? _FifaColors.gold.withOpacity(0.5)
-              : _FifaColors.green.withOpacity(0.6),
+              ? _FifaColors.gold.withValues(alpha: 0.5)
+              : _FifaColors.green.withValues(alpha: 0.6),
           width: 1.5,
         ),
       ),
@@ -1937,8 +1872,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           _Avatar(isUser: false, isError: false),
           const SizedBox(width: 8),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: _FifaColors.aiBubble,
               borderRadius: const BorderRadius.only(
@@ -2060,7 +1994,7 @@ class _InputBar extends StatelessWidget {
                     ? null
                     : [
                         BoxShadow(
-                          color: _FifaColors.green.withOpacity(0.35),
+                          color: _FifaColors.green.withValues(alpha: 0.35),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
@@ -2099,7 +2033,5 @@ class _ChatMessage {
   _ChatMessage({
     required this.role,
     required this.content,
-    this.chartType,
-    this.chartData,
   });
 }

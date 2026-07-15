@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/match_model.dart';
-import '../data/hive_boxes.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 import '../services/data_service.dart';
@@ -27,7 +26,8 @@ class _VoteScreenState extends State<VoteScreen> {
     for (final id in allPlayers) {
       if (!widget.match.votes.containsKey(id)) widget.match.votes[id] = 5.0;
       if (!widget.match.goals.containsKey(id)) widget.match.goals[id] = 0;
-      _commentControllers[id] = TextEditingController(text: widget.match.comments[id] ?? '');
+      _commentControllers[id] =
+          TextEditingController(text: widget.match.comments[id] ?? '');
       final savedGoals = widget.match.goals[id] ?? 0;
       _goalControllers[id] = TextEditingController(
         text: savedGoals > 0 ? '$savedGoals' : '',
@@ -37,8 +37,12 @@ class _VoteScreenState extends State<VoteScreen> {
 
   @override
   void dispose() {
-    for (final c in _commentControllers.values) c.dispose();
-    for (final c in _goalControllers.values) c.dispose();
+    for (final c in _commentControllers.values) {
+      c.dispose();
+    }
+    for (final c in _goalControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -77,15 +81,21 @@ class _VoteScreenState extends State<VoteScreen> {
             }
           },
           child: Container(
-            width: 28, height: 28,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
-              color: goals > 0 ? AppTheme.accentRed.withOpacity(0.15) : AppTheme.surfaceAlt,
+              color: goals > 0
+                  ? AppTheme.accentRed.withValues(alpha: 0.15)
+                  : AppTheme.surfaceAlt,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: goals > 0 ? AppTheme.accentRed.withOpacity(0.4) : AppTheme.border,
+                color: goals > 0
+                    ? AppTheme.accentRed.withValues(alpha: 0.4)
+                    : AppTheme.border,
               ),
             ),
-            child: Icon(Icons.remove_rounded, size: 16,
+            child: Icon(Icons.remove_rounded,
+                size: 16,
                 color: goals > 0 ? AppTheme.accentRed : AppTheme.textMuted),
           ),
         ),
@@ -112,7 +122,8 @@ class _VoteScreenState extends State<VoteScreen> {
             onChanged: (text) {
               final val = int.tryParse(text) ?? 0;
               // ✅ non superare il totale gol della partita
-              final currentOther = _assignedGoals - (widget.match.goals[id] ?? 0);
+              final currentOther =
+                  _assignedGoals - (widget.match.goals[id] ?? 0);
               final maxAllowed = _matchTotalGoals - currentOther;
               setState(() => widget.match.goals[id] = val.clamp(0, maxAllowed));
               // correggi il testo se il valore e' stato clampato
@@ -137,19 +148,21 @@ class _VoteScreenState extends State<VoteScreen> {
             });
           },
           child: Container(
-            width: 28, height: 28,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
               color: _remainingGoals > 0
-                  ? AppTheme.accentGreen.withOpacity(0.15)
+                  ? AppTheme.accentGreen.withValues(alpha: 0.15)
                   : AppTheme.surfaceAlt,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: _remainingGoals > 0
-                    ? AppTheme.accentGreen.withOpacity(0.4)
+                    ? AppTheme.accentGreen.withValues(alpha: 0.4)
                     : AppTheme.border,
               ),
             ),
-            child: Icon(Icons.add_rounded, size: 16,
+            child: Icon(Icons.add_rounded,
+                size: 16,
                 color: _remainingGoals > 0
                     ? AppTheme.accentGreen
                     : AppTheme.textMuted),
@@ -159,13 +172,15 @@ class _VoteScreenState extends State<VoteScreen> {
     );
   }
 
-  Widget _buildTeamSection(String teamLabel, List<String> playerIds, Color sectionAccent) {
+  Widget _buildTeamSection(
+      String teamLabel, List<String> playerIds, Color sectionAccent) {
+    final data = Provider.of<DataService>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         FifaSectionHeader(teamLabel, accent: sectionAccent),
         ...playerIds.map((id) {
-          final player = HiveBoxes.playersBox.get(id);
+          final player = data.getPlayerById(id);
           final name = player?.name ?? 'Sconosciuto';
           final voto = widget.match.votes[id]?.toDouble() ?? 5.0;
           final accent = _voteColor(voto);
@@ -184,32 +199,52 @@ class _VoteScreenState extends State<VoteScreen> {
                 children: [
                   Row(
                     children: [
-                      if (player != null) PlayerAvatar(player: player, radius: 20),
-                      if (player == null) const CircleAvatar(radius: 20, child: Icon(Icons.person)),
+                      if (player != null)
+                        PlayerAvatar(
+                            name: player.name,
+                            icon: player.icon,
+                            imagePath: player.imagePath,
+                            radius: 20),
+                      if (player == null)
+                        const CircleAvatar(
+                            radius: 20, child: Icon(Icons.person)),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(name.toUpperCase(),
-                          style: const TextStyle(color: AppTheme.textPrimary,
-                              fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5)),
                       ),
                       _buildGoalCounter(id),
                       const SizedBox(width: 10),
                       Container(
-                        width: 52, height: 52,
+                        width: 52,
+                        height: 52,
                         decoration: BoxDecoration(
-                          color: accent.withOpacity(0.1),
+                          color: accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: accent.withOpacity(0.45), width: 1.5),
+                          border: Border.all(
+                              color: accent.withValues(alpha: 0.45),
+                              width: 1.5),
                         ),
                         alignment: Alignment.center,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(voto.toStringAsFixed(1),
-                              style: TextStyle(color: accent, fontSize: 18,
-                                  fontWeight: FontWeight.w900, height: 1)),
-                            Text('VOTO', style: TextStyle(color: accent.withOpacity(0.6),
-                                fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                                style: TextStyle(
+                                    color: accent,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1)),
+                            Text('VOTO',
+                                style: TextStyle(
+                                    color: accent.withValues(alpha: 0.6),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1)),
                           ],
                         ),
                       ),
@@ -220,15 +255,18 @@ class _VoteScreenState extends State<VoteScreen> {
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: accent,
                       thumbColor: accent,
-                      overlayColor: accent.withOpacity(0.15),
+                      overlayColor: accent.withValues(alpha: 0.15),
                       inactiveTrackColor: AppTheme.border,
                       trackHeight: 3,
                     ),
                     child: Slider(
                       value: voto,
-                      min: 1, max: 10, divisions: 18,
+                      min: 1,
+                      max: 10,
+                      divisions: 18,
                       label: voto.toStringAsFixed(1),
-                      onChanged: (val) => setState(() => widget.match.votes[id] = val),
+                      onChanged: (val) =>
+                          setState(() => widget.match.votes[id] = val),
                     ),
                   ),
                   Padding(
@@ -238,7 +276,8 @@ class _VoteScreenState extends State<VoteScreen> {
                       children: [
                         FifaLabel('1', color: AppTheme.accentRed, fontSize: 9),
                         FifaLabel('5', color: AppTheme.textMuted, fontSize: 9),
-                        FifaLabel('10', color: AppTheme.accentGreen, fontSize: 9),
+                        FifaLabel('10',
+                            color: AppTheme.accentGreen, fontSize: 9),
                       ],
                     ),
                   ),
@@ -247,11 +286,14 @@ class _VoteScreenState extends State<VoteScreen> {
                     controller: _commentControllers[id],
                     onChanged: (text) => widget.match.comments[id] = text,
                     maxLines: 2,
-                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary, fontSize: 13),
                     decoration: const InputDecoration(
                       hintText: 'Commento opzionale...',
-                      hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 12),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      hintStyle:
+                          TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
                   ),
                 ],
@@ -268,7 +310,8 @@ class _VoteScreenState extends State<VoteScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Vota i Giocatori', color: AppTheme.textPrimary, fontSize: 13),
+        title: const FifaLabel('Vota i Giocatori',
+            color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppTheme.border),
@@ -287,8 +330,8 @@ class _VoteScreenState extends State<VoteScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _remainingGoals == 0
-                      ? AppTheme.accentGreen.withOpacity(0.4)
-                      : AppTheme.accentGold.withOpacity(0.4),
+                      ? AppTheme.accentGreen.withValues(alpha: 0.4)
+                      : AppTheme.accentGold.withValues(alpha: 0.4),
                 ),
               ),
               child: Row(
@@ -317,11 +360,13 @@ class _VoteScreenState extends State<VoteScreen> {
                   ),
                   if (_remainingGoals > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentGold.withOpacity(0.1),
+                        color: AppTheme.accentGold.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.accentGold.withOpacity(0.35)),
+                        border: Border.all(
+                            color: AppTheme.accentGold.withValues(alpha: 0.35)),
                       ),
                       child: Text(
                         '$_remainingGoals rimasti',
@@ -334,11 +379,14 @@ class _VoteScreenState extends State<VoteScreen> {
                     )
                   else
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentGreen.withOpacity(0.1),
+                        color: AppTheme.accentGreen.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.accentGreen.withOpacity(0.35)),
+                        border: Border.all(
+                            color:
+                                AppTheme.accentGreen.withValues(alpha: 0.35)),
                       ),
                       child: const Text(
                         'Completo ✓',
@@ -353,8 +401,10 @@ class _VoteScreenState extends State<VoteScreen> {
               ),
             ),
           ],
-          _buildTeamSection('Squadra Bianca', widget.match.teamA, AppTheme.accentBlue),
-          _buildTeamSection('Squadra Colorata', widget.match.teamB, AppTheme.accentOrange),
+          _buildTeamSection(
+              'Squadra Bianca', widget.match.teamA, AppTheme.accentBlue),
+          _buildTeamSection(
+              'Squadra Colorata', widget.match.teamB, AppTheme.accentOrange),
         ],
       ),
       bottomNavigationBar: Container(
@@ -366,7 +416,8 @@ class _VoteScreenState extends State<VoteScreen> {
         child: ElevatedButton(
           onPressed: () async {
             // ✅ updateMatch aggiorna anche totalGoals sui giocatori
-            final dataService = Provider.of<DataService>(context, listen: false);
+            final dataService =
+                Provider.of<DataService>(context, listen: false);
             await dataService.updateMatch(widget.match);
             if (mounted) Navigator.pop(context);
           },

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-import '../models/player.dart';
+import '../models/player_model.dart';
 import '../models/match_model.dart';
 import '../models/field_model.dart';
 import '../data/hive_boxes.dart';
@@ -10,11 +10,13 @@ class DataService extends ChangeNotifier {
 
   // ── Players ───────────────────────────────────────────────────
 
-  List<Player> getAllPlayers() => HiveBoxes.playersBox.values.toList();
+  List<PlayerModel> getAllPlayers() => HiveBoxes.playersBox.values.toList();
 
-  Future<Player> addPlayer(String name, String icon,
+  PlayerModel? getPlayerById(String id) => HiveBoxes.playersBox.get(id);
+
+  Future<PlayerModel> addPlayer(String name, String icon,
       {required String role, String? imagePath}) async {
-    final player = Player(
+    final player = PlayerModel(
       id: _uuid.v4(),
       name: name,
       role: role,
@@ -26,7 +28,7 @@ class DataService extends ChangeNotifier {
     return player;
   }
 
-  Future<void> updatePlayer(Player player) async {
+  Future<void> updatePlayer(PlayerModel player) async {
     await HiveBoxes.playersBox.put(player.id, player);
     notifyListeners();
   }
@@ -77,8 +79,11 @@ class DataService extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get matchCount => HiveBoxes.matchesBox.length;
+
   /// Aggiunge o sottrae (+1 / -1) i contatori ai giocatori coinvolti.
-  Future<void> _updateAwardCounters(MatchModel match, {required int delta}) async {
+  Future<void> _updateAwardCounters(MatchModel match,
+      {required int delta}) async {
     // MVP
     if (match.mvp.isNotEmpty) {
       final mvpPlayer = _findPlayerById(match.mvp);
@@ -92,7 +97,8 @@ class DataService extends ChangeNotifier {
     if (match.hustlePlayer.isNotEmpty) {
       final hustlePlayer = _findPlayerById(match.hustlePlayer);
       if (hustlePlayer != null) {
-        hustlePlayer.hustleCount = (hustlePlayer.hustleCount + delta).clamp(0, 9999);
+        hustlePlayer.hustleCount =
+            (hustlePlayer.hustleCount + delta).clamp(0, 9999);
         await HiveBoxes.playersBox.put(hustlePlayer.id, hustlePlayer);
       }
     }
@@ -101,7 +107,8 @@ class DataService extends ChangeNotifier {
     if (match.bestGoalPlayer.isNotEmpty) {
       final bestGoalPlayer = _findPlayerById(match.bestGoalPlayer);
       if (bestGoalPlayer != null) {
-        bestGoalPlayer.bestGoalCount = (bestGoalPlayer.bestGoalCount + delta).clamp(0, 9999);
+        bestGoalPlayer.bestGoalCount =
+            (bestGoalPlayer.bestGoalCount + delta).clamp(0, 9999);
         await HiveBoxes.playersBox.put(bestGoalPlayer.id, bestGoalPlayer);
       }
     }
@@ -110,13 +117,14 @@ class DataService extends ChangeNotifier {
     for (final entry in match.goals.entries) {
       final player = _findPlayerById(entry.key);
       if (player != null) {
-        player.totalGoals = (player.totalGoals + entry.value * delta).clamp(0, 99999);
+        player.totalGoals =
+            (player.totalGoals + entry.value * delta).clamp(0, 99999);
         await HiveBoxes.playersBox.put(player.id, player);
       }
     }
   }
 
-  Player? _findPlayerById(String playerId) {
+  PlayerModel? _findPlayerById(String playerId) {
     return HiveBoxes.playersBox.get(playerId);
   }
 
@@ -128,7 +136,10 @@ class DataService extends ChangeNotifier {
     return list;
   }
 
-  Future<FieldModel> addField(String name, String address, {String? imagePath}) async {
+  FieldModel? getFieldById(String id) => HiveBoxes.fieldsBox.get(id);
+
+  Future<FieldModel> addField(String name, String address,
+      {String? imagePath}) async {
     final field = FieldModel(
       id: _uuid.v4(),
       name: name,

@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../core/util/date_formatters.dart';
+import 'package:provider/provider.dart';
 import '../models/match_model.dart';
 import '../models/field_model.dart';
-import '../data/hive_boxes.dart';
+import '../services/data_service.dart';
 import '../theme/app_theme.dart';
 import 'match_detail_screen.dart';
 
@@ -23,9 +25,7 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
   void initState() {
     super.initState();
     _selectedYear = widget.matches.isNotEmpty
-        ? widget.matches
-            .map((m) => m.date.year)
-            .reduce((a, b) => a > b ? a : b)
+        ? widget.matches.map((m) => m.date.year).reduce((a, b) => a > b ? a : b)
         : DateTime.now().year;
     _buildIndex();
   }
@@ -205,9 +205,9 @@ class _MonthGrid extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.border.withOpacity(0.0),
-                  AppTheme.border.withOpacity(0.6),
-                  AppTheme.border.withOpacity(0.0),
+                  AppTheme.border.withValues(alpha: 0.0),
+                  AppTheme.border.withValues(alpha: 0.6),
+                  AppTheme.border.withValues(alpha: 0.0),
                 ],
               ),
             ),
@@ -235,7 +235,7 @@ class _MonthGrid extends StatelessWidget {
               return _DayCell(
                 day: day,
                 matches: dayMatches,
-                onTap: hasMatch ? () => onDayTap(dayMatches!) : null,
+                onTap: hasMatch ? () => onDayTap(dayMatches) : null,
               );
             },
           ),
@@ -274,7 +274,7 @@ class _DayCell extends StatelessWidget {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppTheme.border.withOpacity(0.2)),
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.2)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -294,10 +294,10 @@ class _DayCell extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: AppTheme.accentGold.withOpacity(0.12),
+            color: AppTheme.accentGold.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-                color: AppTheme.accentGold.withOpacity(0.5), width: 1.5),
+                color: AppTheme.accentGold.withValues(alpha: 0.5), width: 1.5),
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -340,7 +340,8 @@ class _DayCell extends StatelessWidget {
     final accent = _resultColor(match);
 
     // fieldLocation è l'id del campo — recuperiamo FieldModel da Hive
-    final FieldModel? field = HiveBoxes.fieldsBox.get(match.fieldLocation);
+    final FieldModel? field = Provider.of<DataService>(context, listen: false)
+        .getFieldById(match.fieldLocation);
     final String? imagePath = field?.imagePath;
     final String fieldName = field?.name ?? match.fieldLocation;
 
@@ -365,7 +366,7 @@ class _DayCell extends StatelessWidget {
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.52),
+                  color: Colors.black.withValues(alpha: 0.52),
                 ),
               ),
             ),
@@ -379,7 +380,7 @@ class _DayCell extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.55),
+                      Colors.black.withValues(alpha: 0.55),
                     ],
                   ),
                 ),
@@ -391,8 +392,8 @@ class _DayCell extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: accent.withOpacity(0.75), width: 1.5),
+                  border: Border.all(
+                      color: accent.withValues(alpha: 0.75), width: 1.5),
                 ),
               ),
             ),
@@ -438,7 +439,7 @@ class _DayCell extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    DateFormat('HH:mm').format(match.date),
+                    formatTime(match.date),
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 7,
@@ -477,7 +478,7 @@ class _FieldFallback extends StatelessWidget {
         color: AppTheme.surfaceAlt,
         child: Icon(
           Icons.sports_soccer,
-          color: accent.withOpacity(0.35),
+          color: accent.withValues(alpha: 0.35),
           size: 20,
         ),
       );
@@ -536,10 +537,10 @@ class _MultiMatchSheet extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _resultColor(m).withOpacity(0.12),
+                  color: _resultColor(m).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: _resultColor(m).withOpacity(0.4)),
+                      Border.all(color: _resultColor(m).withValues(alpha: 0.4)),
                 ),
                 child: Text(
                   '${m.scoreA} : ${m.scoreB}',
@@ -559,12 +560,12 @@ class _MultiMatchSheet extends StatelessWidget {
                 ),
               ),
               subtitle: Text(
-                DateFormat('HH:mm', 'it_IT').format(m.date),
+                formatTime(m.date),
                 style: const TextStyle(
                     color: AppTheme.textSecondary, fontSize: 11),
               ),
-              trailing: const Icon(Icons.chevron_right,
-                  color: AppTheme.textMuted),
+              trailing:
+                  const Icon(Icons.chevron_right, color: AppTheme.textMuted),
             ),
           ),
           const SizedBox(height: 8),

@@ -27,7 +27,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
 
   Future<void> _showAddDialog(BuildContext context) async {
     final data = Provider.of<DataService>(context, listen: false);
-    final nameCtrl    = TextEditingController();
+    final nameCtrl = TextEditingController();
     final addressCtrl = TextEditingController();
     String? pickedImagePath;
 
@@ -60,6 +60,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                         maxHeight: 768);
                     if (picked != null) {
                       final copied = await _copyImageToAppDir(picked.path);
+                      if (!ctx.mounted) return;
                       setD(() => pickedImagePath = copied);
                     }
                   },
@@ -70,7 +71,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                       color: AppTheme.surfaceAlt,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppTheme.accentGreen.withOpacity(0.3),
+                          color: AppTheme.accentGreen.withValues(alpha: 0.3),
                           width: 1.5),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -81,11 +82,12 @@ class _FieldsScreenState extends State<FieldsScreen> {
                               Image.file(File(pickedImagePath!),
                                   fit: BoxFit.cover),
                               Positioned(
-                                bottom: 6, right: 6,
+                                bottom: 6,
+                                right: 6,
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
+                                    color: Colors.black.withValues(alpha: 0.6),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.edit_rounded,
@@ -98,7 +100,8 @@ class _FieldsScreenState extends State<FieldsScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.add_photo_alternate_rounded,
-                                  color: AppTheme.accentGreen.withOpacity(0.6),
+                                  color: AppTheme.accentGreen
+                                      .withValues(alpha: 0.6),
                                   size: 36),
                               const SizedBox(height: 8),
                               const FifaLabel('Aggiungi Foto',
@@ -165,13 +168,14 @@ class _FieldsScreenState extends State<FieldsScreen> {
         addressCtrl.text.trim(),
         imagePath: pickedImagePath,
       );
+      if (!mounted) return;
       setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final data   = Provider.of<DataService>(context);
+    final data = Provider.of<DataService>(context);
     final fields = data.getAllFields();
 
     return Scaffold(
@@ -190,14 +194,15 @@ class _FieldsScreenState extends State<FieldsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.stadium_outlined,
-                      size: 52, color: AppTheme.textMuted.withOpacity(0.5)),
+                      size: 52,
+                      color: AppTheme.textMuted.withValues(alpha: 0.5)),
                   const SizedBox(height: 14),
                   const FifaLabel('Nessun campo',
                       color: AppTheme.textMuted, fontSize: 12),
                   const SizedBox(height: 6),
                   const Text('Tocca + per aggiungere il primo',
-                      style: TextStyle(
-                          color: AppTheme.textMuted, fontSize: 12)),
+                      style:
+                          TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                 ],
               ),
             )
@@ -233,8 +238,8 @@ class _FieldCard extends StatelessWidget {
   });
 
   Future<void> _showEditDialog(BuildContext context) async {
-    final data        = Provider.of<DataService>(context, listen: false);
-    final nameCtrl    = TextEditingController(text: field.name);
+    final data = Provider.of<DataService>(context, listen: false);
+    final nameCtrl = TextEditingController(text: field.name);
     final addressCtrl = TextEditingController(text: field.address);
     String? newImagePath = field.imagePath;
     bool imageChanged = false;
@@ -253,7 +258,8 @@ class _FieldCard extends StatelessWidget {
             Icon(Icons.edit_location_alt_rounded,
                 color: AppTheme.accentGold, size: 18),
             SizedBox(width: 8),
-            FifaLabel('Modifica Campo', color: AppTheme.accentGold, fontSize: 11),
+            FifaLabel('Modifica Campo',
+                color: AppTheme.accentGold, fontSize: 11),
           ]),
           content: SingleChildScrollView(
             child: Column(
@@ -269,9 +275,10 @@ class _FieldCard extends StatelessWidget {
                         maxHeight: 768);
                     if (picked != null) {
                       final copied = await copyImage(picked.path);
+                      if (!ctx.mounted) return;
                       setD(() {
-                        newImagePath  = copied;
-                        imageChanged  = true;
+                        newImagePath = copied;
+                        imageChanged = true;
                       });
                     }
                   },
@@ -282,7 +289,7 @@ class _FieldCard extends StatelessWidget {
                       color: AppTheme.surfaceAlt,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppTheme.accentGold.withOpacity(0.3),
+                          color: AppTheme.accentGold.withValues(alpha: 0.3),
                           width: 1.5),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -294,11 +301,12 @@ class _FieldCard extends StatelessWidget {
                               Image.file(File(newImagePath!),
                                   fit: BoxFit.cover),
                               Positioned(
-                                bottom: 6, right: 6,
+                                bottom: 6,
+                                right: 6,
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
+                                    color: Colors.black.withValues(alpha: 0.6),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.edit_rounded,
@@ -311,7 +319,8 @@ class _FieldCard extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.add_photo_alternate_rounded,
-                                  color: AppTheme.accentGold.withOpacity(0.6),
+                                  color: AppTheme.accentGold
+                                      .withValues(alpha: 0.6),
                                   size: 36),
                               const SizedBox(height: 8),
                               const FifaLabel('Cambia Foto',
@@ -373,10 +382,11 @@ class _FieldCard extends StatelessWidget {
     );
 
     if (confirmed == true) {
-      field.name    = nameCtrl.text.trim();
+      field.name = nameCtrl.text.trim();
       field.address = addressCtrl.text.trim();
       if (imageChanged) field.imagePath = newImagePath;
       await data.updateField(field);
+      if (!context.mounted) return;
       onChanged();
     }
   }
@@ -389,7 +399,7 @@ class _FieldCard extends StatelessWidget {
         backgroundColor: AppTheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: AppTheme.accentRed.withOpacity(0.4)),
+          side: BorderSide(color: AppTheme.accentRed.withValues(alpha: 0.4)),
         ),
         title: const FifaLabel('Elimina Campo?',
             color: AppTheme.accentRed, fontSize: 11),
@@ -420,6 +430,7 @@ class _FieldCard extends StatelessWidget {
         if (await f.exists()) await f.delete();
       }
       await data.deleteField(field.id);
+      if (!context.mounted) return;
       onChanged();
     }
   }
@@ -460,7 +471,7 @@ class _FieldCard extends StatelessWidget {
                 children: [
                   Icon(Icons.stadium_rounded,
                       size: 36,
-                      color: AppTheme.textMuted.withOpacity(0.4)),
+                      color: AppTheme.textMuted.withValues(alpha: 0.4)),
                   const SizedBox(height: 6),
                   const FifaLabel('Nessuna foto',
                       color: AppTheme.textMuted, fontSize: 9),
@@ -470,8 +481,7 @@ class _FieldCard extends StatelessWidget {
 
           // ── Info + azioni ───────────────────────────────────
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 Expanded(

@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../data/hive_boxes.dart';
-import '../models/player.dart';
+import 'package:provider/provider.dart';
+import '../models/player_model.dart';
 import '../models/field_model.dart';
+import '../services/data_service.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 import 'field_lineup_page.dart';
@@ -40,31 +41,32 @@ class _MatchPromoPageState extends State<MatchPromoPage>
 
   static const _backgrounds = {
     'SanFrancesco': 'assets/images/campoSanFrancescoColorato.jpg',
-    'Montanaso':    'assets/images/montanaso.jpg',
-    'Faustina':     'assets/images/faustina.png',
-    'Pergola':      'assets/images/laPergola.jpg',
-    'Other':        'assets/images/sfondoPalloneGenerico.png',
+    'Montanaso': 'assets/images/montanaso.jpg',
+    'Faustina': 'assets/images/faustina.png',
+    'Pergola': 'assets/images/laPergola.jpg',
+    'Other': 'assets/images/sfondoPalloneGenerico.png',
   };
 
   static const _locationLabels = {
     'SanFrancesco': 'San Francesco',
-    'Montanaso':    'Montanaso',
-    'Faustina':     'Faustina Arena',
-    'Pergola':      'La Pergola',
-    'Other':        'Campo Sportivo',
+    'Montanaso': 'Montanaso',
+    'Faustina': 'Faustina Arena',
+    'Pergola': 'La Pergola',
+    'Other': 'Campo Sportivo',
   };
 
   static const _locationAddresses = {
     'SanFrancesco': 'Via Serravalle, 4 — Lodi',
-    'Montanaso':    'Via G. Garibaldi — Montanaso Lombardo',
-    'Faustina':     'Piazzale degli Sport — Lodi',
-    'Pergola':      'Via per Ca de Bolli, 11 — San Martino in Strada',
-    'Other':        '',
+    'Montanaso': 'Via G. Garibaldi — Montanaso Lombardo',
+    'Faustina': 'Piazzale degli Sport — Lodi',
+    'Pergola': 'Via per Ca de Bolli, 11 — San Martino in Strada',
+    'Other': '',
   };
 
   String get _bg => widget.fieldModel != null
       ? ''
-      : (_backgrounds[widget.campo] ?? 'assets/images/sfondoPalloneGenerico.png');
+      : (_backgrounds[widget.campo] ??
+          'assets/images/sfondoPalloneGenerico.png');
 
   String get _locationLabel => widget.fieldModel != null
       ? widget.fieldModel!.name
@@ -191,17 +193,27 @@ class _MatchPromoPageState extends State<MatchPromoPage>
 // ─────────────────────────────────────────────────────────────
 
 class _HeroPoster extends StatelessWidget {
-  final String bgAsset, locationLabel, locationAddress, dataOra, nGiocatori, prezzo;
+  final String bgAsset,
+      locationLabel,
+      locationAddress,
+      dataOra,
+      nGiocatori,
+      prezzo;
   final String? fieldImagePath;
   const _HeroPoster({
-    required this.bgAsset, required this.locationLabel, required this.locationAddress,
-    required this.dataOra, required this.nGiocatori, required this.prezzo,
+    required this.bgAsset,
+    required this.locationLabel,
+    required this.locationAddress,
+    required this.dataOra,
+    required this.nGiocatori,
+    required this.prezzo,
     this.fieldImagePath,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasFileImage = fieldImagePath != null && File(fieldImagePath!).existsSync();
+    final hasFileImage =
+        fieldImagePath != null && File(fieldImagePath!).existsSync();
 
     return SizedBox(
       height: 220,
@@ -240,7 +252,9 @@ class _HeroPoster extends StatelessWidget {
 
           // Linea accent verticale sinistra con gradient
           Positioned(
-            left: 0, top: 0, bottom: 0,
+            left: 0,
+            top: 0,
+            bottom: 0,
             child: Container(
               width: 4,
               decoration: const BoxDecoration(
@@ -294,12 +308,13 @@ class _HeroPoster extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.location_on_rounded,
-                          color: AppTheme.accentGreen.withOpacity(0.8), size: 12),
+                          color: AppTheme.accentGreen.withValues(alpha: 0.8),
+                          size: 12),
                       const SizedBox(width: 4),
                       Text(
                         locationAddress,
                         style: TextStyle(
-                          color: AppTheme.accentGreen.withOpacity(0.75),
+                          color: AppTheme.accentGreen.withValues(alpha: 0.75),
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.3,
@@ -342,72 +357,70 @@ class _GlowPill extends StatelessWidget {
   final IconData icon;
   final String text;
   final Color color;
-  const _GlowPill({required this.icon, required this.text, required this.color});
+  const _GlowPill(
+      {required this.icon, required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.15),
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: color.withOpacity(0.5)),
-      boxShadow: [
-        BoxShadow(
-          color: color.withOpacity(0.35),
-          blurRadius: 14,
-          spreadRadius: 1,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.35),
+              blurRadius: 14,
+              spreadRadius: 1,
+            ),
+          ],
         ),
-      ],
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 12),
-        const SizedBox(width: 6),
-        Text(dataOra_placeholder,
-            style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w800)),
-      ],
-    ),
-  );
-
-  // placeholder field workaround per campo testo
-  String get dataOra_placeholder => text;
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 12),
+            const SizedBox(width: 6),
+            Text(text,
+                style: TextStyle(
+                    color: color, fontSize: 12, fontWeight: FontWeight.w800)),
+          ],
+        ),
+      );
 }
 
 class _PosterChip extends StatelessWidget {
   final IconData icon;
   final String text;
   final Color color;
-  const _PosterChip({required this.icon, required this.text, required this.color});
+  const _PosterChip(
+      {required this.icon, required this.text, required this.color});
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.15),
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: color.withOpacity(0.45)),
-      boxShadow: [
-        BoxShadow(
-          color: color.withOpacity(0.2),
-          blurRadius: 10,
-          spreadRadius: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: color.withValues(alpha: 0.45)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.2),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
         ),
-      ],
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 13),
-        const SizedBox(width: 6),
-        Text(text, style: TextStyle(
-            color: color, fontSize: 12, fontWeight: FontWeight.w800)),
-      ],
-    ),
-  );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 13),
+            const SizedBox(width: 6),
+            Text(text,
+                style: TextStyle(
+                    color: color, fontSize: 12, fontWeight: FontWeight.w800)),
+          ],
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -420,8 +433,10 @@ class _VsDivider extends StatelessWidget {
   final AnimationController listController;
 
   const _VsDivider({
-    required this.leftLabel, required this.rightLabel,
-    required this.leftCount, required this.rightCount,
+    required this.leftLabel,
+    required this.rightLabel,
+    required this.leftCount,
+    required this.rightCount,
     required this.listController,
   });
 
@@ -445,9 +460,9 @@ class _VsDivider extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppTheme.accentBlue.withOpacity(0.07),
+                    AppTheme.accentBlue.withValues(alpha: 0.07),
                     AppTheme.surface,
-                    AppTheme.accentOrange.withOpacity(0.07),
+                    AppTheme.accentOrange.withValues(alpha: 0.07),
                   ],
                   stops: const [0.0, 0.5, 1.0],
                 ),
@@ -456,7 +471,8 @@ class _VsDivider extends StatelessWidget {
 
             // Linee decorative laterali al badge VS
             Positioned(
-              left: 0, right: 0,
+              left: 0,
+              right: 0,
               child: Row(
                 children: [
                   const SizedBox(width: 16),
@@ -466,7 +482,7 @@ class _VsDivider extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppTheme.accentBlue.withOpacity(0.5),
+                            AppTheme.accentBlue.withValues(alpha: 0.5),
                             Colors.transparent,
                           ],
                         ),
@@ -481,7 +497,7 @@ class _VsDivider extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            AppTheme.accentOrange.withOpacity(0.5),
+                            AppTheme.accentOrange.withValues(alpha: 0.5),
                           ],
                         ),
                       ),
@@ -503,13 +519,15 @@ class _VsDivider extends StatelessWidget {
                       children: [
                         // Jersey swatch
                         Container(
-                          width: 10, height: 10,
+                          width: 10,
+                          height: 10,
                           decoration: BoxDecoration(
                             color: AppTheme.accentBlue,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.accentBlue.withOpacity(0.5),
+                                color:
+                                    AppTheme.accentBlue.withValues(alpha: 0.5),
                                 blurRadius: 6,
                               ),
                             ],
@@ -533,14 +551,15 @@ class _VsDivider extends StatelessWidget {
 
                   // Badge VS centrale con gradient border
                   Container(
-                    width: 50, height: 50,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [
-                          AppTheme.accentBlue.withOpacity(0.25),
+                          AppTheme.accentBlue.withValues(alpha: 0.25),
                           AppTheme.bg,
-                          AppTheme.accentOrange.withOpacity(0.25),
+                          AppTheme.accentOrange.withValues(alpha: 0.25),
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -548,24 +567,25 @@ class _VsDivider extends StatelessWidget {
                       border: Border.all(color: AppTheme.border, width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.4),
+                          color: Colors.black.withValues(alpha: 0.4),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),
                         BoxShadow(
-                          color: AppTheme.accentBlue.withOpacity(0.15),
+                          color: AppTheme.accentBlue.withValues(alpha: 0.15),
                           blurRadius: 8,
                           offset: const Offset(-3, 0),
                         ),
                         BoxShadow(
-                          color: AppTheme.accentOrange.withOpacity(0.15),
+                          color: AppTheme.accentOrange.withValues(alpha: 0.15),
                           blurRadius: 8,
                           offset: const Offset(3, 0),
                         ),
                       ],
                     ),
                     alignment: Alignment.center,
-                    child: const Text('VS',
+                    child: const Text(
+                      'VS',
                       style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 13,
@@ -593,13 +613,15 @@ class _VsDivider extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          width: 10, height: 10,
+                          width: 10,
+                          height: 10,
                           decoration: BoxDecoration(
                             color: AppTheme.accentOrange,
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.accentOrange.withOpacity(0.5),
+                                color: AppTheme.accentOrange
+                                    .withValues(alpha: 0.5),
                                 blurRadius: 6,
                               ),
                             ],
@@ -619,7 +641,7 @@ class _VsDivider extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Player Grid — con animazione staggered
+// PlayerModel Grid — con animazione staggered
 // ─────────────────────────────────────────────────────────────
 
 class _PlayerGrid extends StatelessWidget {
@@ -637,11 +659,12 @@ class _PlayerGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = Provider.of<DataService>(context, listen: false);
     return Column(
       children: playerIds.asMap().entries.map((entry) {
         final index = entry.key;
         final id = entry.value;
-        final player = HiveBoxes.playersBox.get(id);
+        final player = data.getPlayerById(id);
 
         // stagger: ogni card appare con delay progressivo
         final double delayStart = (startDelay / 1000) + (index * 0.08);
@@ -664,8 +687,7 @@ class _PlayerGrid extends StatelessWidget {
           opacity: fade,
           child: SlideTransition(
             position: slide,
-            child: _PlayerFigCard(
-                player: player, playerId: id, accent: accent),
+            child: _PlayerFigCard(player: player, playerId: id, accent: accent),
           ),
         );
       }).toList(),
@@ -678,7 +700,7 @@ class _PlayerGrid extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────
 
 class _PlayerFigCard extends StatelessWidget {
-  final Player? player;
+  final PlayerModel? player;
   final String playerId;
   final Color accent;
   const _PlayerFigCard(
@@ -688,7 +710,7 @@ class _PlayerFigCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = player?.name ?? 'Sconosciuto';
     final role = player?.role ?? '?';
-    // Rating non disponibile nel modello Player attuale
+    // Rating non disponibile nel modello PlayerModel attuale
     const int? rating = null;
 
     return Container(
@@ -696,10 +718,10 @@ class _PlayerFigCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withOpacity(0.3)),
+        border: Border.all(color: accent.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: accent.withOpacity(0.08),
+            color: accent.withValues(alpha: 0.08),
             blurRadius: 12,
             spreadRadius: 1,
             offset: const Offset(0, 2),
@@ -712,14 +734,16 @@ class _PlayerFigCard extends StatelessWidget {
           children: [
             // Sottile shimmer/glow gradient sul bordo superiore
             Positioned(
-              top: 0, left: 0, right: 0,
+              top: 0,
+              left: 0,
+              right: 0,
               child: Container(
                 height: 1,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      accent.withOpacity(0.7),
+                      accent.withValues(alpha: 0.7),
                       Colors.transparent,
                     ],
                   ),
@@ -729,7 +753,9 @@ class _PlayerFigCard extends StatelessWidget {
 
             // Accent strip sinistra con gradient verticale
             Positioned(
-              left: 0, top: 0, bottom: 0,
+              left: 0,
+              top: 0,
+              bottom: 0,
               child: Container(
                 width: 4,
                 decoration: BoxDecoration(
@@ -737,8 +763,8 @@ class _PlayerFigCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      accent.withOpacity(0.3),
-                      accent.withOpacity(0.8),
+                      accent.withValues(alpha: 0.3),
+                      accent.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -753,17 +779,21 @@ class _PlayerFigCard extends StatelessWidget {
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(color: accent.withOpacity(0.45), width: 1.5),
+                      border: Border.all(
+                          color: accent.withValues(alpha: 0.45), width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: accent.withOpacity(0.2),
+                          color: accent.withValues(alpha: 0.2),
                           blurRadius: 8,
                         ),
                       ],
                     ),
                     child: player != null
-                        ? PlayerAvatar(player: player!, radius: 20)
+                        ? PlayerAvatar(
+                            name: player!.name,
+                            icon: player!.icon,
+                            imagePath: player!.imagePath,
+                            radius: 20)
                         : CircleAvatar(
                             radius: 20,
                             backgroundColor: AppTheme.surfaceAlt,
@@ -802,12 +832,14 @@ class _PlayerFigCard extends StatelessWidget {
                   // Rating numerico FUT (se disponibile)
                   if (rating != null) ...[
                     Container(
-                      width: 30, height: 28,
+                      width: 30,
+                      height: 28,
                       margin: const EdgeInsets.only(right: 4),
                       decoration: BoxDecoration(
-                        color: accent.withOpacity(0.18),
+                        color: accent.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: accent.withOpacity(0.4)),
+                        border:
+                            Border.all(color: accent.withValues(alpha: 0.4)),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -823,14 +855,16 @@ class _PlayerFigCard extends StatelessWidget {
 
                   // Ruolo badge
                   Container(
-                    width: 28, height: 28,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: accent.withOpacity(0.12),
+                      color: accent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: accent.withOpacity(0.35)),
+                      border: Border.all(color: accent.withValues(alpha: 0.35)),
                     ),
                     alignment: Alignment.center,
-                    child: Text(role,
+                    child: Text(
+                      role,
                       style: TextStyle(
                           color: accent,
                           fontSize: 10,
@@ -858,11 +892,15 @@ class _MiniStars extends StatelessWidget {
     // Converte rating (es. 0-100) in stelle su 5
     final stars = ((rating / 20).clamp(0, 5)).round();
     return Row(
-      children: List.generate(5, (i) => Icon(
-        i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
-        color: i < stars ? color.withOpacity(0.9) : color.withOpacity(0.25),
-        size: 9,
-      )),
+      children: List.generate(
+          5,
+          (i) => Icon(
+                i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: i < stars
+                    ? color.withValues(alpha: 0.9)
+                    : color.withValues(alpha: 0.25),
+                size: 9,
+              )),
     );
   }
 }
@@ -912,18 +950,18 @@ class _LineupButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             gradient: LinearGradient(
               colors: [
-                AppTheme.accentGreen.withOpacity(0.85),
+                AppTheme.accentGreen.withValues(alpha: 0.85),
                 const Color(0xFF0d6b25),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: AppTheme.accentGreen.withOpacity(0.5),
+              color: AppTheme.accentGreen.withValues(alpha: 0.5),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.accentGreen.withOpacity(0.35),
+                color: AppTheme.accentGreen.withValues(alpha: 0.35),
                 blurRadius: 16,
                 spreadRadius: 0,
                 offset: const Offset(0, 4),
@@ -937,7 +975,7 @@ class _LineupButton extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -985,9 +1023,9 @@ class _FooterBranding extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppTheme.accentBlue.withOpacity(0.6),
+                AppTheme.accentBlue.withValues(alpha: 0.6),
                 Colors.transparent,
-                AppTheme.accentOrange.withOpacity(0.6),
+                AppTheme.accentOrange.withValues(alpha: 0.6),
               ],
             ),
           ),
@@ -1003,12 +1041,13 @@ class _FooterBranding extends StatelessWidget {
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.accentGreen.withOpacity(0.08),
+                  color: AppTheme.accentGreen.withValues(alpha: 0.08),
                   border: Border.all(
-                      color: AppTheme.accentGreen.withOpacity(0.25), width: 1),
+                      color: AppTheme.accentGreen.withValues(alpha: 0.25),
+                      width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.accentGreen.withOpacity(0.2),
+                      color: AppTheme.accentGreen.withValues(alpha: 0.2),
                       blurRadius: 10,
                     ),
                   ],

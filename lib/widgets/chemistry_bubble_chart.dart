@@ -2,17 +2,19 @@
 // Chemistry Bubble Chart
 // ─────────────────────────────────────────────────────────────
 
-import 'package:calcetto_tracker/data/hive_boxes.dart';
 import 'package:calcetto_tracker/models/match_model.dart';
-import 'package:calcetto_tracker/models/player.dart';
+import 'package:calcetto_tracker/models/player_model.dart';
+import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:calcetto_tracker/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ChemistryBubbleChart extends StatefulWidget {
   final List<MatchModel> matches;
-  final Player player;
+  final PlayerModel player;
 
   const ChemistryBubbleChart({
+    super.key,
     required this.matches,
     required this.player,
   });
@@ -27,7 +29,6 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
   // Calcola i dati chemistry per ogni compagno di squadra
   List<_ChemistryData> _computeChemistry() {
     final playerId = widget.player.id;
-    final allPlayers = HiveBoxes.playersBox.values.toList();
 
     // mappa playerId -> dati aggregati
     final data = <String, _ChemistryData>{};
@@ -63,10 +64,11 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
     }
 
     // Arricchisci con il nome del giocatore
+    final dataService = Provider.of<DataService>(context, listen: false);
     final result = <_ChemistryData>[];
     for (final entry in data.values) {
       if (entry.games == 0) continue;
-      final p = HiveBoxes.playersBox.get(entry.playerId);
+      final p = dataService.getPlayerById(entry.playerId);
       if (p == null) continue;
       entry.name = p.name;
       entry.role = p.role;
@@ -150,7 +152,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: AppTheme.accentRed.withOpacity(0.5),
+                        color: AppTheme.accentRed.withValues(alpha: 0.5),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -201,7 +203,8 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
               child: Text(
                 'Tocca una bolla per vedere i dettagli',
                 style: TextStyle(
-                    color: AppTheme.textMuted.withOpacity(0.6), fontSize: 10),
+                    color: AppTheme.textMuted.withValues(alpha: 0.6),
+                    fontSize: 10),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -454,11 +457,10 @@ class _BubblePainter extends CustomPainter {
     const padT = _BubbleCanvas._padT;
     const padB = _BubbleCanvas._padB;
 
-    final plotW = size.width - padL - padR;
     final plotH = size.height - padT - padB;
 
     final gridPaint = Paint()
-      ..color = AppTheme.border.withOpacity(0.5)
+      ..color = AppTheme.border.withValues(alpha: 0.5)
       ..strokeWidth = 0.8;
 
     // Griglia orizzontale
@@ -479,7 +481,7 @@ class _BubblePainter extends CustomPainter {
 
     // Linea 50%
     final midPaint = Paint()
-      ..color = AppTheme.accentGold.withOpacity(0.3)
+      ..color = AppTheme.accentGold.withValues(alpha: 0.3)
       ..strokeWidth = 1.5;
 
     final midY = padT + 0.5 * plotH;
@@ -511,7 +513,7 @@ class _BubblePainter extends CustomPainter {
       canvas.drawCircle(
         center,
         r,
-        Paint()..color = baseColor.withOpacity(opacity),
+        Paint()..color = baseColor.withValues(alpha: opacity),
       );
 
       // Border animato
@@ -519,7 +521,7 @@ class _BubblePainter extends CustomPainter {
         center,
         r,
         Paint()
-          ..color = isTapped ? baseColor : baseColor.withOpacity(0.6)
+          ..color = isTapped ? baseColor : baseColor.withValues(alpha: 0.6)
           ..strokeWidth = isTapped ? 1.5 + 1.5 * animationValue : 1.5
           ..style = PaintingStyle.stroke,
       );
@@ -529,7 +531,7 @@ class _BubblePainter extends CustomPainter {
           center,
           r + 10 * animationValue,
           Paint()
-            ..color = baseColor.withOpacity(0.25 * animationValue)
+            ..color = baseColor.withValues(alpha: 0.25 * animationValue)
             ..style = PaintingStyle.fill,
         );
       }
@@ -584,7 +586,7 @@ class _BubblePainter extends CustomPainter {
           center,
           r + 6,
           Paint()
-            ..color = baseColor.withOpacity(0.25)
+            ..color = baseColor.withValues(alpha: 0.25)
             ..style = PaintingStyle.fill,
         );
       }
@@ -637,7 +639,7 @@ class _TooltipStat extends StatelessWidget {
           if (sub.isNotEmpty)
             Text(sub,
                 style: TextStyle(
-                    color: color.withOpacity(0.6),
+                    color: color.withValues(alpha: 0.6),
                     fontSize: 9,
                     fontWeight: FontWeight.w700)),
           Text(label,

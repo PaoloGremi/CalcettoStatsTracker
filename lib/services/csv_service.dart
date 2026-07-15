@@ -9,7 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../data/hive_boxes.dart';
 import '../models/field_model.dart';
 import '../models/match_model.dart';
-import '../models/player.dart';
+import '../models/player_model.dart';
 
 class CsvService {
   final _uuid = const Uuid();
@@ -26,8 +26,7 @@ class CsvService {
     return dir;
   }
 
-  String _toCsv(List<List<dynamic>> rows) =>
-      const ListToCsvConverter(
+  String _toCsv(List<List<dynamic>> rows) => const ListToCsvConverter(
         fieldDelimiter: ',',
         textDelimiter: '"',
         textEndDelimiter: '"',
@@ -42,7 +41,8 @@ class CsvService {
       textDelimiter: '"',
       textEndDelimiter: '"',
       eol: '\n',
-      shouldParseNumbers: false, // legge tutto come stringa, evitiamo cast errati
+      shouldParseNumbers:
+          false, // legge tutto come stringa, evitiamo cast errati
     ).convert(normalized);
   }
 
@@ -54,13 +54,13 @@ class CsvService {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // HELPER — cerca un Player per UUID (campo id), non per chiave Hive.
-  // Necessario perché Player estende HiveObject e la chiave Hive
+  // HELPER — cerca un PlayerModel per UUID (campo id), non per chiave Hive.
+  // Necessario perché PlayerModel estende HiveObject e la chiave Hive
   // è un indice numerico autogenerato, non l'UUID del campo id.
   // ─────────────────────────────────────────────────────────────
 
   // ✅ Con put(id) come chiave Hive, get(id) funziona direttamente
-  Player? _playerById(String id) => HiveBoxes.playersBox.get(id);
+  PlayerModel? _playerById(String id) => HiveBoxes.playersBox.get(id);
 
   // ─────────────────────────────────────────────────────────────
   // EXPORT — GIOCATORI
@@ -106,14 +106,26 @@ class CsvService {
   Future<File> exportMatches() async {
     final matches = HiveBoxes.matchesBox.values.toList();
     final rows = <List<dynamic>>[
-      ['id', 'date', 'fieldLocation', 'scoreA', 'scoreB', 'teamA', 'teamB', 'mvp', 'hustlePlayer', 'bestGoalPlayer', 'goals'],
+      [
+        'id',
+        'date',
+        'fieldLocation',
+        'scoreA',
+        'scoreB',
+        'teamA',
+        'teamB',
+        'mvp',
+        'hustlePlayer',
+        'bestGoalPlayer',
+        'goals'
+      ],
       ...matches.map((m) => [
             m.id,
             _dateFormat.format(m.date),
             m.fieldLocation,
             m.scoreA,
             m.scoreB,
-            m.teamA.join('|'),   // lista ID separati da pipe
+            m.teamA.join('|'), // lista ID separati da pipe
             m.teamB.join('|'),
             m.mvp,
             m.hustlePlayer,
@@ -135,7 +147,15 @@ class CsvService {
   Future<File> exportVotes() async {
     final matches = HiveBoxes.matchesBox.values.toList();
     final rows = <List<dynamic>>[
-      ['matchId', 'matchDate', 'playerId', 'playerName', 'vote', 'comment', 'goals'],
+      [
+        'matchId',
+        'matchDate',
+        'playerId',
+        'playerName',
+        'vote',
+        'comment',
+        'goals'
+      ],
     ];
 
     for (final m in matches) {
@@ -169,10 +189,21 @@ class CsvService {
     final players = HiveBoxes.playersBox.values.toList();
     final matches = HiveBoxes.matchesBox.values.toList();
 
-    players.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    players
+        .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     final rows = <List<dynamic>>[
-      ['playerId', 'playerName', 'role', 'gamesPlayed', 'votesReceived', 'avgVote', 'bestVote', 'worstVote', 'totalGoals'],
+      [
+        'playerId',
+        'playerName',
+        'role',
+        'gamesPlayed',
+        'votesReceived',
+        'avgVote',
+        'bestVote',
+        'worstVote',
+        'totalGoals'
+      ],
     ];
 
     for (final player in players) {
@@ -184,7 +215,8 @@ class CsvService {
       int totalGoals = 0;
 
       for (final match in matches) {
-        if (match.teamA.contains(player.id) || match.teamB.contains(player.id)) {
+        if (match.teamA.contains(player.id) ||
+            match.teamB.contains(player.id)) {
           gamesPlayed++;
           if (match.votes.containsKey(player.id)) {
             final v = match.votes[player.id]!;
@@ -221,10 +253,10 @@ class CsvService {
 
   Future<void> exportAll() async {
     final playersFile = await exportPlayers();
-    final fieldsFile  = await exportFields();
+    final fieldsFile = await exportFields();
     final matchesFile = await exportMatches();
-    final votesFile   = await exportVotes();
-    final statsFile   = await exportStats();
+    final votesFile = await exportVotes();
+    final statsFile = await exportStats();
 
     await Share.shareXFiles(
       [
@@ -234,7 +266,8 @@ class CsvService {
         XFile(votesFile.path),
         XFile(statsFile.path),
       ],
-      subject: 'Calcetto Tracker — Backup dati ${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
+      subject:
+          'Calcetto Tracker — Backup dati ${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
     );
   }
 
@@ -262,7 +295,10 @@ class CsvService {
     // Riga 0 = header, salta
     for (int i = 1; i < rows.length; i++) {
       final row = rows[i];
-      if (row.length < 4) { skipped++; continue; }
+      if (row.length < 4) {
+        skipped++;
+        continue;
+      }
 
       try {
         final id = row[0].toString().trim();
@@ -271,7 +307,10 @@ class CsvService {
         final icon = row[3].toString().trim();
         final imagePath = row.length > 4 ? row[4].toString().trim() : '';
 
-        if (name.isEmpty) { skipped++; continue; }
+        if (name.isEmpty) {
+          skipped++;
+          continue;
+        }
 
         // FIX: cerca per UUID nel campo id, non con get() che usa la chiave Hive
         // numerica autogenerata. HiveObject non usa l'id come chiave Hive.
@@ -289,7 +328,7 @@ class CsvService {
         } else {
           // ✅ put(id, player) usa l'UUID come chiave Hive
           // cosi' HiveBoxes.playersBox.get(uuid) funziona correttamente
-          final player = Player(
+          final player = PlayerModel(
             id: id,
             name: name,
             role: role,
@@ -333,20 +372,26 @@ class CsvService {
 
     for (int i = 1; i < rows.length; i++) {
       final row = rows[i];
-      if (row.length < 3) { skipped++; continue; }
+      if (row.length < 3) {
+        skipped++;
+        continue;
+      }
 
       try {
-        final id      = row[0].toString().trim();
-        final name    = row[1].toString().trim();
+        final id = row[0].toString().trim();
+        final name = row[1].toString().trim();
         final address = row[2].toString().trim();
         final imagePath = row.length > 3 ? row[3].toString().trim() : '';
 
-        if (name.isEmpty) { skipped++; continue; }
+        if (name.isEmpty) {
+          skipped++;
+          continue;
+        }
 
         final existing = HiveBoxes.fieldsBox.get(id);
         if (existing != null) {
-          existing.name      = name;
-          existing.address   = address;
+          existing.name = name;
+          existing.address = address;
           existing.imagePath = imagePath.isEmpty ? null : imagePath;
           await existing.save();
         } else {
@@ -390,7 +435,10 @@ class CsvService {
 
     for (int i = 1; i < rows.length; i++) {
       final row = rows[i];
-      if (row.length < 7) { skipped++; continue; }
+      if (row.length < 7) {
+        skipped++;
+        continue;
+      }
 
       try {
         final id = row[0].toString().trim();
@@ -398,8 +446,10 @@ class CsvService {
         final fieldLocation = row[2].toString().trim();
         final scoreA = int.tryParse(row[3].toString()) ?? 0;
         final scoreB = int.tryParse(row[4].toString()) ?? 0;
-        final teamA = row[5].toString().split('|').where((s) => s.isNotEmpty).toList();
-        final teamB = row[6].toString().split('|').where((s) => s.isNotEmpty).toList();
+        final teamA =
+            row[5].toString().split('|').where((s) => s.isNotEmpty).toList();
+        final teamB =
+            row[6].toString().split('|').where((s) => s.isNotEmpty).toList();
         final mvp = row.length > 7 ? row[7].toString().trim() : '';
         final hustlePlayer = row.length > 8 ? row[8].toString().trim() : '';
         final bestGoalPlayer = row.length > 9 ? row[9].toString().trim() : '';
@@ -484,7 +534,10 @@ class CsvService {
 
     for (int i = 1; i < rows.length; i++) {
       final row = rows[i];
-      if (row.length < 5) { skipped++; continue; }
+      if (row.length < 5) {
+        skipped++;
+        continue;
+      }
 
       try {
         final matchId = row[0].toString().trim();
@@ -493,7 +546,10 @@ class CsvService {
         final comment = row.length > 5 ? row[5].toString().trim() : '';
 
         final match = HiveBoxes.matchesBox.get(matchId);
-        if (match == null) { skipped++; continue; }
+        if (match == null) {
+          skipped++;
+          continue;
+        }
 
         final vote = double.tryParse(voteStr);
         if (vote != null) match.votes[playerId] = vote;
@@ -580,7 +636,11 @@ class ImportResult {
   });
 
   factory ImportResult.success({required int imported, required int skipped}) =>
-      ImportResult._(success: true, cancelled: false, imported: imported, skipped: skipped);
+      ImportResult._(
+          success: true,
+          cancelled: false,
+          imported: imported,
+          skipped: skipped);
 
   factory ImportResult.cancelled() =>
       ImportResult._(success: false, cancelled: true);
