@@ -89,8 +89,8 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                 );
                 if (date == null || !mounted) return;
                 final time = await showTimePicker(
-                    context: context, initialTime: TimeOfDay.now());
-                if (time == null) return;
+                    context: context, initialTime: TimeOfDay.now()); // ignore: use_build_context_synchronously
+                if (time == null || !mounted) return;
                 setState(() => selectedDateTime = DateTime(
                     date.year, date.month, date.day, time.hour, time.minute));
               },

@@ -8,6 +8,11 @@ import '../data/hive_boxes.dart';
 class DataService extends ChangeNotifier {
   final _uuid = const Uuid();
 
+  /// Forza un rebuild dei listener. Da usare quando dati sono stati scritti
+  /// su Hive da codice esterno (es. import CSV) senza passare dai metodi di
+  /// questa classe.
+  void invalidate() => notifyListeners();
+
   // ── Players ───────────────────────────────────────────────────
 
   List<PlayerModel> getAllPlayers() => HiveBoxes.playersBox.values.toList();

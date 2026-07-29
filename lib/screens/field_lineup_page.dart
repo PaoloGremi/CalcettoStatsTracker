@@ -23,14 +23,13 @@ class _PlayerToken {
   final String playerId;
   final Color accent;
   Offset position; // centro del token sul campo
-  bool isDragging;
+  bool isDragging = false;
 
   _PlayerToken({
     required this.player,
     required this.playerId,
     required this.accent,
     required this.position,
-    this.isDragging = false,
   });
 }
 

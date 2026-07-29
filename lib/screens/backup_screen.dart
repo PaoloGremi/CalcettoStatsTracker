@@ -49,7 +49,7 @@ class _BackupScreenState extends State<BackupScreen> {
         '$label importati: ${result.imported}  •  saltati: ${result.skipped}');
     // Forza rebuild del provider
     if (mounted) {
-      Provider.of<DataService>(context, listen: false).notifyListeners();
+      Provider.of<DataService>(context, listen: false).invalidate();
     }
   }
 

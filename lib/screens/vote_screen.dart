@@ -419,7 +419,9 @@ class _VoteScreenState extends State<VoteScreen> {
             final dataService =
                 Provider.of<DataService>(context, listen: false);
             await dataService.updateMatch(widget.match);
-            if (mounted) Navigator.pop(context);
+            if (!mounted) return;
+            // ignore: use_build_context_synchronously
+            Navigator.pop(context);
           },
           child: const Text('SALVA VOTI, GOL E COMMENTI'),
         ),

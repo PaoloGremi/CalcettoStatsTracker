@@ -273,9 +273,9 @@ class _EditMatchScreenState extends State<EditMatchScreen> {
                 );
                 if (date == null || !mounted) return;
                 final time = await showTimePicker(
-                    context: context,
+                    context: context, // ignore: use_build_context_synchronously
                     initialTime: TimeOfDay.fromDateTime(selectedDateTime));
-                if (time == null) return;
+                if (time == null || !mounted) return;
                 setState(() {
                   selectedDateTime = DateTime(
                       date.year, date.month, date.day, time.hour, time.minute);
@@ -443,10 +443,12 @@ class _EditMatchScreenState extends State<EditMatchScreen> {
                       await data.updateMatch(updated);
                       if (!mounted) return;
                       Navigator.push(
-                        context,
+                        context, // ignore: use_build_context_synchronously
                         MaterialPageRoute(
                             builder: (_) => VoteScreen(match: updated)),
-                      ).then((_) => Navigator.pop(context));
+                      ).then((_) {
+                        if (mounted) Navigator.pop(context); // ignore: use_build_context_synchronously
+                      });
                     }
                   : null,
               style: ElevatedButton.styleFrom(
@@ -485,6 +487,7 @@ class _EditMatchScreenState extends State<EditMatchScreen> {
                       );
                       await data.updateMatch(updated);
                       if (!mounted) return;
+                      // ignore: use_build_context_synchronously
                       Navigator.pop(context);
                     }
                   : null,
