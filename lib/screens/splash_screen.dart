@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/util/seasonal_theme.dart';
 import '../theme/app_theme.dart';
+import '../widgets/seasonal_overlay.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  /// Forza un tema stagionale specifico, bypassando [resolveSeasonalTheme].
+  /// Utile solo per QA manuale (es. `SplashScreen(debugForceTheme: ...)`
+  /// temporaneo in main.dart) — non usato in produzione.
+  final SeasonalTheme? debugForceTheme;
+
+  const SplashScreen({super.key, this.debugForceTheme});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -25,9 +32,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   late final Animation<double> _overlayOpacity;
 
+  late final SeasonalTheme _seasonalTheme;
+
   @override
   void initState() {
     super.initState();
+
+    _seasonalTheme = widget.debugForceTheme ?? resolveSeasonalTheme();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
@@ -93,6 +104,17 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  /// Colore del glow dietro il logo, in tema con la stagione corrente.
+  /// [SeasonalTheme.none] riproduce lo stesso oro usato prima di introdurre
+  /// gli effetti stagionali: nessuna regressione visiva fuori stagione.
+  Color _seasonalGlowColor(SeasonalTheme theme) => switch (theme) {
+        SeasonalTheme.christmas => AppTheme.accentRed,
+        SeasonalTheme.halloween => AppTheme.accentOrange,
+        SeasonalTheme.summer => AppTheme.accentBlue,
+        SeasonalTheme.easter => AppTheme.accentGreen,
+        SeasonalTheme.none => AppTheme.accentGold,
+      };
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -130,6 +152,10 @@ class _SplashScreenState extends State<SplashScreen>
             size: size,
           ),
 
+          // ── Effetti stagionali (neve, uova, zucche, sole...) ──
+          if (_seasonalTheme != SeasonalTheme.none)
+            SeasonalOverlay(theme: _seasonalTheme),
+
           // ── Contenuto centrale ────────────────────────────────
           LayoutBuilder(
             builder: (context, constraints) {
@@ -165,8 +191,8 @@ class _SplashScreenState extends State<SplashScreen>
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color.fromARGB(
-                                                    33, 255, 221, 0)
+                                            color: _seasonalGlowColor(
+                                                    _seasonalTheme)
                                                 .withValues(alpha: 0.35),
                                             blurRadius: 60,
                                             spreadRadius: 20,

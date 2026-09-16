@@ -832,10 +832,33 @@ class _FutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = _cardColor;
-    final cardW = 200.0;
-    final cardH = 280.0;
     final stats = _computed; // calcolate una sola volta
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Dimensioni "naturali" della card, ridotte in proporzione se lo
+        // spazio disponibile (es. schermi piccoli) è inferiore, per evitare
+        // overflow verticale del contenuto interno.
+        const naturalW = 200.0;
+        const naturalH = 280.0;
+        const aspect = naturalW / naturalH;
+        var cardW = naturalW;
+        var cardH = naturalH;
+        if (constraints.maxWidth.isFinite && constraints.maxWidth < cardW) {
+          cardW = constraints.maxWidth;
+          cardH = cardW / aspect;
+        }
+        if (constraints.maxHeight.isFinite && constraints.maxHeight < cardH) {
+          cardH = constraints.maxHeight;
+          cardW = cardH * aspect;
+        }
+        return _buildCard(c, stats, cardW, cardH);
+      },
+    );
+  }
+
+  Widget _buildCard(
+      Color c, ComputedFifaStats stats, double cardW, double cardH) {
     return Container(
       width: cardW,
       height: cardH,
@@ -874,8 +897,11 @@ class _FutCard extends StatelessWidget {
               child: Column(
                 children: [
                   // ── Riga superiore: rating + foto + ruolo ──────
-                  SizedBox(
-                    height: cardH * 0.52,
+                  // Expanded (invece di un'altezza fissa proporzionale a
+                  // cardH) così occupa esattamente lo spazio residuo della
+                  // Column, senza mai sommare più del 100% dell'altezza
+                  // disponibile insieme agli elementi fissi sottostanti.
+                  Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
