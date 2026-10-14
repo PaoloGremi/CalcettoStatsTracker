@@ -170,4 +170,34 @@ void main() {
       verifyNever(() => getAllPlayers());
     });
   });
+
+  group('search', () {
+    test('visiblePlayers filters by query and notifies listeners', () async {
+      when(() => getAllPlayers()).thenAnswer((_) async => Result.success(const [
+            Player(id: 'p1', name: 'Mario', role: 'A', icon: 'x'),
+            Player(id: 'p2', name: 'Luigi', role: 'D', icon: 'x'),
+          ]));
+      await controller.load();
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      controller.setQuery('mar');
+
+      expect(controller.query, 'mar');
+      expect(controller.visiblePlayers.map((p) => p.name), ['Mario']);
+      expect(controller.players, hasLength(2));
+      expect(notified, 1);
+    });
+
+    test('query survives a reload', () async {
+      when(() => getAllPlayers()).thenAnswer((_) async => Result.success(const [
+            Player(id: 'p1', name: 'Mario', role: 'A', icon: 'x'),
+            Player(id: 'p2', name: 'Luigi', role: 'D', icon: 'x'),
+          ]));
+      controller.setQuery('lui');
+      await controller.load();
+
+      expect(controller.visiblePlayers.map((p) => p.name), ['Luigi']);
+    });
+  });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/util/player_search.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/usecases/add_player.dart';
 import '../../domain/usecases/delete_player.dart';
@@ -28,6 +29,19 @@ class PlayersController extends ChangeNotifier {
 
   List<Player> _players = const [];
   List<Player> get players => _players;
+
+  String _query = '';
+  String get query => _query;
+
+  /// [players] filtrati per la query della barra di ricerca.
+  List<Player> get visiblePlayers =>
+      _players.where((p) => matchesPlayerQuery(p.name, _query)).toList();
+
+  void setQuery(String query) {
+    if (query == _query) return;
+    _query = query;
+    notifyListeners();
+  }
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;

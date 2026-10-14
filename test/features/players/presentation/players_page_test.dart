@@ -80,6 +80,28 @@ void main() {
     expect(find.byIcon(Icons.delete_outline_rounded), findsNWidgets(2));
   });
 
+  testWidgets('typing in the search bar filters the roster', (tester) async {
+    when(() => getAllPlayers())
+        .thenAnswer((_) async => Result.success(const [_mario, _luigi]));
+    await controller.load();
+
+    await tester.pumpWidget(wrap(const PlayersView()));
+    await tester.enterText(find.byKey(const Key('player_search_field')), 'lui');
+    await tester.pump();
+
+    expect(find.text('LUIGI'), findsOneWidget);
+    expect(find.text('MARIO'), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('player_search_field')), 'zzz');
+    await tester.pump();
+    expect(find.text('NESSUN RISULTATO'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pump();
+    expect(find.text('MARIO'), findsOneWidget);
+    expect(find.text('LUIGI'), findsOneWidget);
+  });
+
   testWidgets('tapping the FAB opens the "new player" form', (tester) async {
     when(() => getAllPlayers())
         .thenAnswer((_) async => Result.success(const []));
@@ -110,7 +132,10 @@ void main() {
     await tester.tap(find.byIcon(Icons.person_add_rounded));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'Nuovo Giocatore Test');
+    await tester.enterText(
+        find.descendant(
+            of: find.byType(AlertDialog), matching: find.byType(TextField)),
+        'Nuovo Giocatore Test');
     await tester.tap(find.byType(DropdownButtonFormField<String>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('A — Attaccante').last);

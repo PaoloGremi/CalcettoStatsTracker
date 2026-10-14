@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../widgets/player_avatar.dart';
+import '../../../../widgets/player_search_field.dart';
 import '../../domain/entities/player.dart';
 import '../controllers/players_controller.dart';
 import '../widgets/player_form_dialog.dart';
@@ -131,7 +132,7 @@ class PlayersView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<PlayersController>();
-    final players = controller.players;
+    final players = controller.visiblePlayers;
 
     return Scaffold(
       backgroundColor: AppTheme.bg,
@@ -146,34 +147,59 @@ class PlayersView extends StatelessWidget {
       body: controller.isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.accentGreen))
-          : players.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.people_outline,
-                          size: 48, color: AppTheme.textMuted),
-                      const SizedBox(height: 12),
-                      FifaLabel('Nessun giocatore',
-                          color: AppTheme.textMuted, fontSize: 12),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  itemCount: players.length,
-                  itemBuilder: (_, i) => _PlayerRow(
-                    player: players[i],
-                    onEdit: () =>
-                        _showEditDialog(context, controller, players[i]),
-                    onDelete: () =>
-                        _confirmDelete(context, controller, players[i]),
-                  ),
+          : controller.players.isEmpty
+              ? const _EmptyState(
+                  icon: Icons.people_outline, label: 'Nessun giocatore')
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                      child: PlayerSearchField(onChanged: controller.setQuery),
+                    ),
+                    Expanded(
+                      child: players.isEmpty
+                          ? const _EmptyState(
+                              icon: Icons.search_off_rounded,
+                              label: 'Nessun risultato')
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              itemCount: players.length,
+                              itemBuilder: (_, i) => _PlayerRow(
+                                player: players[i],
+                                onEdit: () => _showEditDialog(
+                                    context, controller, players[i]),
+                                onDelete: () => _confirmDelete(
+                                    context, controller, players[i]),
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddDialog(context, controller),
         child: const Icon(Icons.person_add_rounded),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: AppTheme.textMuted),
+          const SizedBox(height: 12),
+          FifaLabel(label, color: AppTheme.textMuted, fontSize: 12),
+        ],
       ),
     );
   }

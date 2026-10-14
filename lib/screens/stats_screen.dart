@@ -5,6 +5,8 @@ import '../services/data_service.dart';
 import '../models/player_model.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import '../core/util/player_search.dart';
+import '../widgets/player_search_field.dart';
 
 enum _SortMode {
   avgVote,
@@ -24,6 +26,7 @@ class StatsScreen extends StatefulWidget {
 
 class _StatsScreenState extends State<StatsScreen> {
   _SortMode _mode = _SortMode.matches;
+  String _query = '';
 
   static const _modes = [
     {'value': _SortMode.avgVote, 'label': 'Voto Medio', 'emoji': '⭐'},
@@ -120,6 +123,14 @@ class _StatsScreenState extends State<StatsScreen> {
         if (diff != 0) return diff;
         return a.name.toLowerCase().compareTo(b.name.toLowerCase());
       });
+
+    // Filtra dopo l'ordinamento così ogni giocatore mantiene la sua
+    // posizione reale in classifica anche durante la ricerca.
+    final visible = [
+      for (var i = 0; i < sorted.length; i++)
+        if (matchesPlayerQuery(sorted[i].name, _query))
+          (rank: i + 1, player: sorted[i]),
+    ];
 
     final accent = _modeAccent();
 
@@ -222,271 +233,302 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
           ),
 
+          // ── Ricerca giocatore ─────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+            child:
+                PlayerSearchField(onChanged: (v) => setState(() => _query = v)),
+          ),
+
           // ── Lista giocatori ───────────────────────────────────
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              itemCount: sorted.length,
-              itemBuilder: (context, i) {
-                final player = sorted[i];
-                final rank = i + 1;
-                final isFirst = i == 0;
-                final isSecond = i == 1;
-                final isThird = i == 2;
-                const podiumGold = Color(0xFFFFD700);
-                const podiumSilver = Color(0xFFB8B8B8);
-                const podiumBronze = Color(0xFFCD7F32);
-                final podiumColor = isFirst
-                    ? podiumGold
-                    : isSecond
-                        ? podiumSilver
-                        : isThird
-                            ? podiumBronze
-                            : null;
-                final games = stats[player.id]!['games'] as int;
-                final avgVote = stats[player.id]!['avgVote'] as double;
-                final isEmpty = _sortValue(player, stats) == 0;
-
-                final boxColor = switch (_mode) {
-                  _SortMode.avgVote => _voteColor(avgVote),
-                  _SortMode.mvp => AppTheme.accentGold,
-                  _SortMode.hustle => AppTheme.accentOrange,
-                  _SortMode.bestGoal => AppTheme.accentGreen,
-                  _SortMode.goals => AppTheme.accentRed, // ✅
-                  _SortMode.matches => AppTheme.accentBlue, // ✅
-                };
-
-                final boxMain = switch (_mode) {
-                  _SortMode.avgVote => avgVote.toStringAsFixed(1),
-                  _SortMode.mvp => '${player.mvpCount}',
-                  _SortMode.hustle => '${player.hustleCount}',
-                  _SortMode.bestGoal => '${player.bestGoalCount}',
-                  _SortMode.goals =>
-                    '${(stats[player.id]!["goals"] as int)}', // ✅
-                  _SortMode.matches =>
-                    '${(stats[player.id]!["games"] as int)}', // ✅
-                };
-
-                final boxSub = switch (_mode) {
-                  _SortMode.avgVote => 'MEDIA',
-                  _SortMode.mvp => '👑',
-                  _SortMode.hustle => '🔥',
-                  _SortMode.bestGoal => '⚽',
-                  _SortMode.goals => '🥅', // ✅
-                  _SortMode.matches => '📊', // ✅
-                };
-
-                return InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PlayerStatsScreen(player: player),
+            child: visible.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.search_off_rounded,
+                            size: 48, color: AppTheme.textMuted),
+                        const SizedBox(height: 12),
+                        FifaLabel('Nessun risultato',
+                            color: AppTheme.textMuted, fontSize: 12),
+                      ],
                     ),
-                  ),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      gradient: podiumColor != null && !isEmpty
-                          ? LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                podiumColor.withValues(
-                                    alpha: isFirst ? 0.18 : 0.10),
-                                podiumColor.withValues(alpha: 0.04),
-                              ],
-                            )
-                          : null,
-                      color: podiumColor == null || isEmpty
-                          ? AppTheme.surface
-                          : null,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: podiumColor != null && !isEmpty
-                            ? podiumColor.withValues(alpha: isFirst ? 0.6 : 0.4)
-                            : AppTheme.border,
-                        width: podiumColor != null ? 1.5 : 1,
-                      ),
-                      boxShadow: podiumColor != null && !isEmpty
-                          ? [
-                              BoxShadow(
-                                color: podiumColor.withValues(
-                                    alpha: isFirst ? 0.20 : 0.10),
-                                blurRadius: isFirst ? 20 : 10,
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      child: Row(
-                        children: [
-                          // Rank
-                          SizedBox(
-                            width: 28,
-                            child: Text(
-                              isFirst
-                                  ? '🥇'
-                                  : isSecond
-                                      ? '🥈'
-                                      : isThird
-                                          ? '🥉'
-                                          : '#$rank',
-                              style: TextStyle(
-                                color: podiumColor ?? AppTheme.textMuted,
-                                fontSize: podiumColor != null ? 20 : 11,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1,
-                              ),
-                            ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    itemCount: visible.length,
+                    itemBuilder: (context, i) {
+                      final player = visible[i].player;
+                      final rank = visible[i].rank;
+                      final isFirst = rank == 1;
+                      final isSecond = rank == 2;
+                      final isThird = rank == 3;
+                      const podiumGold = Color(0xFFFFD700);
+                      const podiumSilver = Color(0xFFB8B8B8);
+                      const podiumBronze = Color(0xFFCD7F32);
+                      final podiumColor = isFirst
+                          ? podiumGold
+                          : isSecond
+                              ? podiumSilver
+                              : isThird
+                                  ? podiumBronze
+                                  : null;
+                      final games = stats[player.id]!['games'] as int;
+                      final avgVote = stats[player.id]!['avgVote'] as double;
+                      final isEmpty = _sortValue(player, stats) == 0;
+
+                      final boxColor = switch (_mode) {
+                        _SortMode.avgVote => _voteColor(avgVote),
+                        _SortMode.mvp => AppTheme.accentGold,
+                        _SortMode.hustle => AppTheme.accentOrange,
+                        _SortMode.bestGoal => AppTheme.accentGreen,
+                        _SortMode.goals => AppTheme.accentRed, // ✅
+                        _SortMode.matches => AppTheme.accentBlue, // ✅
+                      };
+
+                      final boxMain = switch (_mode) {
+                        _SortMode.avgVote => avgVote.toStringAsFixed(1),
+                        _SortMode.mvp => '${player.mvpCount}',
+                        _SortMode.hustle => '${player.hustleCount}',
+                        _SortMode.bestGoal => '${player.bestGoalCount}',
+                        _SortMode.goals =>
+                          '${(stats[player.id]!["goals"] as int)}', // ✅
+                        _SortMode.matches =>
+                          '${(stats[player.id]!["games"] as int)}', // ✅
+                      };
+
+                      final boxSub = switch (_mode) {
+                        _SortMode.avgVote => 'MEDIA',
+                        _SortMode.mvp => '👑',
+                        _SortMode.hustle => '🔥',
+                        _SortMode.bestGoal => '⚽',
+                        _SortMode.goals => '🥅', // ✅
+                        _SortMode.matches => '📊', // ✅
+                      };
+
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PlayerStatsScreen(player: player),
                           ),
-                          const SizedBox(width: 8),
-                          PlayerAvatar(
-                              name: player.name,
-                              icon: player.icon,
-                              imagePath: player.imagePath,
-                              radius: 24),
-                          const SizedBox(width: 14),
-                          // Info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            gradient: podiumColor != null && !isEmpty
+                                ? LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      podiumColor.withValues(
+                                          alpha: isFirst ? 0.18 : 0.10),
+                                      podiumColor.withValues(alpha: 0.04),
+                                    ],
+                                  )
+                                : null,
+                            color: podiumColor == null || isEmpty
+                                ? AppTheme.surface
+                                : null,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: podiumColor != null && !isEmpty
+                                  ? podiumColor.withValues(
+                                      alpha: isFirst ? 0.6 : 0.4)
+                                  : AppTheme.border,
+                              width: podiumColor != null ? 1.5 : 1,
+                            ),
+                            boxShadow: podiumColor != null && !isEmpty
+                                ? [
+                                    BoxShadow(
+                                      color: podiumColor.withValues(
+                                          alpha: isFirst ? 0.20 : 0.10),
+                                      blurRadius: isFirst ? 20 : 10,
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            child: Row(
                               children: [
-                                Text(
-                                  player.name.toUpperCase(),
-                                  style: const TextStyle(
-                                    color: AppTheme.textPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.5,
+                                // Rank
+                                SizedBox(
+                                  width: 28,
+                                  child: Text(
+                                    isFirst
+                                        ? '🥇'
+                                        : isSecond
+                                            ? '🥈'
+                                            : isThird
+                                                ? '🥉'
+                                                : '#$rank',
+                                    style: TextStyle(
+                                      color: podiumColor ?? AppTheme.textMuted,
+                                      fontSize: podiumColor != null ? 20 : 11,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    FifaBadge(player.role,
-                                        color: switch (player.role) {
-                                          'P' => AppTheme.accentGold,
-                                          'D' => AppTheme.accentBlue,
-                                          'C' => AppTheme.accentGreen,
-                                          'A' => AppTheme.accentRed,
-                                          _ => AppTheme.textMuted,
-                                        }),
-                                    const SizedBox(width: 6),
-                                    Text('$games partite',
-                                        style: const TextStyle(
-                                            color: AppTheme.textSecondary,
-                                            fontSize: 11)),
-                                  ],
-                                ),
-                                // Badge premi secondari + gol
-                                if (player.mvpCount > 0 ||
-                                    player.hustleCount > 0 ||
-                                    player.bestGoalCount > 0 ||
-                                    (stats[player.id]!['goals'] as int) >
-                                        0) ...[
-                                  const SizedBox(height: 6),
-                                  Row(
+                                const SizedBox(width: 8),
+                                PlayerAvatar(
+                                    name: player.name,
+                                    icon: player.icon,
+                                    imagePath: player.imagePath,
+                                    radius: 24),
+                                const SizedBox(width: 14),
+                                // Info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      if (player.mvpCount > 0) ...[
-                                        _AwardCounter(
-                                            emoji: '👑',
-                                            count: player.mvpCount,
-                                            color: AppTheme.accentGold,
-                                            highlight: _mode == _SortMode.mvp),
-                                        const SizedBox(width: 5),
+                                      Text(
+                                        player.name.toUpperCase(),
+                                        style: const TextStyle(
+                                          color: AppTheme.textPrimary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          FifaBadge(player.role,
+                                              color: switch (player.role) {
+                                                'P' => AppTheme.accentGold,
+                                                'D' => AppTheme.accentBlue,
+                                                'C' => AppTheme.accentGreen,
+                                                'A' => AppTheme.accentRed,
+                                                _ => AppTheme.textMuted,
+                                              }),
+                                          const SizedBox(width: 6),
+                                          Text('$games partite',
+                                              style: const TextStyle(
+                                                  color: AppTheme.textSecondary,
+                                                  fontSize: 11)),
+                                        ],
+                                      ),
+                                      // Badge premi secondari + gol
+                                      if (player.mvpCount > 0 ||
+                                          player.hustleCount > 0 ||
+                                          player.bestGoalCount > 0 ||
+                                          (stats[player.id]!['goals'] as int) >
+                                              0) ...[
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            if (player.mvpCount > 0) ...[
+                                              _AwardCounter(
+                                                  emoji: '👑',
+                                                  count: player.mvpCount,
+                                                  color: AppTheme.accentGold,
+                                                  highlight:
+                                                      _mode == _SortMode.mvp),
+                                              const SizedBox(width: 5),
+                                            ],
+                                            if (player.hustleCount > 0) ...[
+                                              _AwardCounter(
+                                                  emoji: '🔥',
+                                                  count: player.hustleCount,
+                                                  color: AppTheme.accentOrange,
+                                                  highlight: _mode ==
+                                                      _SortMode.hustle),
+                                              const SizedBox(width: 5),
+                                            ],
+                                            if (player.bestGoalCount > 0) ...[
+                                              _AwardCounter(
+                                                  emoji: '⚽',
+                                                  count: player.bestGoalCount,
+                                                  color: AppTheme.accentGreen,
+                                                  highlight: _mode ==
+                                                      _SortMode.bestGoal),
+                                              const SizedBox(width: 5),
+                                            ],
+                                            // ✅ Gol totali calcolati dalle partite
+                                            if ((stats[player.id]!['goals']
+                                                    as int) >
+                                                0)
+                                              _AwardCounter(
+                                                  emoji: '🥅',
+                                                  count:
+                                                      stats[player.id]!['goals']
+                                                          as int,
+                                                  color: AppTheme.accentRed,
+                                                  highlight:
+                                                      _mode == _SortMode.goals),
+                                          ],
+                                        ),
                                       ],
-                                      if (player.hustleCount > 0) ...[
-                                        _AwardCounter(
-                                            emoji: '🔥',
-                                            count: player.hustleCount,
-                                            color: AppTheme.accentOrange,
-                                            highlight:
-                                                _mode == _SortMode.hustle),
-                                        const SizedBox(width: 5),
-                                      ],
-                                      if (player.bestGoalCount > 0) ...[
-                                        _AwardCounter(
-                                            emoji: '⚽',
-                                            count: player.bestGoalCount,
-                                            color: AppTheme.accentGreen,
-                                            highlight:
-                                                _mode == _SortMode.bestGoal),
-                                        const SizedBox(width: 5),
-                                      ],
-                                      // ✅ Gol totali calcolati dalle partite
-                                      if ((stats[player.id]!['goals'] as int) >
-                                          0)
-                                        _AwardCounter(
-                                            emoji: '🥅',
-                                            count: stats[player.id]!['goals']
-                                                as int,
-                                            color: AppTheme.accentRed,
-                                            highlight:
-                                                _mode == _SortMode.goals),
                                     ],
                                   ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          // Box metrica principale
-                          Container(
-                            width: 58,
-                            height: 58,
-                            decoration: BoxDecoration(
-                              color: isEmpty
-                                  ? AppTheme.surfaceAlt
-                                  : boxColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isEmpty
-                                    ? AppTheme.border
-                                    : boxColor.withValues(alpha: 0.45),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  isEmpty ? '—' : boxMain,
-                                  style: TextStyle(
-                                    color:
-                                        isEmpty ? AppTheme.textMuted : boxColor,
-                                    fontSize:
-                                        _mode == _SortMode.avgVote ? 20 : 22,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1,
-                                  ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  isEmpty ? '' : boxSub,
-                                  style: TextStyle(
+                                const SizedBox(width: 10),
+                                // Box metrica principale
+                                Container(
+                                  width: 58,
+                                  height: 58,
+                                  decoration: BoxDecoration(
                                     color: isEmpty
-                                        ? Colors.transparent
-                                        : boxColor.withValues(alpha: 0.6),
-                                    fontSize:
-                                        _mode == _SortMode.avgVote ? 9 : 14,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing:
-                                        _mode == _SortMode.avgVote ? 1.5 : 0,
+                                        ? AppTheme.surfaceAlt
+                                        : boxColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isEmpty
+                                          ? AppTheme.border
+                                          : boxColor.withValues(alpha: 0.45),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        isEmpty ? '—' : boxMain,
+                                        style: TextStyle(
+                                          color: isEmpty
+                                              ? AppTheme.textMuted
+                                              : boxColor,
+                                          fontSize: _mode == _SortMode.avgVote
+                                              ? 20
+                                              : 22,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isEmpty ? '' : boxSub,
+                                        style: TextStyle(
+                                          color: isEmpty
+                                              ? Colors.transparent
+                                              : boxColor.withValues(alpha: 0.6),
+                                          fontSize: _mode == _SortMode.avgVote
+                                              ? 9
+                                              : 14,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing:
+                                              _mode == _SortMode.avgVote
+                                                  ? 1.5
+                                                  : 0,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
