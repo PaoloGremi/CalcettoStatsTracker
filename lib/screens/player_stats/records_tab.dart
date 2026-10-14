@@ -13,6 +13,12 @@ class _RecordsTab extends StatelessWidget {
     final totalGames = summary.totalGames;
 
     final sections = <Widget>[
+      if (totalGames > 0)
+        ..._section('Serie Record', AppTheme.accentGold,
+            _RecordStreaksCard(summary: summary)),
+      if (summary.bestVoteMatch != null || summary.mostGoalsMatch != null)
+        ..._section('Miglior Partita', AppTheme.accentGreen,
+            _BestMatchesCard(summary: summary)),
       // ── Timeline Traguardi ────────────────────────────
       if (totalGames > 0)
         ..._section(

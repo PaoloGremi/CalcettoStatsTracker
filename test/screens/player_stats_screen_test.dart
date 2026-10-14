@@ -4,6 +4,7 @@ import 'package:calcetto_tracker/data/hive_boxes.dart';
 import 'package:calcetto_tracker/models/field_model.dart';
 import 'package:calcetto_tracker/models/match_model.dart';
 import 'package:calcetto_tracker/models/player_model.dart';
+import 'package:calcetto_tracker/screens/match_detail_screen.dart';
 import 'package:calcetto_tracker/screens/player_stats_screen.dart';
 import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:flutter/material.dart';
@@ -69,11 +70,10 @@ void main() {
   }
 
   Future<void> pumpScreen(WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: ChangeNotifierProvider<DataService>.value(
-        value: dataService,
-        child: PlayerStatsScreen(player: mario),
-      ),
+    // Provider sopra il MaterialApp: le route spinte (MatchDetailScreen) lo vedono.
+    await tester.pumpWidget(ChangeNotifierProvider<DataService>.value(
+      value: dataService,
+      child: MaterialApp(home: PlayerStatsScreen(player: mario)),
     ));
     await tester.pumpAndSettle();
   }
@@ -182,6 +182,11 @@ void main() {
     };
     for (final entry in expectedHeaders.entries) {
       await tapTab(tester, entry.key);
+      await tester.scrollUntilVisible(find.text(entry.value), 300,
+          scrollable: find
+              .descendant(
+                  of: find.byType(ListView), matching: find.byType(Scrollable))
+              .first);
       expect(find.text(entry.value), findsOneWidget, reason: entry.key);
       expect(tester.takeException(), isNull);
     }
@@ -194,7 +199,8 @@ void main() {
 
     await tapTab(tester, 'GOL');
     final scrollable = find
-        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .descendant(
+            of: find.byType(ListView), matching: find.byType(Scrollable))
         .first;
     await tester.scrollUntilVisible(find.text('QUOTA GOL SQUADRA'), 300,
         scrollable: scrollable);
@@ -212,7 +218,8 @@ void main() {
 
     await tapTab(tester, 'RISULTATI');
     final scrollable = find
-        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .descendant(
+            of: find.byType(ListView), matching: find.byType(Scrollable))
         .first;
     await tester.scrollUntilVisible(find.text('DIFFERENZA RETI'), 300,
         scrollable: scrollable);
@@ -224,5 +231,29 @@ void main() {
         scrollable: scrollable);
     expect(find.text('Di misura'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('records tab shows streaks and best matches; tap opens detail',
+      (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'RECORD');
+    final scrollable = find
+        .descendant(
+            of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    expect(find.text('SERIE RECORD'), findsOneWidget);
+    expect(find.text('VITTORIE'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('VOTO PIÙ ALTO'), 300,
+        scrollable: scrollable);
+    await tester.scrollUntilVisible(find.text('TRAGUARDI IN CARRIERA'), 300,
+        scrollable: scrollable);
+    expect(find.text('TRAGUARDI IN CARRIERA'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('VOTO PIÙ ALTO'), -300,
+        scrollable: scrollable);
+    await tester.tap(find.text('VOTO PIÙ ALTO'));
+    await tester.pumpAndSettle();
+    expect(find.byType(MatchDetailScreen), findsOneWidget);
   });
 }

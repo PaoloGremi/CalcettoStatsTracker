@@ -24,6 +24,7 @@ enum MarginBand {
 
 typedef VotePoint = ({int matchIndex, double vote});
 typedef RelativeVote = ({DateTime date, double delta});
+typedef Streak = ({int length, DateTime start, DateTime end});
 typedef RecentResult = ({MatchOutcome outcome, double? vote, DateTime date});
 
 /// Statistiche aggregate di un giocatore, calcolate in Dart puro.
@@ -68,6 +69,11 @@ class PlayerStatsSummary {
   final double avgGoalDiff, avgGoalsFor, avgGoalsAgainst;
   final Map<MarginBand, int> winsByMargin;
   final Map<MarginBand, int> lossesByMargin;
+  final Streak? longestWinStreak,
+      longestUnbeatenStreak,
+      longestLossStreak,
+      longestScoringStreak;
+  final MatchModel? bestVoteMatch, mostGoalsMatch;
 
   const PlayerStatsSummary._({
     required this.playerId,
@@ -111,6 +117,12 @@ class PlayerStatsSummary {
     required this.avgGoalsAgainst,
     required this.winsByMargin,
     required this.lossesByMargin,
+    required this.longestWinStreak,
+    required this.longestUnbeatenStreak,
+    required this.longestLossStreak,
+    required this.longestScoringStreak,
+    required this.bestVoteMatch,
+    required this.mostGoalsMatch,
   });
 
   /// Risultato della partita dal punto di vista del giocatore.
@@ -182,6 +194,12 @@ class PlayerStatsSummary {
           avgGoalsAgainst: 0,
           winsByMargin: const {},
           lossesByMargin: const {},
+          longestWinStreak: null,
+          longestUnbeatenStreak: null,
+          longestLossStreak: null,
+          longestScoringStreak: null,
+          bestVoteMatch: null,
+          mostGoalsMatch: null,
         );
     final h = helper();
 
@@ -387,6 +405,54 @@ class PlayerStatsSummary {
     final avgGoalsFor = totalGames > 0 ? goalsForSum / totalGames : 0.0;
     final avgGoalsAgainst = totalGames > 0 ? goalsAgainstSum / totalGames : 0.0;
 
+    // Serie record (a parità vince la più recente).
+    Streak? longestStreak(bool Function(int i) test) {
+      Streak? best;
+      var len = 0;
+      for (int i = 0; i < matches.length; i++) {
+        if (!test(i)) {
+          len = 0;
+          continue;
+        }
+        len++;
+        if (best == null || len >= best.length) {
+          best = (
+            length: len,
+            start: matches[i - len + 1].date,
+            end: matches[i].date,
+          );
+        }
+      }
+      return best;
+    }
+
+    // Miglior partita per voto e per gol.
+    MatchModel? bestVoteMatch, mostGoalsMatch;
+    for (final m in matches) {
+      final v = m.votes[playerId];
+      final g = m.goals[playerId] ?? 0;
+      if (v != null) {
+        final b = bestVoteMatch;
+        if (b == null) {
+          bestVoteMatch = m;
+        } else {
+          final bv = b.votes[playerId]!, bg = b.goals[playerId] ?? 0;
+          if (v > bv || (v == bv && g >= bg)) bestVoteMatch = m;
+        }
+      }
+      if (g > 0) {
+        final b = mostGoalsMatch;
+        if (b == null) {
+          mostGoalsMatch = m;
+        } else {
+          final bg = b.goals[playerId] ?? 0;
+          final bv = b.votes[playerId] ?? double.negativeInfinity;
+          final cv = v ?? double.negativeInfinity;
+          if (g > bg || (g == bg && cv >= bv)) mostGoalsMatch = m;
+        }
+      }
+    }
+
     return PlayerStatsSummary._(
       playerId: playerId,
       matches: matches,
@@ -429,6 +495,13 @@ class PlayerStatsSummary {
       avgGoalsAgainst: avgGoalsAgainst,
       winsByMargin: winsByMargin,
       lossesByMargin: lossesByMargin,
+      longestWinStreak: longestStreak((i) => outcomes[i] == MatchOutcome.win),
+      longestUnbeatenStreak:
+          longestStreak((i) => outcomes[i] != MatchOutcome.loss),
+      longestLossStreak: longestStreak((i) => outcomes[i] == MatchOutcome.loss),
+      longestScoringStreak: longestStreak((i) => goalsPerMatch[i] > 0),
+      bestVoteMatch: bestVoteMatch,
+      mostGoalsMatch: mostGoalsMatch,
     );
   }
 }

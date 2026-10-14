@@ -15,6 +15,7 @@ import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 import '../services/player_stats_calculator.dart';
 import '../core/util/date_formatters.dart';
+import 'match_detail_screen.dart';
 
 part 'player_stats/stats_widgets.dart';
 part 'player_stats/overview_tab.dart';
@@ -27,6 +28,8 @@ part 'player_stats/results_tab.dart';
 part 'player_stats/goal_diff_card.dart';
 part 'player_stats/margins_card.dart';
 part 'player_stats/records_tab.dart';
+part 'player_stats/record_streaks_card.dart';
+part 'player_stats/best_matches_card.dart';
 part 'player_stats/teammates_tab.dart';
 part 'player_stats/seasons_tab.dart';
 

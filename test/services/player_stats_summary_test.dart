@@ -267,4 +267,82 @@ void main() {
       expect(s.lossesByMargin.length, 3);
     });
   });
+  group('records', () {
+    DateTime d(int i) => DateTime(2026, 1, i);
+
+    PlayerStatsSummary withOutcomes(String outcomes, List<int> goals) {
+      return PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        for (var i = 0; i < outcomes.length; i++)
+          res('m$i', d(i + 1), outcomes[i], goals: {'p1': goals[i]}),
+      ]);
+    }
+
+    test('longest streaks with dates', () {
+      final s = withOutcomes('VVSVVVPSS', [1, 1, 0, 1, 0, 0, 2, 1, 1]);
+      expect(s.longestWinStreak, (length: 3, start: d(4), end: d(6)));
+      expect(s.longestUnbeatenStreak, (length: 4, start: d(4), end: d(7)));
+      expect(s.longestLossStreak, (length: 2, start: d(8), end: d(9)));
+      expect(s.longestScoringStreak, (length: 3, start: d(7), end: d(9)));
+      expect(s.longestUnbeatenStreak!.length, s.bestUnbeaten);
+    });
+
+    test('ties pick the most recent streak', () {
+      final s = withOutcomes('VVSVV', [0, 0, 0, 0, 0]);
+      expect(s.longestWinStreak!.length, 2);
+      expect(s.longestWinStreak!.start, d(4));
+    });
+
+    test('single match gives length-1 streaks with start == end', () {
+      final s = withOutcomes('V', [1]);
+      expect(s.longestWinStreak, (length: 1, start: d(1), end: d(1)));
+      expect(s.longestScoringStreak, (length: 1, start: d(1), end: d(1)));
+      expect(s.longestLossStreak, isNull);
+    });
+
+    test('no matches -> null streaks and matches', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: []);
+      expect(s.longestWinStreak, isNull);
+      expect(s.longestUnbeatenStreak, isNull);
+      expect(s.bestVoteMatch, isNull);
+      expect(s.mostGoalsMatch, isNull);
+    });
+
+    test('best vote match tie-breaks on goals then recency', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', d(1), 'V', votes: {'p1': 8}, goals: {'p1': 1}),
+        res('b', d(2), 'V', votes: {'p1': 8}, goals: {'p1': 2}),
+        res('c', d(3), 'V', votes: {'p1': 7}, goals: {'p1': 3}),
+      ]);
+      expect(s.bestVoteMatch!.id, 'b');
+      final t = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', d(1), 'V', votes: {'p1': 8}, goals: {'p1': 1}),
+        res('b', d(2), 'V', votes: {'p1': 8}, goals: {'p1': 1}),
+      ]);
+      expect(t.bestVoteMatch!.id, 'b');
+    });
+
+    test('most goals match tie-breaks on vote (absent = -inf) then recency',
+        () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', d(1), 'V', votes: {'p1': 6}, goals: {'p1': 2}),
+        res('b', d(2), 'V', goals: {'p1': 2}),
+        res('c', d(3), 'V', votes: {'p1': 5}, goals: {'p1': 2}),
+        res('d', d(4), 'V', votes: {'p1': 9}, goals: {'p1': 1}),
+      ]);
+      expect(s.mostGoalsMatch!.id, 'a');
+      final t = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', d(1), 'V', goals: {'p1': 2}),
+        res('b', d(2), 'V', goals: {'p1': 2}),
+      ]);
+      expect(t.mostGoalsMatch!.id, 'b');
+    });
+
+    test('most goals match is null when the player never scored', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', d(1), 'V', votes: {'p1': 7}),
+      ]);
+      expect(s.mostGoalsMatch, isNull);
+      expect(s.bestVoteMatch!.id, 'a');
+    });
+  });
 }
