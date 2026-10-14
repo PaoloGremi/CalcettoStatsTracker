@@ -24,6 +24,8 @@ part 'player_stats/goals_tab.dart';
 part 'player_stats/team_goal_share_card.dart';
 part 'player_stats/multi_goal_card.dart';
 part 'player_stats/results_tab.dart';
+part 'player_stats/goal_diff_card.dart';
+part 'player_stats/margins_card.dart';
 part 'player_stats/records_tab.dart';
 part 'player_stats/teammates_tab.dart';
 part 'player_stats/seasons_tab.dart';

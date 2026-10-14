@@ -9,6 +9,19 @@ enum MatchOutcome {
   final String label;
 }
 
+/// Fascia del margine (valore assoluto) di una vittoria o sconfitta.
+enum MarginBand {
+  narrow('Di misura'), // 1 gol
+  clear('Nette'), // 2 gol
+  wide('Larghe'); // 3+ gol
+
+  const MarginBand(this.label);
+  final String label;
+
+  static MarginBand fromMargin(int margin) =>
+      margin <= 1 ? narrow : (margin == 2 ? clear : wide);
+}
+
 typedef VotePoint = ({int matchIndex, double vote});
 typedef RelativeVote = ({DateTime date, double delta});
 typedef RecentResult = ({MatchOutcome outcome, double? vote, DateTime date});
@@ -52,6 +65,9 @@ class PlayerStatsSummary {
   final List<RelativeVote> relativeVotes;
   final double avgRelativeVote;
   final int aboveAvgPct;
+  final double avgGoalDiff, avgGoalsFor, avgGoalsAgainst;
+  final Map<MarginBand, int> winsByMargin;
+  final Map<MarginBand, int> lossesByMargin;
 
   const PlayerStatsSummary._({
     required this.playerId,
@@ -90,6 +106,11 @@ class PlayerStatsSummary {
     required this.relativeVotes,
     required this.avgRelativeVote,
     required this.aboveAvgPct,
+    required this.avgGoalDiff,
+    required this.avgGoalsFor,
+    required this.avgGoalsAgainst,
+    required this.winsByMargin,
+    required this.lossesByMargin,
   });
 
   /// Risultato della partita dal punto di vista del giocatore.
@@ -156,6 +177,11 @@ class PlayerStatsSummary {
           relativeVotes: const [],
           avgRelativeVote: 0,
           aboveAvgPct: 0,
+          avgGoalDiff: 0,
+          avgGoalsFor: 0,
+          avgGoalsAgainst: 0,
+          winsByMargin: const {},
+          lossesByMargin: const {},
         );
     final h = helper();
 
@@ -342,6 +368,25 @@ class PlayerStatsSummary {
             .round()
         : 0;
 
+    // Differenza reti e margini di vittoria/sconfitta.
+    final winsByMargin = {for (final b in MarginBand.values) b: 0};
+    final lossesByMargin = {for (final b in MarginBand.values) b: 0};
+    var goalsForSum = 0, goalsAgainstSum = 0;
+    for (final m in matches) {
+      final f = h.goalsForOf(m), a = h.goalsAgainstOf(m);
+      goalsForSum += f;
+      goalsAgainstSum += a;
+      if (f > a) {
+        final b = MarginBand.fromMargin(f - a);
+        winsByMargin[b] = winsByMargin[b]! + 1;
+      } else if (f < a) {
+        final b = MarginBand.fromMargin(a - f);
+        lossesByMargin[b] = lossesByMargin[b]! + 1;
+      }
+    }
+    final avgGoalsFor = totalGames > 0 ? goalsForSum / totalGames : 0.0;
+    final avgGoalsAgainst = totalGames > 0 ? goalsAgainstSum / totalGames : 0.0;
+
     return PlayerStatsSummary._(
       playerId: playerId,
       matches: matches,
@@ -379,6 +424,11 @@ class PlayerStatsSummary {
       relativeVotes: relativeVotes,
       avgRelativeVote: avgRelativeVote,
       aboveAvgPct: aboveAvgPct,
+      avgGoalDiff: avgGoalsFor - avgGoalsAgainst,
+      avgGoalsFor: avgGoalsFor,
+      avgGoalsAgainst: avgGoalsAgainst,
+      winsByMargin: winsByMargin,
+      lossesByMargin: lossesByMargin,
     );
   }
 }

@@ -225,6 +225,14 @@ class _ResultsTab extends StatelessWidget {
         ),
       ],
 
+      // ── Differenza reti e margini ─────────────────────────
+      if (totalGames > 0) ...[
+        ..._section('Differenza Reti', AppTheme.accentGreen,
+            _GoalDiffCard(summary: summary)),
+        ..._section(
+            'Margini', AppTheme.accentBlue, _MarginsCard(summary: summary)),
+      ],
+
       // ── Statistiche per Campo ─────────────────────────────
       if (totalGames > 0)
         ..._section('Statistiche per Campo', AppTheme.accentGreen,

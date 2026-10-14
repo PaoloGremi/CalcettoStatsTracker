@@ -204,4 +204,25 @@ void main() {
     expect(find.text('DOPPIETTE E TRIPLETTE'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('results tab shows goal difference and margins sections',
+      (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'RISULTATI');
+    final scrollable = find
+        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('DIFFERENZA RETI'), 300,
+        scrollable: scrollable);
+    expect(find.text('DIFF. MEDIA'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('MARGINI'), 300,
+        scrollable: scrollable);
+    expect(find.text('MARGINI'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Di misura'), 300,
+        scrollable: scrollable);
+    expect(find.text('Di misura'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

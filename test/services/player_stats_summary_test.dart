@@ -215,4 +215,56 @@ void main() {
       expect(s.maxGoalsMatch, isNull);
     });
   });
+
+  group('results extras', () {
+    test('average goal difference from the player side', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), sa: 5, sb: 2),
+        m('2', DateTime(2026, 1, 2),
+            a: ['y', 'z'], b: ['p1', 'x'], sa: 1, sb: 3),
+        m('3', DateTime(2026, 1, 3)),
+      ]);
+      expect(s.avgGoalDiff, closeTo(5 / 3, 1e-9));
+      expect(s.avgGoalsFor, closeTo(8 / 3, 1e-9));
+      expect(s.avgGoalsAgainst, closeTo(1.0, 1e-9));
+    });
+
+    test('margin bands', () {
+      final results = [
+        (3, 2), (3, 1), (3, 0), (6, 0), // wins: 1, 2, 3, 6
+        (0, 1), (1, 2), (0, 4), // losses: 1, 1, 4
+      ];
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        for (var i = 0; i < results.length; i++)
+          m('$i', DateTime(2026, 1, i + 1),
+              sa: results[i].$1, sb: results[i].$2),
+      ]);
+      expect(s.winsByMargin,
+          {MarginBand.narrow: 1, MarginBand.clear: 1, MarginBand.wide: 2});
+      expect(s.lossesByMargin,
+          {MarginBand.narrow: 2, MarginBand.clear: 0, MarginBand.wide: 1});
+    });
+
+    test('only draws -> all bands zero', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), sa: 2, sb: 2),
+        m('2', DateTime(2026, 1, 2), sa: 2, sb: 2),
+      ]);
+      const zero = {
+        MarginBand.narrow: 0,
+        MarginBand.clear: 0,
+        MarginBand.wide: 0
+      };
+      expect(s.winsByMargin, zero);
+      expect(s.lossesByMargin, zero);
+      expect(s.avgGoalDiff, 0.0);
+    });
+
+    test('no matches -> zeros with all keys', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: []);
+      expect(s.avgGoalDiff, 0.0);
+      expect(s.winsByMargin.length, 3);
+      expect(s.lossesByMargin.length, 3);
+    });
+  });
 }
