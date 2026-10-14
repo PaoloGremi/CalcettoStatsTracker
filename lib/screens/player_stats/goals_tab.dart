@@ -323,6 +323,16 @@ class _GoalsTab extends StatelessWidget {
                 ),
               ),
             )),
+
+      // ── Quota gol squadra ─────────────────────────────
+      if (summary.teamGoalShare != null)
+        ..._section('Quota Gol Squadra', AppTheme.accentRed,
+            _TeamGoalShareCard(summary: summary)),
+
+      // ── Doppiette e triplette ─────────────────────────
+      if (totalGoals > 0)
+        ..._section('Doppiette e Triplette', AppTheme.accentGold,
+            _MultiGoalCard(summary: summary)),
     ];
     if (sections.isEmpty) return const _EmptyTab();
     return ListView(

@@ -29,9 +29,14 @@ class PlayerStatsSummary {
       losses,
       participationPct,
       bestUnbeaten,
-      gamesWithGoal;
+      gamesWithGoal,
+      teamGoals,
+      braces,
+      hatTricks;
   final double avgVote, bestVote, worstVote, avgGoals;
   final double? modeVote;
+  final double? teamGoalShare;
+  final ({int goals, DateTime date})? maxGoalsMatch;
   final String currentStreak;
   final List<VotePoint> votePoints;
   final List<int> goalsPerMatch;
@@ -60,6 +65,11 @@ class PlayerStatsSummary {
     required this.participationPct,
     required this.bestUnbeaten,
     required this.gamesWithGoal,
+    required this.teamGoals,
+    required this.braces,
+    required this.hatTricks,
+    required this.teamGoalShare,
+    required this.maxGoalsMatch,
     required this.avgVote,
     required this.bestVote,
     required this.worstVote,
@@ -121,6 +131,11 @@ class PlayerStatsSummary {
           participationPct: 0,
           bestUnbeaten: 0,
           gamesWithGoal: 0,
+          teamGoals: 0,
+          braces: 0,
+          hatTricks: 0,
+          teamGoalShare: null,
+          maxGoalsMatch: null,
           avgVote: 0,
           bestVote: 0,
           worstVote: 0,
@@ -198,6 +213,19 @@ class PlayerStatsSummary {
         ? (totalGames / allMatches.length * 100).round()
         : 0;
     final gamesWithGoal = goalsPerMatch.where((g) => g > 0).length;
+
+    // Quota gol squadra e partite multi-gol
+    final teamGoals = matches.fold<int>(0, (sum, m) => sum + h.goalsForOf(m));
+    final teamGoalShare = teamGoals > 0 ? totalGoals / teamGoals : null;
+    final braces = goalsPerMatch.where((g) => g == 2).length;
+    final hatTricks = goalsPerMatch.where((g) => g >= 3).length;
+    ({int goals, DateTime date})? maxGoalsMatch;
+    for (int i = 0; i < matches.length; i++) {
+      final g = goalsPerMatch[i];
+      if (g > 0 && (maxGoalsMatch == null || g >= maxGoalsMatch.goals)) {
+        maxGoalsMatch = (goals: g, date: matches[i].date);
+      }
+    }
 
     // Striscia corrente
     var currentStreak = '—';
@@ -326,6 +354,11 @@ class PlayerStatsSummary {
       participationPct: participationPct,
       bestUnbeaten: bestUnbeaten,
       gamesWithGoal: gamesWithGoal,
+      teamGoals: teamGoals,
+      braces: braces,
+      hatTricks: hatTricks,
+      teamGoalShare: teamGoalShare,
+      maxGoalsMatch: maxGoalsMatch,
       avgVote: avgVote,
       bestVote: bestVote,
       worstVote: worstVote,

@@ -186,4 +186,22 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets('goals tab shows team goal share and multi-goal sections',
+      (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'GOL');
+    final scrollable = find
+        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('QUOTA GOL SQUADRA'), 300,
+        scrollable: scrollable);
+    expect(find.text('QUOTA GOL SQUADRA'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('DOPPIETTE E TRIPLETTE'), 300,
+        scrollable: scrollable);
+    expect(find.text('DOPPIETTE E TRIPLETTE'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

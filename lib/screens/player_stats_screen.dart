@@ -21,6 +21,8 @@ part 'player_stats/overview_tab.dart';
 part 'player_stats/votes_tab.dart';
 part 'player_stats/relative_vote_card.dart';
 part 'player_stats/goals_tab.dart';
+part 'player_stats/team_goal_share_card.dart';
+part 'player_stats/multi_goal_card.dart';
 part 'player_stats/results_tab.dart';
 part 'player_stats/records_tab.dart';
 part 'player_stats/teammates_tab.dart';

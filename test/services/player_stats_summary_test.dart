@@ -169,4 +169,50 @@ void main() {
       expect(s.aboveAvgPct, 67);
     });
   });
+
+  group('goals extras', () {
+    test('team goal share uses the team score as denominator', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), sa: 3, sb: 0, goals: {'p1': 1}),
+        m('2', DateTime(2026, 1, 2),
+            a: ['y', 'z'], b: ['p1', 'x'], sa: 0, sb: 2, goals: {'p1': 2}),
+      ]);
+      expect(s.teamGoals, 5);
+      expect(s.teamGoalShare, closeTo(0.6, 1e-9));
+    });
+
+    test('share is null when the team never scores', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1)),
+        m('2', DateTime(2026, 1, 2)),
+      ]);
+      expect(s.teamGoals, 0);
+      expect(s.teamGoalShare, isNull);
+    });
+
+    test('braces, hat tricks and max goals', () {
+      final gs = [2, 3, 0, 4, 2];
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        for (var i = 0; i < gs.length; i++)
+          m('$i', DateTime(2026, 1, i + 1), sa: 5, goals: {'p1': gs[i]}),
+      ]);
+      expect(s.braces, 2);
+      expect(s.hatTricks, 2);
+      expect(s.maxGoalsMatch!.goals, 4);
+    });
+
+    test('max goals tie picks the most recent', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), sa: 3, goals: {'p1': 3}),
+        m('2', DateTime(2026, 2, 1), sa: 3, goals: {'p1': 3}),
+      ]);
+      expect(s.maxGoalsMatch!.date, DateTime(2026, 2, 1));
+    });
+
+    test('no goals means no max goals match', () {
+      final s = PlayerStatsSummary.compute(
+          playerId: 'p1', allMatches: [m('1', DateTime(2026, 1, 1), sa: 2)]);
+      expect(s.maxGoalsMatch, isNull);
+    });
+  });
 }
