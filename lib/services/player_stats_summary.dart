@@ -27,6 +27,33 @@ typedef RelativeVote = ({DateTime date, double delta});
 typedef Streak = ({int length, DateTime start, DateTime end});
 typedef RecentResult = ({MatchOutcome outcome, double? vote, DateTime date});
 
+typedef WeekdayStat = ({int weekday, int games, int winPct, double? avgVote});
+typedef YearStat = ({
+  int year,
+  int games,
+  double? avgVote,
+  int goals,
+  double goalsPerGame,
+  int winPct,
+  int mvps
+});
+
+/// Tutti i giorni dal lunedì della settimana che contiene l'1/1 alla domenica
+/// della settimana che contiene il 31/12, come `DateTime.utc` (nessun buco DST).
+List<DateTime> heatmapDays(int year) {
+  final jan1 = DateTime.utc(year, 1, 1);
+  final dec31 = DateTime.utc(year, 12, 31);
+  final start = DateTime.utc(year, 1, 1 - (jan1.weekday - DateTime.monday));
+  final end = DateTime.utc(year, 12, 31 + (DateTime.sunday - dec31.weekday));
+  final days = <DateTime>[];
+  for (var d = start;
+      !d.isAfter(end);
+      d = DateTime.utc(d.year, d.month, d.day + 1)) {
+    days.add(d);
+  }
+  return days;
+}
+
 /// Statistiche aggregate di un giocatore, calcolate in Dart puro.
 /// Non lancia mai eccezioni: liste vuote producono zeri / null.
 class PlayerStatsSummary {
@@ -74,6 +101,12 @@ class PlayerStatsSummary {
       longestLossStreak,
       longestScoringStreak;
   final MatchModel? bestVoteMatch, mostGoalsMatch;
+
+  /// chiave = DateTime.utc(y, m, d); valore = esito dell'ultima partita del giorno
+  final Map<DateTime, MatchOutcome> outcomeByDay;
+  final List<int> activeYears; // crescente
+  final List<WeekdayStat> weekdayStats; // solo giorni con partite, lun→dom
+  final List<YearStat> yearStats; // anno decrescente
 
   const PlayerStatsSummary._({
     required this.playerId,
@@ -123,6 +156,10 @@ class PlayerStatsSummary {
     required this.longestScoringStreak,
     required this.bestVoteMatch,
     required this.mostGoalsMatch,
+    required this.outcomeByDay,
+    required this.activeYears,
+    required this.weekdayStats,
+    required this.yearStats,
   });
 
   /// Risultato della partita dal punto di vista del giocatore.
@@ -200,6 +237,10 @@ class PlayerStatsSummary {
           longestScoringStreak: null,
           bestVoteMatch: null,
           mostGoalsMatch: null,
+          outcomeByDay: const {},
+          activeYears: const [],
+          weekdayStats: const [],
+          yearStats: const [],
         );
     final h = helper();
 
@@ -453,6 +494,59 @@ class PlayerStatsSummary {
       }
     }
 
+    // Mappa presenze, giorno della settimana, confronto anni.
+    // `matches` è ordinato per data: l'ultima partita del giorno vince.
+    final outcomeByDay = <DateTime, MatchOutcome>{};
+    final byWeekday = <int, List<int>>{};
+    final byYear = <int, List<int>>{};
+    for (int i = 0; i < matches.length; i++) {
+      final d = matches[i].date;
+      outcomeByDay[DateTime.utc(d.year, d.month, d.day)] = outcomes[i];
+      byWeekday.putIfAbsent(d.weekday, () => []).add(i);
+      byYear.putIfAbsent(d.year, () => []).add(i);
+    }
+    double? avgVoteOf(List<int> idx) {
+      final vs = [
+        for (final i in idx)
+          if (matches[i].votes[playerId] != null) matches[i].votes[playerId]!,
+      ];
+      return vs.isEmpty ? null : vs.reduce((a, b) => a + b) / vs.length;
+    }
+
+    int winPctOf(List<int> idx) => idx.isEmpty
+        ? 0
+        : (idx.where((i) => outcomes[i] == MatchOutcome.win).length /
+                idx.length *
+                100)
+            .round();
+
+    final weekdayStats = <WeekdayStat>[
+      for (int wd = DateTime.monday; wd <= DateTime.sunday; wd++)
+        if (byWeekday[wd] != null)
+          (
+            weekday: wd,
+            games: byWeekday[wd]!.length,
+            winPct: winPctOf(byWeekday[wd]!),
+            avgVote: avgVoteOf(byWeekday[wd]!),
+          ),
+    ];
+    final activeYears = byYear.keys.toList()..sort();
+    final yearStats = <YearStat>[
+      for (final y in activeYears.reversed)
+        (
+          year: y,
+          games: byYear[y]!.length,
+          avgVote: avgVoteOf(byYear[y]!),
+          goals: byYear[y]!.fold<int>(0, (sum, i) => sum + goalsPerMatch[i]),
+          goalsPerGame: byYear[y]!.isEmpty
+              ? 0.0
+              : byYear[y]!.fold<int>(0, (sum, i) => sum + goalsPerMatch[i]) /
+                  byYear[y]!.length,
+          winPct: winPctOf(byYear[y]!),
+          mvps: byYear[y]!.where((i) => matches[i].mvp == playerId).length,
+        ),
+    ];
+
     return PlayerStatsSummary._(
       playerId: playerId,
       matches: matches,
@@ -502,6 +596,10 @@ class PlayerStatsSummary {
       longestScoringStreak: longestStreak((i) => goalsPerMatch[i] > 0),
       bestVoteMatch: bestVoteMatch,
       mostGoalsMatch: mostGoalsMatch,
+      outcomeByDay: outcomeByDay,
+      activeYears: activeYears,
+      weekdayStats: weekdayStats,
+      yearStats: yearStats,
     );
   }
 }

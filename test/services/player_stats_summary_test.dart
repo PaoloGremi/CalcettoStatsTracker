@@ -345,4 +345,68 @@ void main() {
       expect(s.bestVoteMatch!.id, 'a');
     });
   });
+  group('seasons', () {
+    test('outcomeByDay keeps the last match of the day', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', DateTime(2026, 3, 10, 18), 'V'),
+        res('b', DateTime(2026, 3, 10, 21), 'S'),
+      ]);
+      expect(s.outcomeByDay[DateTime.utc(2026, 3, 10)], MatchOutcome.loss);
+      expect(s.outcomeByDay.length, 1);
+    });
+
+    test('heatmapDays covers whole weeks without DST gaps', () {
+      final days = heatmapDays(2026);
+      expect(days.first, DateTime.utc(2025, 12, 29));
+      expect(days.first.weekday, DateTime.monday);
+      expect(days.last, DateTime.utc(2027, 1, 3));
+      expect(days.last.weekday, DateTime.sunday);
+      expect(days.length % 7, 0);
+      expect(days.toSet().length, days.length);
+      expect(days, contains(DateTime.utc(2026, 3, 29)));
+      expect(days, contains(DateTime.utc(2026, 10, 25)));
+    });
+
+    test('weekday stats', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        res('a', DateTime(2026, 3, 10, 18), 'V', votes: {'p1': 7}), // martedì
+        res('b', DateTime(2026, 3, 17, 18), 'S', votes: {'p1': 5}), // martedì
+        res('c', DateTime(2026, 3, 14, 18), 'P'), // sabato
+      ]);
+      expect(s.weekdayStats.length, 2);
+      expect(s.weekdayStats.first.weekday, DateTime.tuesday);
+      expect(s.weekdayStats.first.games, 2);
+      expect(s.weekdayStats.first.winPct, 50);
+      expect(s.weekdayStats.first.avgVote, 6.0);
+      expect(s.weekdayStats.last.weekday, DateTime.saturday);
+      expect(s.weekdayStats.last.avgVote, isNull);
+    });
+
+    test('year stats newest first with mvp count', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('a', DateTime(2025, 5, 1),
+            sa: 2, votes: {'p1': 8}, goals: {'p1': 2}, mvp: 'p1'),
+        res('b', DateTime(2025, 6, 1), 'S'),
+        res('c', DateTime(2026, 1, 5), 'V'),
+      ]);
+      expect(s.yearStats.first.year, 2026);
+      expect(s.yearStats.last.year, 2025);
+      expect(s.yearStats.last.games, 2);
+      expect(s.yearStats.last.mvps, 1);
+      expect(s.yearStats.last.goals, 2);
+      expect(s.yearStats.last.goalsPerGame, 1.0);
+      expect(s.yearStats.last.winPct, 50);
+      expect(s.yearStats.last.avgVote, 8.0);
+      expect(s.yearStats.first.avgVote, isNull);
+      expect(s.activeYears, [2025, 2026]);
+    });
+
+    test('empty list yields empty season fields', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: []);
+      expect(s.outcomeByDay, isEmpty);
+      expect(s.activeYears, isEmpty);
+      expect(s.weekdayStats, isEmpty);
+      expect(s.yearStats, isEmpty);
+    });
+  });
 }

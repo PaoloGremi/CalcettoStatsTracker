@@ -32,11 +32,17 @@ part 'player_stats/record_streaks_card.dart';
 part 'player_stats/best_matches_card.dart';
 part 'player_stats/teammates_tab.dart';
 part 'player_stats/seasons_tab.dart';
+part 'player_stats/activity_heatmap.dart';
+part 'player_stats/weekday_card.dart';
+part 'player_stats/year_comparison_card.dart';
 
 class PlayerStatsScreen extends StatelessWidget {
   final PlayerModel player;
 
-  const PlayerStatsScreen({required this.player, super.key});
+  /// Data di riferimento per la mappa presenze (default: ora). Iniettabile nei test.
+  final DateTime? today;
+
+  const PlayerStatsScreen({required this.player, this.today, super.key});
 
   static const _tabLabels = [
     'PANORAMICA',
@@ -111,7 +117,7 @@ class PlayerStatsScreen extends StatelessWidget {
                   _ResultsTab(player: player, summary: summary),
                   _RecordsTab(player: player, summary: summary),
                   _TeammatesTab(player: player, summary: summary),
-                  _SeasonsTab(player: player, summary: summary),
+                  _SeasonsTab(player: player, summary: summary, today: today),
                 ],
               ),
             ),

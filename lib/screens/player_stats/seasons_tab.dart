@@ -4,8 +4,9 @@ part of '../player_stats_screen.dart';
 class _SeasonsTab extends StatelessWidget {
   final PlayerModel player;
   final PlayerStatsSummary summary;
+  final DateTime? today;
 
-  const _SeasonsTab({required this.player, required this.summary});
+  const _SeasonsTab({required this.player, required this.summary, this.today});
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +14,15 @@ class _SeasonsTab extends StatelessWidget {
     final sortedMonthKeys = matchesByMonth.keys.toList()..sort();
 
     final sections = <Widget>[
+      if (summary.activeYears.isNotEmpty)
+        ..._section('Mappa Presenze', AppTheme.accentGreen,
+            _ActivityHeatmap(summary: summary, today: today ?? DateTime.now())),
+      if (summary.weekdayStats.isNotEmpty)
+        ..._section('Giorno della Settimana', AppTheme.accentBlue,
+            _WeekdayCard(stats: summary.weekdayStats)),
+      if (summary.yearStats.length >= 2)
+        ..._section('Confronto Anni', AppTheme.accentGold,
+            _YearComparisonCard(stats: summary.yearStats)),
       // ── Grafico partite per mese ──────────────────────
       if (sortedMonthKeys.length >= 2)
         ..._section(

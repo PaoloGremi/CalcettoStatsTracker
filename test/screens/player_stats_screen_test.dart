@@ -256,4 +256,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(MatchDetailScreen), findsOneWidget);
   });
+
+  testWidgets('seasons tab shows heatmap; year comparison needs two years',
+      (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'STAGIONI');
+    expect(find.text('MAPPA PRESENZE'), findsOneWidget);
+    expect(find.text('CONFRONTO ANNI'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('seasons tab shows year comparison with two years',
+      (tester) async {
+    await seed(tester, [
+      ...sixMatches(),
+      MatchModel(
+        id: 'old',
+        date: DateTime(2025, 3, 4),
+        teamA: const ['p1'],
+        teamB: const ['p2'],
+        scoreA: 0,
+        scoreB: 3,
+        votes: {'p1': 4.0, 'p2': 6.0},
+        goals: {'p1': 0},
+        fieldLocation: '',
+        mvp: '',
+        hustlePlayer: '',
+      ),
+    ]);
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'STAGIONI');
+    final scrollable = find
+        .descendant(
+            of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('CONFRONTO ANNI'), 300,
+        scrollable: scrollable);
+    expect(find.text('CONFRONTO ANNI'), findsOneWidget);
+    expect(find.text('GIORNO DELLA SETTIMANA'), findsOneWidget);
+    expect(find.text('▲'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }
