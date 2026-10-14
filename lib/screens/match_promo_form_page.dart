@@ -173,6 +173,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                             )
                           : DropdownButtonFormField<String>(
                               initialValue: fieldId,
+                              isExpanded: true,
                               dropdownColor: AppTheme.surfaceAlt,
                               decoration: const InputDecoration(
                                 labelText: 'CAMPO',
@@ -238,6 +239,44 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                             ),
                                           ],
                                         ),
+                                      ))
+                                  .toList(),
+                              // Il campo chiuso ha un'altezza compatta: lì il
+                              // campo scelto va su una riga sola (le due righe
+                              // nome/indirizzo restano solo nel menu aperto).
+                              selectedItemBuilder: (_) => allFields
+                                  .map((f) => Row(
+                                        children: [
+                                          const Padding(
+                                            padding: EdgeInsets.only(right: 8),
+                                            child: Icon(Icons.stadium_rounded,
+                                                color: AppTheme.textMuted,
+                                                size: 18),
+                                          ),
+                                          Flexible(
+                                            child: Text.rich(
+                                              TextSpan(children: [
+                                                TextSpan(
+                                                    text: f.name,
+                                                    style: const TextStyle(
+                                                        color: AppTheme
+                                                            .textPrimary,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700)),
+                                                if (f.address.isNotEmpty)
+                                                  TextSpan(
+                                                      text: ' · ${f.address}',
+                                                      style: const TextStyle(
+                                                          color: AppTheme
+                                                              .textMuted,
+                                                          fontSize: 11)),
+                                              ]),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ))
                                   .toList(),
                               onChanged: (v) => setState(() => fieldId = v),
