@@ -44,14 +44,14 @@ class PlayerStatsScreen extends StatelessWidget {
 
   const PlayerStatsScreen({required this.player, this.today, super.key});
 
-  static const _tabLabels = [
-    'PANORAMICA',
-    'VOTI',
-    'GOL',
-    'RISULTATI',
-    'RECORD',
-    'COMPAGNI',
-    'STAGIONI',
+  static const _tabs = [
+    (label: 'PANORAMICA', icon: Icons.dashboard_rounded),
+    (label: 'VOTI', icon: Icons.star_rounded),
+    (label: 'GOL', icon: Icons.sports_soccer_rounded),
+    (label: 'RISULTATI', icon: Icons.emoji_events_rounded),
+    (label: 'RECORD', icon: Icons.military_tech_rounded),
+    (label: 'COMPAGNI', icon: Icons.groups_rounded),
+    (label: 'STAGIONI', icon: Icons.calendar_month_rounded),
   ];
 
   @override
@@ -85,24 +85,37 @@ class PlayerStatsScreen extends StatelessWidget {
     }
 
     return DefaultTabController(
-      length: _tabLabels.length,
+      length: _tabs.length,
       child: Scaffold(
         backgroundColor: AppTheme.bg,
         appBar: AppBar(
           title: title,
+          // 7 tab fisse che dividono tutta la larghezza: icona + nome
+          // piccolo, ridotto ancora (FittedBox) se non ci sta.
           bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
+            tabAlignment: TabAlignment.fill,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 2),
             indicatorColor: AppTheme.accentGreen,
             labelColor: AppTheme.textPrimary,
             unselectedLabelColor: AppTheme.textMuted,
             dividerColor: AppTheme.border,
             labelStyle: const TextStyle(
-              fontSize: 11,
+              fontSize: 8.5,
               fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
+              letterSpacing: 0.5,
             ),
-            tabs: [for (final label in _tabLabels) Tab(text: label)],
+            tabs: [
+              for (final t in _tabs)
+                Tab(
+                  height: 52,
+                  icon: Icon(t.icon, size: 20),
+                  iconMargin: const EdgeInsets.only(bottom: 3),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(t.label, maxLines: 1),
+                  ),
+                ),
+            ],
           ),
         ),
         body: Column(

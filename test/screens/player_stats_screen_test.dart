@@ -109,8 +109,44 @@ void main() {
       'COMPAGNI',
       'STAGIONI',
     ];
-    final tabs = tester.widgetList<Tab>(find.byType(Tab)).toList();
-    expect(tabs.map((t) => t.text).toList(), labels);
+    final tabTexts = [
+      for (final tab in find.byType(Tab).evaluate())
+        tester
+            .widget<Text>(find.descendant(
+                of: find.byWidget(tab.widget), matching: find.byType(Text)))
+            .data,
+    ];
+    expect(tabTexts, labels);
+    // Ogni tab ha la sua icona.
+    expect(find.descendant(of: find.byType(Tab), matching: find.byType(Icon)),
+        findsNWidgets(7));
+  });
+
+  testWidgets('tabs fill the whole width without overflowing on a narrow phone',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    // Raccoglie gli errori di layout; quelli dei riquadri _StatBox della
+    // Panoramica (stats_widgets.dart) sono un problema noto e separato
+    // degli schermi stretti, non della barra delle tab.
+    final errors = <String>[];
+    final previous = FlutterError.onError;
+    FlutterError.onError = (d) => errors.add(d.toString());
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+    FlutterError.onError = previous;
+
+    expect(errors.where((e) => !e.contains('stats_widgets.dart')), isEmpty);
+    final tabs = find.byType(Tab);
+    expect(tester.getRect(tabs.first).left, lessThanOrEqualTo(8));
+    expect(tester.getRect(tabs.last).right, greaterThanOrEqualTo(312));
+    // Tutte le tab sono visibili insieme: niente scroll orizzontale.
+    for (final e in tabs.evaluate()) {
+      final r = tester.getRect(find.byWidget(e.widget));
+      expect(r.left, greaterThanOrEqualTo(0));
+      expect(r.right, lessThanOrEqualTo(320));
+    }
   });
 
   testWidgets('tapping VOTI shows the vote trend section', (tester) async {
@@ -253,6 +289,10 @@ void main() {
     expect(find.text('TRAGUARDI IN CARRIERA'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('VOTO PIÙ ALTO'), -300,
         scrollable: scrollable);
+    // Porta la scheda interamente in vista: altrimenti il tocco può cadere
+    // sotto l'intestazione fissa.
+    await tester.ensureVisible(find.text('VOTO PIÙ ALTO'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('VOTO PIÙ ALTO'));
     await tester.pumpAndSettle();
     expect(find.byType(MatchDetailScreen), findsOneWidget);
