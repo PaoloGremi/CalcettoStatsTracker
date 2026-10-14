@@ -133,6 +133,15 @@ void main() {
         find.text('DATI INSUFFICIENTI PER QUESTA CATEGORIA'), findsOneWidget);
   });
 
+  testWidgets('compact header shows a dash when the player has no votes',
+      (tester) async {
+    await seed(tester, sixMatches(withVotes: false));
+    await pumpScreen(tester);
+
+    expect(find.text('6 partite · — ⭐'), findsOneWidget);
+    expect(find.textContaining('0.0 ⭐'), findsNothing);
+  });
+
   testWidgets('compact header shows games and average vote', (tester) async {
     await seed(tester, sixMatches());
     await pumpScreen(tester);

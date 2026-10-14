@@ -153,7 +153,7 @@ class _CompactHeader extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${summary.totalGames} partite · '
-                    '${summary.avgVote.toStringAsFixed(1)} ⭐',
+                    '${summary.votedGames > 0 ? summary.avgVote.toStringAsFixed(1) : '—'} ⭐',
                     style: const TextStyle(
                         color: AppTheme.textSecondary, fontSize: 12),
                   ),
