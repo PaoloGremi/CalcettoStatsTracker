@@ -10,6 +10,7 @@ enum MatchOutcome {
 }
 
 typedef VotePoint = ({int matchIndex, double vote});
+typedef RelativeVote = ({DateTime date, double delta});
 typedef RecentResult = ({MatchOutcome outcome, double? vote, DateTime date});
 
 /// Statistiche aggregate di un giocatore, calcolate in Dart puro.
@@ -43,6 +44,9 @@ class PlayerStatsSummary {
   final List<({int matchIndex, double pct})> rollingWinRate;
   final List<RecentResult> recentResults;
   final Map<MatchOutcome, List<double>> votesByOutcome;
+  final List<RelativeVote> relativeVotes;
+  final double avgRelativeVote;
+  final int aboveAvgPct;
 
   const PlayerStatsSummary._({
     required this.playerId,
@@ -73,6 +77,9 @@ class PlayerStatsSummary {
     required this.rollingWinRate,
     required this.recentResults,
     required this.votesByOutcome,
+    required this.relativeVotes,
+    required this.avgRelativeVote,
+    required this.aboveAvgPct,
   });
 
   /// Risultato della partita dal punto di vista del giocatore.
@@ -131,6 +138,9 @@ class PlayerStatsSummary {
           rollingWinRate: const [],
           recentResults: const [],
           votesByOutcome: const {},
+          relativeVotes: const [],
+          avgRelativeVote: 0,
+          aboveAvgPct: 0,
         );
     final h = helper();
 
@@ -280,6 +290,30 @@ class PlayerStatsSummary {
         ),
     ];
 
+    // Voto relativo: voto del giocatore meno la media degli altri votati.
+    final relativeVotes = <RelativeVote>[];
+    for (final m in matches) {
+      final mine = m.votes[playerId];
+      if (mine == null) continue;
+      final others = [
+        for (final e in m.votes.entries)
+          if (e.key != playerId) e.value,
+      ];
+      if (others.isEmpty) continue;
+      final mean = others.reduce((a, b) => a + b) / others.length;
+      relativeVotes.add((date: m.date, delta: mine - mean));
+    }
+    final avgRelativeVote = relativeVotes.isNotEmpty
+        ? relativeVotes.map((r) => r.delta).reduce((a, b) => a + b) /
+            relativeVotes.length
+        : 0.0;
+    final aboveAvgPct = relativeVotes.isNotEmpty
+        ? (relativeVotes.where((r) => r.delta > 0).length /
+                relativeVotes.length *
+                100)
+            .round()
+        : 0;
+
     return PlayerStatsSummary._(
       playerId: playerId,
       matches: matches,
@@ -309,6 +343,9 @@ class PlayerStatsSummary {
       rollingWinRate: rollingWinRate,
       recentResults: recentResults,
       votesByOutcome: votesByOutcome,
+      relativeVotes: relativeVotes,
+      avgRelativeVote: avgRelativeVote,
+      aboveAvgPct: aboveAvgPct,
     );
   }
 }

@@ -121,6 +121,20 @@ void main() {
     expect(find.text('ANDAMENTO VOTI'), findsOneWidget);
   });
 
+  testWidgets('votes tab shows relative vote card', (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'VOTI');
+    await tester.scrollUntilVisible(find.text('VOTO RELATIVO'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+
+    expect(find.text('VOTO RELATIVO'), findsOneWidget);
+  });
+
   testWidgets(
       'votes tab shows the insufficient-data message when no match has a vote',
       (tester) async {

@@ -136,4 +136,37 @@ void main() {
       expect(s.recentResults.first.date, s.matches[2].date);
     });
   });
+
+  group('relative vote', () {
+    test(
+        'delta is vote minus the mean of every other voted player in the match',
+        () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), votes: {'p1': 8, 'x': 6, 'y': 7}),
+      ]);
+      expect(s.relativeVotes.single.delta, 1.5);
+      expect(s.relativeVotes.single.date, DateTime(2026, 1, 1));
+    });
+
+    test('skips matches where p1 has no vote or nobody else voted', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), votes: {'p1': 8}),
+        m('2', DateTime(2026, 1, 2), votes: {'x': 6}),
+      ]);
+      expect(s.relativeVotes, isEmpty);
+      expect(s.avgRelativeVote, 0.0);
+      expect(s.aboveAvgPct, 0);
+    });
+
+    test('average and above-average percentage', () {
+      // deltas: +1, -0.5, +2
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), votes: {'p1': 7, 'x': 6}),
+        m('2', DateTime(2026, 1, 2), votes: {'p1': 5.5, 'x': 6}),
+        m('3', DateTime(2026, 1, 3), votes: {'p1': 8, 'x': 6}),
+      ]);
+      expect(s.avgRelativeVote, closeTo(0.833, 0.001));
+      expect(s.aboveAvgPct, 67);
+    });
+  });
 }

@@ -531,6 +531,11 @@ class _VotesTab extends StatelessWidget {
               votePoints: votePoints,
             )),
 
+      // ── Voto Relativo ─────────────────────────────────
+      if (summary.relativeVotes.length >= 2)
+        ..._section('Voto Relativo', AppTheme.accentBlue,
+            _RelativeVoteCard(summary: summary)),
+
       // ── Trend Voto con Media Mobile ───────────────────
       if (votePoints.length >= PlayerStatsSummary.movingWindow) ...[
         const FifaSectionHeader('Trend Voto (Media Mobile)',

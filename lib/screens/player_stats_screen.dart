@@ -19,6 +19,7 @@ import '../core/util/date_formatters.dart';
 part 'player_stats/stats_widgets.dart';
 part 'player_stats/overview_tab.dart';
 part 'player_stats/votes_tab.dart';
+part 'player_stats/relative_vote_card.dart';
 part 'player_stats/goals_tab.dart';
 part 'player_stats/results_tab.dart';
 part 'player_stats/records_tab.dart';
