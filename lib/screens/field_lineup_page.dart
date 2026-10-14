@@ -10,10 +10,15 @@ import '../theme/app_theme.dart';
 // Costanti avatar
 // ─────────────────────────────────────────────────────────────
 const double _kAvatarRadius = 22.0;
+// Diametro dell'alone luminoso dietro l'avatar: è l'elemento più grande
+// dello Stack avatar, quindi ne determina l'altezza.
+const double _kGlowDiameter = _kAvatarRadius * 2 + 10;
+// Spazio tra avatar e mini-card nome/ruolo
+const double _kLabelGap = 3.0;
 // [MIGLIORIA 2] Altezza token aumentata per ospitare il ruolo sotto il nome
 const double _kLabelHeight = 28.0;
 const double _kTokenW = _kAvatarRadius * 2 + 16;
-const double _kTokenH = _kAvatarRadius * 2 + _kLabelHeight + 6;
+const double _kTokenH = _kGlowDiameter + _kLabelGap + _kLabelHeight;
 
 // ─────────────────────────────────────────────────────────────
 // Modello token — posizione mutabile, stato drag
@@ -393,8 +398,8 @@ class _FieldLineupPageState extends State<FieldLineupPage>
                         // Glow
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 140),
-                          width: _kAvatarRadius * 2 + 10,
-                          height: _kAvatarRadius * 2 + 10,
+                          width: _kGlowDiameter,
+                          height: _kGlowDiameter,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
@@ -464,7 +469,7 @@ class _FieldLineupPageState extends State<FieldLineupPage>
                         // (spostato sotto il nome — vedi sezione nome)
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: _kLabelGap),
                     // ── [MIGLIORIA 2] Nome + strip ruolo come mini-card ──
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 140),
