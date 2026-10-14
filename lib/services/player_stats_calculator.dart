@@ -3,15 +3,15 @@ import '../data/hive_boxes.dart';
 /// Statistiche FIFA calcolate automaticamente dai dati reali delle partite.
 class ComputedFifaStats {
   final int
-      vel; // Velocità  → frequenza recente (30%) + gol/partita (40%) + partite ad alto scoring (30%)
+      vel; // Velocità  → frequenza recente (35%) + gol/partita (40%) + % partite a segno (25%)
   final int tir; // Tiro      → gol/partita + bonus premi MVP/BestGoal
   final int
-      pas; // Passaggio → gol squadra (30%) + gol subiti inverso (25%) + presenze (20%) + gol compagni (25%)
+      pas; // Passaggio → gol compagni (30%) + % vittorie (30%) + presenze (20%) + voto medio (20%)
+  final int dri; // Dribbling → gol/partita (40%) + MVP (35%) + voto medio (25%)
   final int
-      dri; // Dribbling → gol fatti (30%) + gol subiti squadra (25%) + MVP (25%) + alto scoring (20%)
-  final int dif; // Difesa    → premio Combattivo + voto medio nelle sconfitte
+      dif; // Difesa    → gol subiti vs gruppo (35%) + Combattivo (25%) + ruolo (20%) + voto sconfitte (20%)
   final int
-      fis; // Fisico    → basso scoring (25%) + presenze (25%) + striscia vittorie (20%) + Hustle (20%) + ruolo (10%)
+      fis; // Fisico    → presenze (30%) + Combattivo (25%) + imbattibilità (20%) + ruolo (15%) + voto medio (10%)
 
   const ComputedFifaStats({
     required this.vel,
@@ -40,36 +40,38 @@ class PlayerStatsCalculator {
   /// Calcola le stat FIFA per un giocatore dato il suo ID.
   ///
   /// ┌─────┬────────────────────────────────────────────────────────────────┐
-  /// │ VEL │ Media pesata di 3 componenti:                                  │
-  /// │     │ 30% Frequenza recente: partite ultimi 60gg / media mese gruppo │
-  /// │     │ 40% Gol/partita: 0→40, ≥1 gol/p→99                            │
-  /// │     │ 30% Partite ad alto scoring (tot. gol ≥5): 0%→40, 100%→99     │
+  /// Soglie tarate sul calcetto (5–8 gol per squadra a partita).
+  /// Tutte le stat sono arrotondate e limitate a 40–99.
+  ///
+  /// ┌─────┬────────────────────────────────────────────────────────────────┐
+  /// │ VEL │ 35% Frequenza recente: partite ultimi 60gg / media gruppo      │
+  /// │     │ 40% Gol/partita: 0→40, ≥2→99                                   │
+  /// │     │ 25% % partite a segno: 0%→40, ≥80%→99                          │
   /// ├─────┼────────────────────────────────────────────────────────────────┤
-  /// │ TIR │ Gol/partita (base 40–95) + bonus premi:                        │
-  /// │     │ +2 per MVP (max +4) · +2 per BestGoal (max +4) · cap: 99      │
+  /// │ TIR │ Gol/partita (0→40, ≥2→92)                                      │
+  /// │     │ + 1 per MVP (max +4) + 2 per BestGoal (max +6) · cap 99        │
   /// ├─────┼────────────────────────────────────────────────────────────────┤
-  /// │ PAS │ Media pesata di 4 componenti:                                  │
-  /// │     │ 30% Gol squadra/partita: 0→40, ≥3/p→99                        │
-  /// │     │ 25% Gol subiti/partita (inverso): 0→99, ≥3/p→40               │
-  /// │     │ 20% Presenze (partiteGiocate / totale sistema): 0%→40, 100%→99 │
-  /// │     │ 25% Gol compagni/partita (tot.squadra − propri): 0→40, ≥2/p→99 │
+  /// │ PAS │ 30% Gol dei compagni/partita (squadra − propri): 3→40, 8→99    │
+  /// │     │ 30% % vittorie: 20%→40, 70%→99                                 │
+  /// │     │ 20% Presenze: 0%→40, ≥75%→99                                   │
+  /// │     │ 20% Voto medio: 5→40, 8→99                                     │
   /// ├─────┼────────────────────────────────────────────────────────────────┤
-  /// │ DRI │ Media pesata di 4 componenti:                                  │
-  /// │     │ 30% Gol segnati/partita: 0→40, ≥1/p→99                        │
-  /// │     │ 25% Gol subiti squadra/partita: 0→40, ≥3/p→99                 │
-  /// │     │ 25% Premi MVP: +3 per MVP scalato 40–99, cap 99               │
-  /// │     │ 20% % partite alto scoring (tot. gol ≥5): 0%→40, 100%→99      │
+  /// │ DRI │ 40% Gol/partita: 0→40, ≥2→99                                   │
+  /// │     │ 35% MVP/partita: 0→40, 1 ogni 4 partite→99                     │
+  /// │     │ 25% Voto medio: 5→40, 8→99                                     │
   /// ├─────┼────────────────────────────────────────────────────────────────┤
-  /// │ DIF │ 50% premio Combattivo (hustleCount/partite scalato 40–99)      │
-  /// │     │ + 50% voto medio nelle sconfitte (4→40, 10→99).               │
-  /// │     │ Fallback su voto medio globale se nessuna sconfitta votata.    │
+  /// │ DIF │ 35% Gol subiti squadra/partita ÷ media del gruppo:             │
+  /// │     │     ≤0.7→99, ≥1.3→40 (gruppo senza gol subiti → neutro)        │
+  /// │     │ 25% Premi Combattivo: 0→45, 1 ogni 5 partite→99                │
+  /// │     │ 20% Ruolo: D 99 · P 95 · C 75 · A/altro 55                     │
+  /// │     │ 20% Voto nelle sconfitte (o medio): 4→40, 8→99                 │
   /// ├─────┼────────────────────────────────────────────────────────────────┤
-  /// │ FIS │ Media pesata di 5 componenti:                                  │
-  /// │     │ 25% Partite basso scoring (tot. gol ≤2): 0%→40, 100%→99       │
-  /// │     │ 25% Presenze (partiteGiocate / totale sistema): 0%→40, 100%→99 │
-  /// │     │ 20% Miglior striscia vittorie consecutive: 0→40, ≥10→99        │
-  /// │     │ 20% Premi Hustle (rate/partita): 0→40, 1 ogni 3 partite→99     │
-  /// │     │ 10% Bonus ruolo: DIF/TER+6, POR+4, CEN/MED+3, ATT/ALA+0       │
+  /// │ FIS │ Media pesata di 5 componenti (arrotondata):                    │
+  /// │     │ 30% Presenze (partiteGiocate / totale sistema): 0%→40, ≥75%→99 │
+  /// │     │ 25% Premi Combattivo (rate/partita): 0→45, 1 ogni 5 partite→99 │
+  /// │     │ 20% Miglior serie senza sconfitte: 0→40, ≥6→99                 │
+  /// │     │ 15% Ruolo: D 99 · P 90 · C 80 · A/altro 65                     │
+  /// │     │ 10% Voto medio (impegno): 5→40, 8→99                           │
   /// │     │ Range finale: 40–99                                             │
   /// └─────┴────────────────────────────────────────────────────────────────┘
   static ComputedFifaStats compute(String playerId) {
@@ -88,6 +90,10 @@ class PlayerStatsCalculator {
 
     // ── Raccolta dati partita per partita ──────────────────────────────────
     int totalGoals = 0;
+    int gamesWithGoal = 0;
+    int wins = 0;
+    int totalTeamGoals = 0; // gol segnati dalla squadra del giocatore
+    int totalConceded = 0; // gol subiti dalla squadra del giocatore
     final allVotes = <double>[];
     final votesInLoss = <double>[];
 
@@ -102,7 +108,12 @@ class PlayerStatsCalculator {
       final oppScore = inTeamA ? m.scoreB : m.scoreA;
       final isLoss = myScore < oppScore;
 
-      totalGoals += m.goals[playerId] ?? 0;
+      final goals = m.goals[playerId] ?? 0;
+      totalGoals += goals;
+      if (goals > 0) gamesWithGoal++;
+      if (myScore > oppScore) wins++;
+      totalTeamGoals += myScore;
+      totalConceded += oppScore;
 
       final vote = m.votes[playerId];
       if (vote != null && vote > 0) {
@@ -141,164 +152,121 @@ class PlayerStatsCalculator {
     final velRecent =
         _scale(recentGames.toDouble(), 0.0, recentExpected, 40, 99);
 
-    // Componente 2 (40%): gol/partita
+    // Componente 2 (40%): gol/partita — 2 gol a partita → 99
     final goalsPerGame = totalGoals / totalGames;
-    final velGoals = _scale(goalsPerGame, 0.0, 1.0, 40, 99);
+    final velGoals = _scale(goalsPerGame, 0.0, 2.0, 40, 99);
 
-    // Componente 3 (30%): % partite ad alto scoring (totale gol ≥ 5)
-    int highScoringGames = 0;
-    for (final m in matches) {
-      if ((m.scoreA + m.scoreB) >= 5) highScoringGames++;
-    }
-    final highScoringRate = highScoringGames / totalGames;
-    final velHighScore = _scale(highScoringRate, 0.0, 1.0, 40, 99);
+    // Componente 3 (25%): % partite in cui il giocatore segna
+    final scoringRate = gamesWithGoal / totalGames;
+    final velScoring = _scale(scoringRate, 0.0, 0.8, 40, 99);
 
-    final vel = (velRecent * 0.3 + velGoals * 0.4 + velHighScore * 0.3)
-        .toInt()
+    final vel = (velRecent * 0.35 + velGoals * 0.40 + velScoring * 0.25)
+        .round()
         .clamp(40, 99);
 
     // ── TIR: gol/partita + bonus MVP e BestGoal ───────────────────────────
-    final tirBase = _scale(goalsPerGame, 0.0, 1.0, 40, 95);
-    final tirBonus =
-        (mvpCount * 2).clamp(0, 4) + (bestGoalCount * 2).clamp(0, 4);
-    final tir = (tirBase + tirBonus).toInt().clamp(40, 99);
+    final tirBase = _scale(goalsPerGame, 0.0, 2.0, 40, 92);
+    final tirBonus = mvpCount.clamp(0, 4) + (bestGoalCount * 2).clamp(0, 6);
+    final tir = (tirBase + tirBonus).round().clamp(40, 99);
 
-    // ── PAS: gol squadra + gol subiti inverso + presenze + gol compagni ──
-
-    // presenceRate usato sia da PAS che da FIS — dichiarato qui
+    // ── Dati di squadra condivisi da PAS, DIF e FIS ──────────────────────
     final presenceRate = (totalGames / totalRegistered).clamp(0.0, 1.0);
+    final winRate = wins / totalGames;
+    final hustleRate = hustleCount / totalGames;
+    final mvpRate = mvpCount / totalGames;
+    final voteScore = _scale(avgVote, 5.0, 8.0, 40, 99);
 
-    // Raccolta dati di squadra nelle partite del giocatore
-    int totalTeamGoals = 0; // gol segnati dalla squadra del giocatore
-    // totalConceded già calcolato nel blocco DRI — lo ricalcoliamo qui
-    // per chiarezza (stesso loop, nessun impatto sulle performance)
-    int pasTotalConceded = 0;
-    for (final m in matches) {
-      final inTeamA = m.teamA.contains(playerId);
-      totalTeamGoals += inTeamA ? m.scoreA : m.scoreB;
-      pasTotalConceded += inTeamA ? m.scoreB : m.scoreA;
-    }
-
-    // Componente 1 (30%): gol segnati dalla squadra/partita
-    //   0 gol/p → 40, ≥3/p → 99
-    final teamGoalsPerGame = totalTeamGoals / totalGames;
-    final pasTeamGoals = _scale(teamGoalsPerGame, 0.0, 3.0, 40, 99);
-
-    // Componente 2 (25%): gol subiti/partita — scala inversa
-    //   0 subiti/p → 99, ≥3/p → 40
-    final pasConcededPerGame = pasTotalConceded / totalGames;
-    final pasConceded = _scale(pasConcededPerGame, 0.0, 3.0, 99, 40);
-
-    // Componente 3 (20%): presenze
-    final pasPresence = _scale(presenceRate, 0.0, 1.0, 40, 99);
-
-    // Componente 4 (25%): gol dei compagni/partita
-    //   (gol totali squadra − gol propri) / partite → proxy assist
-    //   0 → 40, ≥2/p → 99
+    // ── PAS: gol compagni + vittorie + presenze + voto medio ─────────────
+    // Gol dei compagni/partita come proxy degli assist: 3→40, 8→99
     final teammateGoalsPerGame =
         (totalTeamGoals - totalGoals).clamp(0, totalTeamGoals) / totalGames;
-    final pasTeammates = _scale(teammateGoalsPerGame, 0.0, 2.0, 40, 99);
+    final pasTeammates = _scale(teammateGoalsPerGame, 3.0, 8.0, 40, 99);
+    final pasWins = _scale(winRate, 0.2, 0.7, 40, 99);
+    final pasPresence = _scale(presenceRate, 0.0, 0.75, 40, 99);
 
-    final pas = (pasTeamGoals * 0.30 +
-            pasConceded * 0.25 +
+    final pas = (pasTeammates * 0.30 +
+            pasWins * 0.30 +
             pasPresence * 0.20 +
-            pasTeammates * 0.25)
-        .toInt()
+            voteScore * 0.20)
+        .round()
         .clamp(40, 99);
 
-    // ── DRI: gol fatti + gol subiti squadra + MVP + alto scoring ─────────
-    //
-    // Componente 1 (30%): gol segnati/partita
-    final driGoals = _scale(goalsPerGame, 0.0, 1.0, 40, 99);
+    // ── DRI: gol/partita + MVP + voto medio ──────────────────────────────
+    final driGoals = _scale(goalsPerGame, 0.0, 2.0, 40, 99);
+    final driMvp = _scale(mvpRate, 0.0, 0.25, 40, 99);
 
-    // Componente 2 (25%): gol subiti dalla squadra/partita
-    //   Chi gioca partite difensivamente aperte tende ad essere un dribblatore
-    //   che privilegia l'attacco alla copertura. 0→40, ≥3/p→99.
-    int totalConceded = 0;
-    for (final m in matches) {
-      final inTeamA = m.teamA.contains(playerId);
-      totalConceded += inTeamA ? m.scoreB : m.scoreA;
+    final dri = (driGoals * 0.40 + driMvp * 0.35 + voteScore * 0.25)
+        .round()
+        .clamp(40, 99);
+
+    // ── DIF: gol subiti vs gruppo + Combattivo + ruolo + voto sconfitte ──
+    // Media gol subiti per squadra nel gruppo (tutte le partite registrate):
+    // confrontarsi con il gruppo rende la stat indipendente da quanto si
+    // segna in media. Gruppo senza gol subiti → rapporto neutro 1.0.
+    int groupGoals = 0;
+    for (final m in allMatchesSorted) {
+      groupGoals += m.scoreA + m.scoreB;
     }
+    final groupConcededPerTeam = groupGoals / (2 * allMatchesSorted.length);
     final concededPerGame = totalConceded / totalGames;
-    final driConceded = _scale(concededPerGame, 0.0, 3.0, 40, 99);
-
-    // Componente 3 (25%): premi MVP
-    //   +3 per ogni MVP, scalato su 40–99 con cap a 99.
-    //   Soglia: 1 MVP ogni 3 partite (mvpRate 0.33) → massimo.
-    final mvpRate = mvpCount / totalGames;
-    final driMvp = _scale(mvpRate, 0.0, 0.33, 40, 99);
-
-    // Componente 4 (20%): % partite ad alto scoring (tot. gol ≥ 5)
-    //   Riutilizza highScoringRate già calcolato per VEL.
-    final driHighScore = _scale(highScoringRate, 0.0, 1.0, 40, 99);
-
-    final dri = (driGoals * 0.30 +
-            driConceded * 0.25 +
-            driMvp * 0.25 +
-            driHighScore * 0.20)
-        .toInt()
-        .clamp(40, 99);
-
-    // ── DIF: 50% Combattivo + 50% voto nelle sconfitte ────────────────────
-    // hustleRate: 0 premi → 40, 1 premio ogni 3 partite (0.33) → 99
-    final hustleRate = hustleCount / totalGames;
-    final difCombattivo = _scale(hustleRate, 0.0, 0.33, 40, 99);
+    final concededRatio =
+        groupConcededPerTeam > 0 ? concededPerGame / groupConcededPerTeam : 1.0;
+    final difConceded = _scale(concededRatio, 0.7, 1.3, 99, 40);
+    final difCombattivo = _scale(hustleRate, 0.0, 0.2, 45, 99);
+    final difRole = difRoleScore(player?.role ?? '').toDouble();
 
     final avgVoteLoss = votesInLoss.isNotEmpty
         ? votesInLoss.reduce((a, b) => a + b) / votesInLoss.length
         : avgVote;
-    final difVoto = _scale(avgVoteLoss, 4.0, 10.0, 40, 99);
+    final difVoto = _scale(avgVoteLoss, 4.0, 8.0, 40, 99);
 
-    final dif = ((difCombattivo * 0.5) + (difVoto * 0.5)).toInt().clamp(40, 99);
+    final dif = (difConceded * 0.35 +
+            difCombattivo * 0.25 +
+            difRole * 0.20 +
+            difVoto * 0.20)
+        .round()
+        .clamp(40, 99);
 
-    // ── FIS: basso scoring + presenze + striscia vittorie + Hustle + ruolo ──
+    // ── FIS: presenze + Combattivo + imbattibilità + ruolo + voto medio ───
+    //
+    // Pensato per il calcetto: le partite finiscono quasi sempre con molti
+    // gol, quindi niente componenti legate al "basso punteggio"; e soglie
+    // raggiungibili da un titolare (non 10 vittorie di fila).
 
-    // Componente 1 (25%): % partite a basso scoring (totale gol ≤ 2)
-    int lowScoringGames = 0;
-    for (final m in matches) {
-      if ((m.scoreA + m.scoreB) <= 2) lowScoringGames++;
-    }
-    final lowScoringRate = lowScoringGames / totalGames;
-    final fisLowScore = _scale(lowScoringRate, 0.0, 1.0, 40, 99);
+    // Componente 1 (30%): presenze — un titolare (≥75%) prende il massimo
+    final fisPresence = _scale(presenceRate, 0.0, 0.75, 40, 99);
 
-    // Componente 2 (25%): presenze (partite giocate / totale nel sistema)
-    // presenceRate già dichiarato prima del blocco PAS
-    final fisPresence = _scale(presenceRate, 0.0, 1.0, 40, 99);
+    // Componente 2 (25%): premi Combattivo — 1 ogni 5 partite → 99
+    final fisHustle = _scale(hustleRate, 0.0, 0.2, 45, 99);
 
-    // Componente 3 (20%): miglior striscia di vittorie consecutive
-    //   0 vittorie consecutive → 40, ≥10 → 99
-    int bestWinStreak = 0;
-    int currentWinStreak = 0;
+    // Componente 3 (20%): miglior serie senza sconfitte (V o P)
+    int bestUnbeaten = 0;
+    int currentUnbeaten = 0;
     for (final m in matches) {
       final inTeamA = m.teamA.contains(playerId);
       final myScore = inTeamA ? m.scoreA : m.scoreB;
       final oppScore = inTeamA ? m.scoreB : m.scoreA;
-      if (myScore > oppScore) {
-        currentWinStreak++;
-        if (currentWinStreak > bestWinStreak) bestWinStreak = currentWinStreak;
+      if (myScore >= oppScore) {
+        currentUnbeaten++;
+        if (currentUnbeaten > bestUnbeaten) bestUnbeaten = currentUnbeaten;
       } else {
-        currentWinStreak = 0;
+        currentUnbeaten = 0;
       }
     }
-    final fisStreak = _scale(bestWinStreak.toDouble(), 0.0, 10.0, 40, 99);
+    final fisUnbeaten = _scale(bestUnbeaten.toDouble(), 0.0, 6.0, 40, 99);
 
-    // Componente 4 (20%): premi Hustle
-    //   0 premi → 40, 1 premio ogni 3 partite (rate 0.33) → 99
-    final fisHustle = _scale(hustleRate, 0.0, 0.33, 40, 99);
+    // Componente 4 (15%): ruolo
+    final fisRole = fisRoleScore(player?.role ?? '').toDouble();
 
-    // Componente 5 (10%): bonus ruolo (valore fisso normalizzato su 40–99)
-    //   DIF/TER → +6 (fisico massimo), POR → +4, CEN/MED → +3, ATT/ALA → 0
-    final roleBonus = _defRoleBonus(player?.role ?? '');
-    // Il bonus è un offset diretto sul risultato finale (non sul raw 0–1)
-    // Lo trattiamo come una componente fissa: bonus 0→40, bonus 6→99
-    final fisRole = _scale(roleBonus.toDouble(), 0.0, 6.0, 40, 99);
+    // Componente 5 (10%): voto medio come misura dell'impegno
+    final fisVote = voteScore;
 
-    final fisRaw = fisLowScore * 0.25 +
-        fisPresence * 0.25 +
-        fisStreak * 0.20 +
-        fisHustle * 0.20 +
-        fisRole * 0.10;
-    final fis = fisRaw.toInt().clamp(40, 99);
+    final fisRaw = fisPresence * 0.30 +
+        fisHustle * 0.25 +
+        fisUnbeaten * 0.20 +
+        fisRole * 0.15 +
+        fisVote * 0.10;
+    final fis = fisRaw.round().clamp(40, 99);
 
     return ComputedFifaStats(
       vel: vel,
@@ -323,26 +291,34 @@ class PlayerStatsCalculator {
     return outMin + t * (outMax - outMin);
   }
 
-  // ── Bonus ruolo difensivo per FIS ─────────────────────────────────────
-  //   DIF / TER(minatore) → 6  (massimo fisico)
-  //   POR(tiere)          → 4
-  //   CEN(trocampista) / MED(iano) → 3
-  //   ATT(accante) / ALA  → 0  (nessun bonus)
-  static int _defRoleBonus(String role) {
-    final r = role.toUpperCase();
+  // ── Ruolo ─────────────────────────────────────────────────────────
+  //   L'app salva i ruoli come lettera singola (P/D/C/A); i nomi lunghi
+  //   (DIF, POR, CEN, …) restano riconosciuti per i dati più vecchi.
+  //   Ritorna 'D', 'P', 'C' oppure 'A' (attaccante o sconosciuto).
+  static String _roleCategory(String role) {
+    final r = role.trim().toUpperCase();
+    if (const {'D', 'P', 'C', 'A'}.contains(r)) return r;
     if (r.contains('DIF') ||
         r.contains('TER') ||
         r.contains('LIB') ||
         r.contains('STO')) {
-      return 6;
+      return 'D';
     }
-    if (r.contains('POR')) return 4;
+    if (r.contains('POR')) return 'P';
     if (r.contains('CEN') ||
         r.contains('MED') ||
         r.contains('INT') ||
         r.contains('TRE')) {
-      return 3;
+      return 'C';
     }
-    return 0;
+    return 'A';
   }
+
+  /// Punteggio ruolo per FIS (scala 40–99): D 99 · P 90 · C 80 · A 65.
+  static int fisRoleScore(String role) =>
+      const {'D': 99, 'P': 90, 'C': 80, 'A': 65}[_roleCategory(role)]!;
+
+  /// Punteggio ruolo per DIF (scala 40–99): D 99 · P 95 · C 75 · A 55.
+  static int difRoleScore(String role) =>
+      const {'D': 99, 'P': 95, 'C': 75, 'A': 55}[_roleCategory(role)]!;
 }
