@@ -8,6 +8,7 @@ import 'package:calcetto_tracker/screens/match_detail_screen.dart';
 import 'package:calcetto_tracker/screens/player_stats_screen.dart';
 import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:calcetto_tracker/services/player_stats_summary.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -147,6 +148,31 @@ void main() {
       expect(r.left, greaterThanOrEqualTo(0));
       expect(r.right, lessThanOrEqualTo(320));
     }
+  });
+
+  testWidgets('radar uses a fixed 0–1 scale in both views', (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+    // Il radar è sotto il bordo: la ListView lo costruisce solo se visibile.
+    await tester.scrollUntilVisible(find.byType(RadarChart), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    await tester.pumpAndSettle();
+
+    void expectFixedScale() {
+      final data = tester.widget<RadarChart>(find.byType(RadarChart)).data;
+      // Bordo esterno = massimo possibile, primo anello = 0: la scala non
+      // si adatta più ai valori del singolo giocatore.
+      expect(data.maxEntry.value, 1.0);
+      expect(data.minEntry.value, 0.0);
+    }
+
+    expectFixedScale(); // Performance
+    await tester.tap(find.text('Attributi FIFA'));
+    await tester.pumpAndSettle();
+    expectFixedScale(); // FIFA
   });
 
   testWidgets('tapping VOTI shows the vote trend section', (tester) async {

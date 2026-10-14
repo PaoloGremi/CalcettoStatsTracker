@@ -304,6 +304,14 @@ class _RadarCardState extends State<_RadarCard> {
 
   double _norm(double value, double max) => (value / max).clamp(0.0, 1.0);
 
+  RadarDataSet _scaleAnchor(int count, double value) => RadarDataSet(
+        fillColor: Colors.transparent,
+        borderColor: Colors.transparent,
+        borderWidth: 0,
+        entryRadius: 0,
+        dataEntries: List.filled(count, RadarEntry(value: value)),
+      );
+
   @override
   Widget build(BuildContext context) {
     // ── Dati radar Performance ───────────────────────────────
@@ -393,6 +401,11 @@ class _RadarCardState extends State<_RadarCard> {
                 getTitle: (index, angle) =>
                     RadarChartTitle(text: labels[index]),
                 dataSets: [
+                  // fl_chart adatta la scala ai dati (bordo = valore più
+                  // alto, primo anello = più basso). Due serie invisibili
+                  // a 0 e 1 fissano la scala per tutti i giocatori.
+                  _scaleAnchor(labels.length, 0),
+                  _scaleAnchor(labels.length, 1),
                   RadarDataSet(
                     fillColor: accentColor.withValues(alpha: 0.18),
                     borderColor: accentColor,
