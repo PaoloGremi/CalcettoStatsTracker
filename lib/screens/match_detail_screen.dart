@@ -9,7 +9,7 @@ import '../models/match_model.dart';
 import '../services/data_service.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final MatchModel match;
@@ -1725,12 +1725,17 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
     setState(() => _saving = true);
     try {
       final bytes = base64Decode(_base64Image!);
-      final result = await ImageGallerySaver.saveImage(
-        bytes,
-        quality: 100,
-        name: 'calcetto_copertina_${DateTime.now().millisecondsSinceEpoch}',
-      );
-      final success = result['isSuccess'] == true;
+      String? errorMessage;
+      try {
+        if (!await Gal.hasAccess()) await Gal.requestAccess();
+        await Gal.putImageBytes(
+          bytes,
+          name: 'calcetto_copertina_${DateTime.now().millisecondsSinceEpoch}',
+        );
+      } on GalException catch (e) {
+        errorMessage = e.type.message;
+      }
+      final success = errorMessage == null;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1739,7 +1744,7 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
             content: Text(
               success
                   ? '✅ Copertina salvata nella galleria!'
-                  : '❌ Salvataggio fallito: ${result['errorMessage'] ?? 'errore sconosciuto'}',
+                  : '❌ Salvataggio fallito: $errorMessage',
               style: const TextStyle(
                   color: Colors.black, fontWeight: FontWeight.bold),
             ),
