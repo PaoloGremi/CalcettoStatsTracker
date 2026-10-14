@@ -7,6 +7,7 @@ import 'package:calcetto_tracker/models/player_model.dart';
 import 'package:calcetto_tracker/screens/match_detail_screen.dart';
 import 'package:calcetto_tracker/screens/player_stats_screen.dart';
 import 'package:calcetto_tracker/services/data_service.dart';
+import 'package:calcetto_tracker/services/player_stats_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -332,6 +333,114 @@ void main() {
     expect(find.text('▼'), findsNothing);
   });
 
+  test('formatSignedDelta signs, rounds and never shows -0.0', () {
+    expect(formatSignedDelta(1.3), '+1.3');
+    expect(formatSignedDelta(-0.04), '0.0');
+    expect(formatSignedDelta(0.04), '0.0');
+    expect(formatSignedDelta(0), '0.0');
+    expect(formatSignedDelta(-0.5), '-0.5');
+  });
+
+  testWidgets('compact header uses the singular for one match', (tester) async {
+    await seed(tester, [sixMatches().first]);
+    await pumpScreen(tester);
+
+    expect(find.textContaining('1 partita ·'), findsOneWidget);
+    expect(find.textContaining('1 partite'), findsNothing);
+  });
+
+  testWidgets('year comparison arrows compare the rounded values',
+      (tester) async {
+    // 2025: 21 partite, 22 gol -> 1.048 G/P, mostrato "1.0" come il 2026.
+    await seed(tester, [
+      ...sixMatches(),
+      for (int i = 0; i < 21; i++)
+        MatchModel(
+          id: 'o$i',
+          date: DateTime(2025, 3, 1).add(Duration(days: i)),
+          teamA: const ['p1'],
+          teamB: const ['p2'],
+          scoreA: 0,
+          scoreB: 3,
+          votes: const {'p1': 4.0, 'p2': 6.0},
+          goals: {'p1': i == 0 ? 2 : 1},
+          fieldLocation: '',
+          mvp: '',
+          hustlePlayer: '',
+        ),
+    ]);
+    await pumpScreen(tester);
+    await tapTab(tester, 'STAGIONI');
+    await tester.scrollUntilVisible(find.text('CONFRONTO ANNI'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+
+    // partite e gol scendono, voto e %V salgono, G/P (1.0 vs 1.0) invariato.
+    expect(find.text('▲'), findsNWidgets(2));
+    expect(find.text('▼'), findsNWidgets(2));
+  });
+
+  testWidgets('year comparison does not overflow on a narrow, scaled screen',
+      (tester) async {
+    await seed(tester, [...sixMatches(), oldMatch()]);
+    await pumpScreen(tester);
+    await tapTab(tester, 'STAGIONI');
+    // Altri widget (header, weekday) sforano a questa scala: qui conta solo
+    // la tabella confronto anni.
+    final yearCardErrors = <String>[];
+    final prevOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      if (details.toString().contains('year_comparison_card')) {
+        yearCardErrors.add(details.toString());
+      }
+    };
+    addTearDown(() => FlutterError.onError = prevOnError);
+    // Si restringe lo schermo solo dopo aver lasciato la tab PANORAMICA.
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('CONFRONTO ANNI'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    await tester.pumpAndSettle();
+    expect(yearCardErrors, isEmpty);
+  });
+
+  testWidgets('best matches omit the field text when the field is deleted',
+      (tester) async {
+    await seed(tester, [
+      for (final m in sixMatches())
+        MatchModel(
+          id: m.id,
+          date: m.date,
+          teamA: m.teamA,
+          teamB: m.teamB,
+          scoreA: m.scoreA,
+          scoreB: m.scoreB,
+          votes: m.votes,
+          goals: m.goals,
+          fieldLocation: 'ghost-field-id',
+          mvp: '',
+          hustlePlayer: '',
+        ),
+    ]);
+    await pumpScreen(tester);
+    await tapTab(tester, 'RECORD');
+    await tester.scrollUntilVisible(find.text('VOTO PIÙ ALTO'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    expect(find.text('ghost-field-id'), findsNothing);
+  });
+
   group('heatmap with pinned today', () {
     bool selected(WidgetTester tester, String year) => tester
         .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, year))
@@ -360,18 +469,40 @@ void main() {
       expect(selected(tester, '2025'), isFalse);
     });
 
-    testWidgets('scrolls towards the current week for a late-year today',
+    Finder heatmapScroll() => find.byKey(const Key('activity_heatmap_scroll'));
+
+    /// Il offset deve portare la colonna della settimana corrente nel viewport.
+    void expectWeekInViewport(WidgetTester tester, DateTime today) {
+      final sv = tester.widget<SingleChildScrollView>(heatmapScroll());
+      final c = sv.controller!;
+      final days = heatmapDays(today.year);
+      final week =
+          days.indexOf(DateTime.utc(today.year, today.month, today.day)) ~/ 7;
+      const step = 12.0 + 3.0;
+      final start = week * step, end = (week + 1) * step;
+      expect(c.offset, lessThanOrEqualTo(start));
+      expect(
+          c.offset + c.position.viewportDimension, greaterThanOrEqualTo(end));
+    }
+
+    testWidgets('keeps the current week visible for a late-year today',
         (tester) async {
-      await open(tester, DateTime(2026, 12, 20), twoYears: false);
-      final card = find.ancestor(
-          of: find.byType(ChoiceChip).first, matching: find.byType(Column));
-      final scroll = find.descendant(
-          of: card.first,
-          matching: find.byWidgetPredicate((w) =>
-              w is SingleChildScrollView &&
-              w.scrollDirection == Axis.horizontal));
-      expect(tester.widget<SingleChildScrollView>(scroll).controller!.offset,
+      final today = DateTime(2026, 12, 20);
+      await open(tester, today, twoYears: false);
+      expect(
+          tester
+              .widget<SingleChildScrollView>(heatmapScroll())
+              .controller!
+              .offset,
           greaterThan(0));
+      expectWeekInViewport(tester, today);
+    });
+
+    testWidgets('keeps the current week visible for a mid-year today',
+        (tester) async {
+      final today = DateTime(2026, 4, 15);
+      await open(tester, today, twoYears: false);
+      expectWeekInViewport(tester, today);
     });
   });
 }

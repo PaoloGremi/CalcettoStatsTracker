@@ -42,15 +42,22 @@ class _YearComparisonCard extends StatelessWidget {
     return TableRow(children: [
       _cell('${s.year}', null, AppTheme.textPrimary),
       _cell('${s.games}', _dir(s.games, prev?.games), AppTheme.textPrimary),
-      _cell(s.avgVote?.toStringAsFixed(1) ?? '—',
-          _dir(s.avgVote, prev?.avgVote), AppTheme.textPrimary),
+      _cell(
+          s.avgVote?.toStringAsFixed(1) ?? '—',
+          _dir(_tenths(s.avgVote), _tenths(prev?.avgVote)),
+          AppTheme.textPrimary),
       _cell('${s.goals}', _dir(s.goals, prev?.goals), AppTheme.textPrimary),
-      _cell(s.goalsPerGame.toStringAsFixed(1),
-          _dir(s.goalsPerGame, prev?.goalsPerGame), AppTheme.textPrimary),
+      _cell(
+          s.goalsPerGame.toStringAsFixed(1),
+          _dir(_tenths(s.goalsPerGame), _tenths(prev?.goalsPerGame)),
+          AppTheme.textPrimary),
       _cell('${s.winPct}%', _dir(s.winPct, prev?.winPct), AppTheme.textPrimary),
       _cell('${s.mvps}', _dir(s.mvps, prev?.mvps), AppTheme.textPrimary),
     ]);
   }
+
+  /// Valore arrotondato a 1 decimale (come mostrato), per confronti coerenti.
+  int? _tenths(double? v) => v == null ? null : (v * 10).round();
 
   /// 1 = salito, -1 = sceso, null = uguale / non confrontabile.
   int? _dir(num? cur, num? prev) {
@@ -61,19 +68,22 @@ class _YearComparisonCard extends StatelessWidget {
 
   Widget _cell(String text, int? dir, Color color) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(text,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w700)),
-            if (dir != null)
-              Text(dir > 0 ? '▲' : '▼',
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(text,
                   style: TextStyle(
-                      color:
-                          dir > 0 ? AppTheme.accentGreen : AppTheme.accentRed,
-                      fontSize: 8)),
-          ],
+                      color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+              if (dir != null)
+                Text(dir > 0 ? '▲' : '▼',
+                    style: TextStyle(
+                        color:
+                            dir > 0 ? AppTheme.accentGreen : AppTheme.accentRed,
+                        fontSize: 8)),
+            ],
+          ),
         ),
       );
 }

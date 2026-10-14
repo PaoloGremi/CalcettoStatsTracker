@@ -43,8 +43,10 @@ class _ActivityHeatmapState extends State<_ActivityHeatmap> {
         final i = days.indexOf(t);
         if (i >= 0) week = i ~/ 7;
       }
-      final target = (week * (_cell + _gap))
-          .clamp(0.0, _controller.position.maxScrollExtent);
+      // Allinea a destra la settimana corrente.
+      final target =
+          ((week + 1) * (_cell + _gap) - _controller.position.viewportDimension)
+              .clamp(0.0, _controller.position.maxScrollExtent);
       _controller.jumpTo(target);
     });
   }
@@ -88,6 +90,7 @@ class _ActivityHeatmapState extends State<_ActivityHeatmap> {
           ),
           const SizedBox(height: 12),
           SingleChildScrollView(
+            key: const Key('activity_heatmap_scroll'),
             controller: _controller,
             scrollDirection: Axis.horizontal,
             child: Row(

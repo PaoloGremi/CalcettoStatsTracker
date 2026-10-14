@@ -16,7 +16,8 @@ class _RelativeVoteCard extends StatelessWidget {
     final maxAbs = recent.map((r) => r.delta.abs()).reduce(math.max);
     final bound = math.max(0.5, (maxAbs * 2).ceil() / 2);
     final avg = summary.avgRelativeVote;
-    final avgText = '${avg >= 0 ? '+' : ''}${avg.toStringAsFixed(1)}';
+    final avgText = formatSignedDelta(avg);
+    final avgRounded = (avg * 10).round();
 
     return Column(
       children: [
@@ -25,7 +26,8 @@ class _RelativeVoteCard extends StatelessWidget {
             _StatBox(
               label: 'DELTA MEDIO',
               value: avgText,
-              color: avg >= 0 ? AppTheme.accentGreen : AppTheme.accentRed,
+              color:
+                  avgRounded >= 0 ? AppTheme.accentGreen : AppTheme.accentRed,
             ),
             const SizedBox(width: 10),
             _StatBox(

@@ -209,6 +209,16 @@ void main() {
       expect(s.maxGoalsMatch!.date, DateTime(2026, 2, 1));
     });
 
+    test('max goals match agrees with most goals match when a vote wins', () {
+      final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
+        m('1', DateTime(2026, 1, 1), sa: 3, goals: {'p1': 3}, votes: {'p1': 8}),
+        m('2', DateTime(2026, 2, 1), sa: 3, goals: {'p1': 3}, votes: {'p1': 6}),
+      ]);
+      expect(s.mostGoalsMatch!.id, '1');
+      expect(s.maxGoalsMatch!.date, DateTime(2026, 1, 1));
+      expect(s.maxGoalsMatch!.goals, 3);
+    });
+
     test('no goals means no max goals match', () {
       final s = PlayerStatsSummary.compute(
           playerId: 'p1', allMatches: [m('1', DateTime(2026, 1, 1), sa: 2)]);

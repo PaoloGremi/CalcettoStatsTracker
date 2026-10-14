@@ -10,7 +10,7 @@ class _BestMatchesCard extends StatelessWidget {
     if (m == null) return const Expanded(child: SizedBox.shrink());
     final field = Provider.of<DataService>(context, listen: false)
         .getFieldById(m.fieldLocation);
-    final fieldName = field?.name ?? m.fieldLocation;
+    final fieldName = field?.name ?? '';
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

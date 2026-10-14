@@ -304,13 +304,6 @@ class PlayerStatsSummary {
     final teamGoalShare = teamGoals > 0 ? totalGoals / teamGoals : null;
     final braces = goalsPerMatch.where((g) => g == 2).length;
     final hatTricks = goalsPerMatch.where((g) => g >= 3).length;
-    ({int goals, DateTime date})? maxGoalsMatch;
-    for (int i = 0; i < matches.length; i++) {
-      final g = goalsPerMatch[i];
-      if (g > 0 && (maxGoalsMatch == null || g >= maxGoalsMatch.goals)) {
-        maxGoalsMatch = (goals: g, date: matches[i].date);
-      }
-    }
 
     // Striscia corrente
     var currentStreak = '—';
@@ -493,6 +486,11 @@ class PlayerStatsSummary {
         }
       }
     }
+
+    // Derivata da mostGoalsMatch, così GOL e RECORD concordano sui pareggi.
+    final mgm = mostGoalsMatch;
+    final ({int goals, DateTime date})? maxGoalsMatch =
+        mgm == null ? null : (goals: mgm.goals[playerId] ?? 0, date: mgm.date);
 
     // Mappa presenze, giorno della settimana, confronto anni.
     // `matches` è ordinato per data: l'ultima partita del giorno vince.

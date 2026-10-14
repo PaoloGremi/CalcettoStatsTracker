@@ -7,6 +7,13 @@ List<Widget> _section(String title, Color accent, Widget child) => [
       const SizedBox(height: 24),
     ];
 
+/// Valore con segno a una cifra decimale; evita "-0.0" e "+0.0".
+String formatSignedDelta(double v) {
+  final s = v.toStringAsFixed(1);
+  if (s == '0.0' || s == '-0.0') return '0.0';
+  return v > 0 ? '+$s' : s;
+}
+
 /// Mostrato da una tab quando tutte le sue sezioni sono nascoste per
 /// mancanza di dati.
 class _EmptyTab extends StatelessWidget {
