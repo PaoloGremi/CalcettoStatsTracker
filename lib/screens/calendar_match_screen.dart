@@ -20,6 +20,8 @@ class CalendarMatchScreen extends StatefulWidget {
 class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
   late int _selectedYear;
   late Map<String, List<MatchModel>> _matchesByDay;
+  final _scrollController = ScrollController();
+  final _currentMonthKey = GlobalKey();
 
   @override
   void initState() {
@@ -28,6 +30,26 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
         ? widget.matches.map((m) => m.date.year).reduce((a, b) => a > b ? a : b)
         : DateTime.now().year;
     _buildIndex();
+    _scrollToCurrentMonth();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Dopo il prossimo frame porta in vista il mese corrente se l'anno
+  /// mostrato è quello attuale, altrimenti torna in cima (gennaio).
+  void _scrollToCurrentMonth() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _currentMonthKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx);
+      } else if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    });
   }
 
   void _buildIndex() {
@@ -61,7 +83,10 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
         actions: [
           PopupMenuButton<int>(
             initialValue: _selectedYear,
-            onSelected: (y) => setState(() => _selectedYear = y),
+            onSelected: (y) {
+              setState(() => _selectedYear = y);
+              _scrollToCurrentMonth();
+            },
             itemBuilder: (_) => _availableYears
                 .map((y) => PopupMenuItem(value: y, child: Text('$y')))
                 .toList(),
@@ -80,20 +105,30 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
+      // Column (non ListView.builder) così tutti i 12 mesi sono costruiti
+      // e il mese corrente ha un context per Scrollable.ensureVisible.
+      body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        itemCount: 12,
-        itemBuilder: (_, monthIndex) {
-          final month = monthIndex + 1;
-          return _MonthGrid(
-            year: _selectedYear,
-            month: month,
-            matchesByDay: _matchesByDay,
-            onDayTap: (matches) => _openMatchOrList(context, matches),
-          );
-        },
+        child: Column(
+          children: [
+            for (var month = 1; month <= 12; month++)
+              _MonthGrid(
+                key: _isCurrentMonth(month) ? _currentMonthKey : null,
+                year: _selectedYear,
+                month: month,
+                matchesByDay: _matchesByDay,
+                onDayTap: (matches) => _openMatchOrList(context, matches),
+              ),
+          ],
+        ),
       ),
     );
+  }
+
+  bool _isCurrentMonth(int month) {
+    final now = DateTime.now();
+    return _selectedYear == now.year && month == now.month;
   }
 
   void _openMatchOrList(BuildContext context, List<MatchModel> matches) {
@@ -126,6 +161,7 @@ class _MonthGrid extends StatelessWidget {
   final void Function(List<MatchModel>) onDayTap;
 
   const _MonthGrid({
+    super.key,
     required this.year,
     required this.month,
     required this.matchesByDay,
