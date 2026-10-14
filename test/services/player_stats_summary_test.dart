@@ -367,6 +367,15 @@ void main() {
       expect(days, contains(DateTime.utc(2026, 10, 25)));
     });
 
+    test('heatmapDays handles a leap year starting on Monday', () {
+      final days = heatmapDays(2024);
+      expect(days.first, DateTime.utc(2024, 1, 1));
+      expect(days, contains(DateTime.utc(2024, 2, 29)));
+      expect(days.length % 7, 0);
+      expect(days.toSet().length, days.length);
+      expect(days.last.weekday, DateTime.sunday);
+    });
+
     test('weekday stats', () {
       final s = PlayerStatsSummary.compute(playerId: 'p1', allMatches: [
         res('a', DateTime(2026, 3, 10, 18), 'V', votes: {'p1': 7}), // martedì

@@ -69,11 +69,11 @@ void main() {
     });
   }
 
-  Future<void> pumpScreen(WidgetTester tester) async {
+  Future<void> pumpScreen(WidgetTester tester, {DateTime? today}) async {
     // Provider sopra il MaterialApp: le route spinte (MatchDetailScreen) lo vedono.
     await tester.pumpWidget(ChangeNotifierProvider<DataService>.value(
       value: dataService,
-      child: MaterialApp(home: PlayerStatsScreen(player: mario)),
+      child: MaterialApp(home: PlayerStatsScreen(player: mario, today: today)),
     ));
     await tester.pumpAndSettle();
   }
@@ -268,10 +268,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('seasons tab shows year comparison with two years',
-      (tester) async {
-    await seed(tester, [
-      ...sixMatches(),
+  MatchModel oldMatch(
+          {Map<String, double>? votes = const {'p1': 4.0, 'p2': 6.0},
+          String mvp = 'p1'}) =>
       MatchModel(
         id: 'old',
         date: DateTime(2025, 3, 4),
@@ -279,13 +278,16 @@ void main() {
         teamB: const ['p2'],
         scoreA: 0,
         scoreB: 3,
-        votes: {'p1': 4.0, 'p2': 6.0},
+        votes: votes,
         goals: {'p1': 0},
         fieldLocation: '',
-        mvp: '',
+        mvp: mvp,
         hustlePlayer: '',
-      ),
-    ]);
+      );
+
+  testWidgets('seasons tab shows year comparison with two years',
+      (tester) async {
+    await seed(tester, [...sixMatches(), oldMatch()]);
     await pumpScreen(tester);
 
     await tapTab(tester, 'STAGIONI');
@@ -297,7 +299,79 @@ void main() {
         scrollable: scrollable);
     expect(find.text('CONFRONTO ANNI'), findsOneWidget);
     expect(find.text('GIORNO DELLA SETTIMANA'), findsOneWidget);
-    expect(find.text('▲'), findsWidgets);
+    // 2026 vs 2025: games, voto, gol, g/p, %v salgono; mvp scende (0 vs 1).
+    expect(find.text('▲'), findsNWidgets(5));
+    expect(find.text('▼'), findsNWidgets(1));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('year comparison shows a dash and no arrow without votes',
+      (tester) async {
+    await seed(tester, [
+      ...sixMatches(),
+      oldMatch(votes: null, mvp: ''),
+    ]);
+    await pumpScreen(tester);
+    await tapTab(tester, 'STAGIONI');
+    await tester.scrollUntilVisible(find.text('CONFRONTO ANNI'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+
+    final dash =
+        find.descendant(of: find.byType(Table), matching: find.text('—'));
+    expect(dash, findsOneWidget);
+    final cell = find.ancestor(of: dash, matching: find.byType(Row)).first;
+    expect(find.descendant(of: cell, matching: find.textContaining('▲')),
+        findsNothing);
+    expect(find.descendant(of: cell, matching: find.textContaining('▼')),
+        findsNothing);
+    // Gli altri 4 valori salgono, mvp invariato.
+    expect(find.text('▲'), findsNWidgets(4));
+    expect(find.text('▼'), findsNothing);
+  });
+
+  group('heatmap with pinned today', () {
+    bool selected(WidgetTester tester, String year) => tester
+        .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, year))
+        .selected;
+
+    Future<void> open(WidgetTester tester, DateTime today,
+        {bool twoYears = true}) async {
+      await seed(tester, [
+        ...sixMatches(),
+        if (twoYears) oldMatch(),
+      ]);
+      await pumpScreen(tester, today: today);
+      await tapTab(tester, 'STAGIONI');
+    }
+
+    testWidgets('defaults to the year of today when active', (tester) async {
+      await open(tester, DateTime(2025, 6, 1));
+      expect(selected(tester, '2025'), isTrue);
+      expect(selected(tester, '2026'), isFalse);
+    });
+
+    testWidgets('defaults to the latest year when today is not active',
+        (tester) async {
+      await open(tester, DateTime(2030, 6, 1));
+      expect(selected(tester, '2026'), isTrue);
+      expect(selected(tester, '2025'), isFalse);
+    });
+
+    testWidgets('scrolls towards the current week for a late-year today',
+        (tester) async {
+      await open(tester, DateTime(2026, 12, 20), twoYears: false);
+      final card = find.ancestor(
+          of: find.byType(ChoiceChip).first, matching: find.byType(Column));
+      final scroll = find.descendant(
+          of: card.first,
+          matching: find.byWidgetPredicate((w) =>
+              w is SingleChildScrollView &&
+              w.scrollDirection == Axis.horizontal));
+      expect(tester.widget<SingleChildScrollView>(scroll).controller!.offset,
+          greaterThan(0));
+    });
   });
 }
