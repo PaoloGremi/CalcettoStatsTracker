@@ -121,7 +121,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                       fontWeight: FontWeight.w700),
                   decoration: const InputDecoration(
                     labelText: 'NOME CAMPO',
-                    hintText: 'es. San Francesco',
+                    hintText: 'es. Campo comunale',
                     prefixIcon: Icon(Icons.stadium_rounded,
                         color: AppTheme.textMuted, size: 18),
                   ),
@@ -137,7 +137,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                       fontWeight: FontWeight.w700),
                   decoration: const InputDecoration(
                     labelText: 'INDIRIZZO',
-                    hintText: 'es. Via Roma 10, Lodi',
+                    hintText: 'es. Via Roma 10, Milano',
                     prefixIcon: Icon(Icons.location_on_rounded,
                         color: AppTheme.textMuted, size: 18),
                   ),

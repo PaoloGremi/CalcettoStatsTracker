@@ -39,42 +39,17 @@ class _MatchPromoPageState extends State<MatchPromoPage>
   late Animation<double> _heroFade;
   late Animation<Offset> _heroSlide;
 
-  static const _backgrounds = {
-    'SanFrancesco': 'assets/images/campoSanFrancescoColorato.jpg',
-    'Montanaso': 'assets/images/montanaso.jpg',
-    'Faustina': 'assets/images/faustina.png',
-    'Pergola': 'assets/images/laPergola.jpg',
-    'Other': 'assets/images/sfondoPalloneGenerico.png',
-  };
+  static const _defaultBg = 'assets/images/sfondoPalloneGenerico.png';
 
-  static const _locationLabels = {
-    'SanFrancesco': 'San Francesco',
-    'Montanaso': 'Montanaso',
-    'Faustina': 'Faustina Arena',
-    'Pergola': 'La Pergola',
-    'Other': 'Campo Sportivo',
-  };
+  String get _bg => widget.fieldModel != null ? '' : _defaultBg;
 
-  static const _locationAddresses = {
-    'SanFrancesco': 'Via Serravalle, 4 — Lodi',
-    'Montanaso': 'Via G. Garibaldi — Montanaso Lombardo',
-    'Faustina': 'Piazzale degli Sport — Lodi',
-    'Pergola': 'Via per Ca de Bolli, 11 — San Martino in Strada',
-    'Other': '',
-  };
+  String get _locationLabel {
+    if (widget.fieldModel != null) return widget.fieldModel!.name;
+    if (widget.campo.isEmpty || widget.campo == 'Other') return 'Campo Sportivo';
+    return widget.campo;
+  }
 
-  String get _bg => widget.fieldModel != null
-      ? ''
-      : (_backgrounds[widget.campo] ??
-          'assets/images/sfondoPalloneGenerico.png');
-
-  String get _locationLabel => widget.fieldModel != null
-      ? widget.fieldModel!.name
-      : (_locationLabels[widget.campo] ?? widget.campo);
-
-  String get _locationAddress => widget.fieldModel != null
-      ? widget.fieldModel!.address
-      : (_locationAddresses[widget.campo] ?? '');
+  String get _locationAddress => widget.fieldModel?.address ?? '';
 
   @override
   void initState() {

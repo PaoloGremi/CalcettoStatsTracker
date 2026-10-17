@@ -17,30 +17,14 @@ class MatchCard extends StatelessWidget {
   // ── Helpers ──────────────────────────────────────────────────
 
   /// Ritorna il FieldModel corrispondente a match.fieldLocation (che è l'ID).
-  /// Gestisce anche i vecchi ID testuali hardcoded per retrocompatibilità.
   FieldModel? _field(BuildContext context) =>
       Provider.of<DataService>(context, listen: false)
           .getFieldById(match.fieldLocation);
 
-  static const _legacyLabels = {
-    'SanFrancesco': 'San Francesco',
-    'Montanaso': 'Montanaso',
-    'Faustina': 'Faustina Arena',
-    'Pergola': 'La Pergola',
-    'Other': 'Campo Sportivo',
-  };
-
-  static const _legacyBg = {
-    'SanFrancesco': 'assets/images/campoSanFrancescoColorato.jpg',
-    'Montanaso': 'assets/images/montanaso.jpg',
-    'Faustina': 'assets/images/faustina.png',
-    'Pergola': 'assets/images/laPergola.jpg',
-  };
-
   String _locationLabel(BuildContext context) {
     final f = _field(context);
     if (f != null) return f.name;
-    return _legacyLabels[match.fieldLocation] ?? match.fieldLocation;
+    return match.fieldLocation == 'Other' ? 'Campo Sportivo' : match.fieldLocation;
   }
 
   /// Ritorna null se si deve usare l'asset di fallback, altrimenti il path del file.
@@ -52,9 +36,7 @@ class MatchCard extends StatelessWidget {
     return null;
   }
 
-  String get _legacyAsset =>
-      _legacyBg[match.fieldLocation] ??
-      'assets/images/sfondoPalloneGenerico.png';
+  String get _legacyAsset => 'assets/images/sfondoPalloneGenerico.png';
 
   String _playerName(String id) => resolvePlayerName(id, fallback: '?');
 
