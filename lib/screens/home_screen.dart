@@ -1281,7 +1281,6 @@ RISPOSTA (solo i titoli separati da |, nessuna numerazione):''';
     try {
       final text = await _openAiService.chatCompletion(
         apiKey: apiKey,
-        model: 'gpt-4o-mini',
         maxTokens: 300,
         messages: [
           {'role': 'user', 'content': prompt}

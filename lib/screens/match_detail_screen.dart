@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,7 @@ import '../core/util/date_formatters.dart';
 import '../core/util/player_lookup.dart';
 import '../models/match_model.dart';
 import '../services/data_service.dart';
+import '../services/match_chronicle.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
 import 'package:gal/gal.dart';
@@ -231,7 +233,7 @@ class MatchDetailScreen extends StatelessWidget {
                           ],
                         ),
                         content: const Text(
-                          'Verrà generata un\'immagine tramite DALL·E (gpt-image-1).\n\n'
+                          'Verrà generata un\'immagine con l\'AI di OpenAI (${OpenAiService.imageModel}).\n\n'
                           'Ogni generazione ha un costo non irrisorio sulla tua chiave API OpenAI. '
                           'Vuoi procedere?',
                           style: TextStyle(
@@ -491,7 +493,12 @@ class _NewspaperContent {
     required this.articleBody,
     required this.isAiGenerated,
     this.pagelle = const {},
+    this.aiError,
   });
+
+  /// Motivo del fallimento della generazione AI; null se l'AI ha risposto
+  /// o se non c'è una chiave API configurata.
+  final String? aiError;
 }
 
 class MatchNewspaperScreen extends StatefulWidget {
@@ -519,7 +526,7 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
   }
 
   // Fallback statico (nessuna chiave API)
-  _NewspaperContent _staticContent() {
+  _NewspaperContent _staticContent({String? aiError}) {
     final diff = (widget.match.scoreA - widget.match.scoreB).abs();
     final mvp = _resolveName(widget.match.mvp);
     String headline;
@@ -533,7 +540,7 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
       } else if (diff >= 2) {
         headline = '$winner DOMINANO';
       } else {
-        headline = '$winner IN RIMONTA';
+        headline = '$winner VINCONO DI MISURA';
       }
     }
     final sub = mvp.isNotEmpty
@@ -544,103 +551,92 @@ class _MatchNewspaperScreenState extends State<MatchNewspaperScreen> {
       subheadline: sub,
       articleBody: '',
       isAiGenerated: false,
+      aiError: aiError,
     );
   }
 
-  // Costruisce il prompt con tutti i dati della partita
-  String _buildPrompt() {
+  // Dati dei giocatori e nome del campo per il prompt
+  Map<String, ChroniclePlayer> _chroniclePlayers(DataService data) {
     final m = widget.match;
-
-    String teamSection(List<String> ids) {
-      return ids.map((id) {
-        final name = _resolveName(id);
-        final voto = m.votes[id] ?? 0.0;
-        final gol = m.goals[id] ?? 0;
-        final commento = m.comments[id] ?? '';
-        final isMvp = m.mvp == id ? ' [MVP]' : '';
-        final isHustle = m.hustlePlayer == id ? ' [COMBATTIVO]' : '';
-        final isBG = m.bestGoalPlayer == id ? ' [BEST GOAL]' : '';
-        return '  - id:"$id" nome:"$name"$isMvp$isHustle$isBG'
-            ' voto:${voto > 0 ? voto.toStringAsFixed(1) : "N/D"}'
-            '${gol > 0 ? " gol:$gol" : ""}'
-            '${commento.isNotEmpty ? ' commento_originale:"$commento"' : ""}';
-      }).join('\n');
-    }
-
-    return '''
-Sei il cronista de "La Gazzetta del Calcetto", stile Gazzetta dello Sport: drammatico, colorito, metafore calcistiche, aggettivi forti.
-
-DATI PARTITA:
-- Data: ${DateFormat('dd MMMM yyyy · HH:mm', 'it_IT').format(m.date)}
-- Risultato: Bianchi ${m.scoreA} – ${m.scoreB} Colorati
-- Esito: ${_resultLabel()}
-
-SQUADRA BIANCHI:
-${teamSection(m.teamA)}
-
-SQUADRA COLORATI:
-${teamSection(m.teamB)}
-
-Rispondi SOLO con un JSON valido (nessun testo extra, nessun backtick):
-{
-  "headline": "TITOLONE IN MAIUSCOLO MAX 6 PAROLE",
-  "subheadline": "Sottotitolo evocativo di 1-2 frasi",
-  "articleBody": "Cronaca di 3-4 frasi stile Gazzetta. Cita giocatori per nome, toni epici.",
-  "pagelle": {
-    "<id_giocatore>": "<giudizio 1 frase stile Gazzetta: mantieni il senso del commento_originale se presente, arricchiscilo con tono giornalistico, cita il voto e i gol se rilevanti>"
+    return {
+      for (final id in [...m.teamA, ...m.teamB])
+        if (data.getPlayerById(id) case final p?)
+          id: ChroniclePlayer(
+            name: p.name,
+            role: p.role,
+            careerGoals: p.totalGoals,
+            careerMvp: p.mvpCount,
+          ),
+    };
   }
-}
-Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti sopra.
-''';
+
+  // Messaggio leggibile per il banner quando la generazione fallisce
+  String _describeError(Object e) {
+    if (e is TimeoutException) {
+      return 'Tempo scaduto: OpenAI non ha risposto in tempo.';
+    }
+    if (e is OpenAiException) {
+      return switch (e.statusCode) {
+        401 => 'Chiave API OpenAI non valida o revocata.',
+        429 => 'Limite di richieste o credito OpenAI esaurito.',
+        _ => 'Errore OpenAI (${e.statusCode ?? 'rete'}).',
+      };
+    }
+    if (e is FormatException) return 'Risposta AI non valida.';
+    return 'Connessione non riuscita.';
   }
 
   // Chiamata OpenAI
   Future<void> _generateAiContent(String apiKey) async {
+    final data = Provider.of<DataService>(context, listen: false);
+    final players = _chroniclePlayers(data);
+    final fieldName = data.getFieldById(widget.match.fieldLocation)?.name ??
+        widget.match.fieldLocation;
+    String? raw;
     try {
-      final content = await _openAiService.chatCompletion(
+      raw = await _openAiService.chatCompletion(
         apiKey: apiKey,
-        model: 'gpt-4o-mini',
-        maxTokens: 1200, // aumentato per contenere le pagelle
-        temperature: 0.85,
+        maxTokens: 1600, // margine per articolo + una pagella per giocatore
+        jsonMode: true,
+        // Con 10+ pagelle la generazione supera facilmente i 12s di default
+        timeout: const Duration(seconds: 45),
         messages: [
-          {'role': 'user', 'content': _buildPrompt()}
+          {
+            'role': 'user',
+            'content': buildChroniclePrompt(widget.match,
+                players: players, fieldName: fieldName),
+          }
         ],
       );
 
-      final raw = content.trim();
-      final clean = raw
-          .replaceAll(RegExp(r'^```json\s*', multiLine: true), '')
-          .replaceAll(RegExp(r'```$', multiLine: true), '')
-          .trim();
-      final json = jsonDecode(clean);
-
-      // Leggi pagelle come Map<String, String>
-      final pagelleRaw = json['pagelle'] as Map<String, dynamic>? ?? {};
-      final pagelle = pagelleRaw.map(
-        (k, v) => MapEntry(k, v?.toString() ?? ''),
+      final result = parseChronicleResponse(
+        raw,
+        nameById: {for (final e in players.entries) e.key: e.value.name},
       );
 
       if (mounted) {
         setState(() {
           _content = _NewspaperContent(
-            headline: (json['headline'] as String? ?? '').toUpperCase(),
-            subheadline: json['subheadline'] as String? ?? '',
-            articleBody: json['articleBody'] as String? ?? '',
+            headline: result.headline,
+            subheadline: result.subheadline,
+            articleBody: result.articleBody,
             isAiGenerated: true,
-            pagelle: pagelle,
+            pagelle: result.pagelle,
           );
           _loading = false;
         });
       }
     } catch (e) {
-      _setStaticFallback();
+      debugPrint('Cronaca AI fallita: $e');
+      if (raw != null) debugPrint('Risposta AI grezza: $raw');
+      _setStaticFallback(aiError: _describeError(e));
     }
   }
 
-  void _setStaticFallback() {
+  void _setStaticFallback({String? aiError}) {
     if (mounted) {
       setState(() {
-        _content = _staticContent();
+        _content = _staticContent(aiError: aiError);
         _loading = false;
       });
     }
@@ -654,11 +650,17 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
 
   Future<void> _init() async {
     final apiKey = await _openAiService.readApiKey();
+    if (!mounted) return;
     if (apiKey != null && apiKey.isNotEmpty) {
       await _generateAiContent(apiKey);
     } else {
       _setStaticFallback();
     }
+  }
+
+  void _retry() {
+    setState(() => _loading = true);
+    _init();
   }
 
   // ── build ─────────────────────────────────────────────────────
@@ -732,6 +734,10 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
                 children: [
                   _NewspaperHeader(dateStr: dateStr, timeStr: timeStr),
 
+                  if (_content!.aiError != null)
+                    _AiErrorBanner(
+                        message: _content!.aiError!, onRetry: _retry),
+
                   _HeadlineBlock(
                     scoreA: widget.match.scoreA,
                     scoreB: widget.match.scoreB,
@@ -768,6 +774,55 @@ Le chiavi di "pagelle" devono essere esattamente gli id dei giocatori forniti so
                 ],
               ),
             ),
+    );
+  }
+}
+
+// ── Banner errore generazione AI ─────────────────────────────────
+
+class _AiErrorBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _AiErrorBanner({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD40000).withValues(alpha: 0.08),
+        border: Border.all(
+            color: const Color(0xFFD40000).withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: Color(0xFFD40000), size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Cronaca AI non disponibile. $message',
+              style: const TextStyle(
+                fontFamily: 'Georgia',
+                fontSize: 11,
+                color: Color(0xFF1A1A1A),
+                height: 1.3,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFD40000)),
+            child: const Text(
+              'RIPROVA',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

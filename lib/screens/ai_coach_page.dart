@@ -461,8 +461,6 @@ ${jsonEncode(playerStats)}
       final responseBuffer = StringBuffer();
       final stream = _openAiService.chatCompletionStream(
         apiKey: widget.apiKey,
-        model: 'gpt-4.1-mini',
-        temperature: 0.4,
         messages: [
           {'role': 'system', 'content': systemPrompt},
           {
@@ -1378,8 +1376,6 @@ ${jsonEncode(contextJson)}
       final responseBuffer = StringBuffer();
       final stream = _openAiService.chatCompletionStream(
         apiKey: widget.apiKey,
-        model: 'gpt-4.1-mini',
-        temperature: 0.3,
         messages: apiMessages,
       );
 

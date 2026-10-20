@@ -8,6 +8,21 @@ import 'package:http/testing.dart';
 
 void main() {
   group('validateApiKey', () {
+    test('uses GET /models (gratuito, non legato a un modello)', () async {
+      late http.Request sent;
+      final client = MockClient((request) async {
+        sent = request;
+        return http.Response('{}', 200);
+      });
+      final service = OpenAiService(client: client);
+
+      await service.validateApiKey('sk-test');
+
+      expect(sent.method, 'GET');
+      expect(sent.url.toString(), 'https://api.openai.com/v1/models');
+      expect(sent.headers['Authorization'], 'Bearer sk-test');
+    });
+
     test('returns true on 200 (chiave valida)', () async {
       final client = MockClient((request) async => http.Response('{}', 200));
       final service = OpenAiService(client: client);
@@ -74,7 +89,10 @@ void main() {
       expect(content, 'ciao squadra');
     });
 
-    test('sends model/maxTokens/temperature in the request body', () async {
+    test(
+        'sends the default model, max_completion_tokens and reasoning_effort '
+        '(no max_tokens/temperature, rifiutati dai modelli di ragionamento)',
+        () async {
       late Map<String, dynamic> sentBody;
       final client = MockClient((request) async {
         sentBody = jsonDecode(request.body) as Map<String, dynamic>;
@@ -93,17 +111,74 @@ void main() {
 
       await service.chatCompletion(
         apiKey: 'sk-test',
-        model: 'gpt-4o-mini',
         maxTokens: 1200,
-        temperature: 0.85,
         messages: [
           {'role': 'user', 'content': 'ping'}
         ],
       );
 
-      expect(sentBody['model'], 'gpt-4o-mini');
-      expect(sentBody['max_tokens'], 1200);
-      expect(sentBody['temperature'], 0.85);
+      expect(sentBody['model'], OpenAiService.chatModel);
+      expect(sentBody['max_completion_tokens'], 1200);
+      expect(sentBody['reasoning_effort'], 'none');
+      expect(sentBody.containsKey('max_tokens'), isFalse);
+      expect(sentBody.containsKey('temperature'), isFalse);
+      expect(sentBody.containsKey('response_format'), isFalse);
+    });
+
+    test('forwards a custom reasoning effort', () async {
+      late Map<String, dynamic> sentBody;
+      final client = MockClient((request) async {
+        sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': 'ok'}
+              }
+            ]
+          }),
+          200,
+        );
+      });
+      final service = OpenAiService(client: client);
+
+      await service.chatCompletion(
+        apiKey: 'sk-test',
+        reasoningEffort: 'low',
+        messages: [
+          {'role': 'user', 'content': 'ping'}
+        ],
+      );
+
+      expect(sentBody['reasoning_effort'], 'low');
+    });
+
+    test('sends response_format when jsonMode is true', () async {
+      late Map<String, dynamic> sentBody;
+      final client = MockClient((request) async {
+        sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': '{}'}
+              }
+            ]
+          }),
+          200,
+        );
+      });
+      final service = OpenAiService(client: client);
+
+      await service.chatCompletion(
+        apiKey: 'sk-test',
+        jsonMode: true,
+        messages: [
+          {'role': 'user', 'content': 'ping'}
+        ],
+      );
+
+      expect(sentBody['response_format'], {'type': 'json_object'});
     });
 
     test('throws OpenAiException with statusCode on non-200', () async {
@@ -184,6 +259,30 @@ void main() {
       expect(deltas.join(), 'ciao squadra');
     });
 
+    test('sends the default model and reasoning_effort, no temperature',
+        () async {
+      late Map<String, dynamic> sentBody;
+      final client = MockClient.streaming((request, bodyStream) async {
+        sentBody = jsonDecode(
+                await bodyStream.transform(utf8.decoder).join())
+            as Map<String, dynamic>;
+        return http.StreamedResponse(Stream.value(sse(['[DONE]'])), 200);
+      });
+      final service = OpenAiService(client: client);
+
+      await service.chatCompletionStream(
+        apiKey: 'sk-test',
+        messages: [
+          {'role': 'user', 'content': 'ping'}
+        ],
+      ).toList();
+
+      expect(sentBody['model'], OpenAiService.chatModel);
+      expect(sentBody['reasoning_effort'], 'none');
+      expect(sentBody['stream'], isTrue);
+      expect(sentBody.containsKey('temperature'), isFalse);
+    });
+
     test('ignores malformed SSE lines instead of throwing', () async {
       final client = MockClient.streaming((request, bodyStream) async {
         final body = utf8.encode(
@@ -233,6 +332,27 @@ void main() {
   });
 
   group('generateImageBase64', () {
+    test('sends the default image model and portrait size', () async {
+      late Map<String, dynamic> sentBody;
+      final client = MockClient((request) async {
+        sentBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'data': [
+              {'b64_json': 'AAAA'}
+            ]
+          }),
+          200,
+        );
+      });
+      final service = OpenAiService(client: client);
+
+      await service.generateImageBase64(apiKey: 'sk-test', prompt: 'cover');
+
+      expect(sentBody['model'], OpenAiService.imageModel);
+      expect(sentBody['size'], '1024x1536');
+    });
+
     test('returns the base64 payload on 200', () async {
       final client = MockClient((request) async {
         return http.Response(

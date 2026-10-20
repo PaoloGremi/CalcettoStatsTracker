@@ -27,8 +27,26 @@ class OpenAiService {
       : _storage = storage ?? const FlutterSecureStorage(),
         _client = client ?? http.Client();
 
+  /// Modello testuale usato da tutte le funzioni AI dell'app. È il
+  /// sostituto indicato da OpenAI per gpt-4o-mini e gpt-4.1-mini, ritirati
+  /// dall'API il 14 gennaio 2027. È un modello di ragionamento: non accetta
+  /// `max_tokens` (si usa `max_completion_tokens`) e non gli passiamo
+  /// `temperature`.
+  static const chatModel = 'gpt-6-luna';
+
+  /// Sostituto di gpt-image-1 (spento dall'API il 23 ottobre 2026).
+  static const imageModel = 'gpt-image-2.5-flare';
+
+  /// Ragionamento disattivato: le funzioni dell'app sono generazione di
+  /// testo, dove non serve, ed è il comportamento più vicino ai vecchi
+  /// modelli. Con un effort più alto i token di ragionamento consumano
+  /// anche il budget di `max_completion_tokens`.
+  static const defaultReasoningEffort = 'none';
+
   static const _storageKey = 'openai_api_key';
   static const _defaultTimeout = Duration(seconds: 12);
+  // La generazione immagini può richiedere fino a ~2 minuti.
+  static const _imageTimeout = Duration(minutes: 3);
   static const _baseUrl = 'https://api.openai.com/v1';
 
   final FlutterSecureStorage _storage;
@@ -41,8 +59,9 @@ class OpenAiService {
 
   Future<void> deleteApiKey() => _storage.delete(key: _storageKey);
 
-  /// Verifica che [key] sia una chiave OpenAI valida con una chiamata di
-  /// test a costo minimo (`max_tokens: 1`).
+  /// Verifica che [key] sia una chiave OpenAI valida elencando i modelli
+  /// (`GET /models`): è gratuita e non dipende da un modello specifico,
+  /// quindi non va aggiornata quando OpenAI ritira un modello.
   ///
   /// Comportamento preservato intenzionalmente da `api_key_setup_page.dart`:
   /// solo un 401 (autenticazione fallita) invalida la chiave; quota/billing
@@ -54,17 +73,7 @@ class OpenAiService {
   Future<bool> validateApiKey(String key) async {
     try {
       final response = await _client
-          .post(
-            Uri.parse('$_baseUrl/chat/completions'),
-            headers: _headers(key),
-            body: jsonEncode({
-              'model': 'gpt-4o-mini',
-              'messages': [
-                {'role': 'user', 'content': 'ping'}
-              ],
-              'max_tokens': 1,
-            }),
-          )
+          .get(Uri.parse('$_baseUrl/models'), headers: _headers(key))
           .timeout(_defaultTimeout);
 
       if (response.statusCode == 200) return true;
@@ -80,12 +89,20 @@ class OpenAiService {
 
   /// Chat completion non in streaming. Ritorna il testo generato o solleva
   /// [OpenAiException] se la risposta non è 200.
+  ///
+  /// [maxTokens] viene inviato come `max_completion_tokens` e include gli
+  /// eventuali token di ragionamento.
+  ///
+  /// Con [jsonMode] attivo l'API garantisce che la risposta sia un oggetto
+  /// JSON valido (`response_format: json_object`); il prompt deve comunque
+  /// menzionare esplicitamente "JSON", altrimenti OpenAI risponde 400.
   Future<String> chatCompletion({
     required String apiKey,
     required List<Map<String, String>> messages,
-    String model = 'gpt-4o-mini',
+    String model = chatModel,
     int? maxTokens,
-    double? temperature,
+    String reasoningEffort = defaultReasoningEffort,
+    bool jsonMode = false,
     Duration timeout = _defaultTimeout,
   }) async {
     final response = await _client
@@ -95,8 +112,9 @@ class OpenAiService {
           body: jsonEncode({
             'model': model,
             'messages': messages,
-            if (maxTokens != null) 'max_tokens': maxTokens,
-            if (temperature != null) 'temperature': temperature,
+            if (maxTokens != null) 'max_completion_tokens': maxTokens,
+            'reasoning_effort': reasoningEffort,
+            if (jsonMode) 'response_format': {'type': 'json_object'},
           }),
         )
         .timeout(timeout);
@@ -120,8 +138,8 @@ class OpenAiService {
   Stream<String> chatCompletionStream({
     required String apiKey,
     required List<Map<String, String>> messages,
-    String model = 'gpt-4.1-mini',
-    double? temperature,
+    String model = chatModel,
+    String reasoningEffort = defaultReasoningEffort,
   }) async* {
     final request =
         http.Request('POST', Uri.parse('$_baseUrl/chat/completions'));
@@ -129,7 +147,7 @@ class OpenAiService {
     request.body = jsonEncode({
       'model': model,
       'messages': messages,
-      if (temperature != null) 'temperature': temperature,
+      'reasoning_effort': reasoningEffort,
       'stream': true,
     });
 
@@ -169,7 +187,7 @@ class OpenAiService {
   Future<String> generateImageBase64({
     required String apiKey,
     required String prompt,
-    String model = 'gpt-image-1',
+    String model = imageModel,
     String size = '1024x1536',
   }) async {
     final response = await _client
@@ -183,7 +201,7 @@ class OpenAiService {
             'size': size,
           }),
         )
-        .timeout(_defaultTimeout);
+        .timeout(_imageTimeout);
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
 
