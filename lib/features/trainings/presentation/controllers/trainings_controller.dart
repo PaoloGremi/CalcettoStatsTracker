@@ -24,6 +24,9 @@ class TrainingsController extends ChangeNotifier {
   final DeleteTraining _deleteTraining;
   final DateTime Function() _clock;
 
+  /// "Oggi" secondo l'orologio iniettato (per le etichette Oggi/Ieri).
+  DateTime get today => _clock();
+
   List<Training> _trainings = const [];
 
   /// Dal più recente.
