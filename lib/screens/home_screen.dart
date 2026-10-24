@@ -11,6 +11,10 @@ import '../core/util/player_lookup.dart';
 import '../services/data_service.dart';
 import '../theme/app_theme.dart';
 import '../features/players/presentation/pages/players_page.dart';
+import '../core/di/service_locator.dart';
+import '../features/trainings/presentation/controllers/trainings_controller.dart';
+import '../features/trainings/presentation/pages/training_form_page.dart';
+import '../features/trainings/presentation/widgets/home_trainings_card.dart';
 import 'match_promo_form_page.dart';
 import 'new_match_screen.dart';
 import 'history_match.dart';
@@ -31,10 +35,66 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   AppSettings _settings = const AppSettings();
 
+  /// Condiviso tra la card in home e il "Nuovo allenamento" del +, così la
+  /// card si aggiorna dopo un salvataggio.
+  final TrainingsController _trainings = getIt<TrainingsController>();
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _trainings.load();
+  }
+
+  @override
+  void dispose() {
+    _trainings.dispose();
+    super.dispose();
+  }
+
+  /// Il + centrale: nuova partita o nuovo allenamento.
+  Future<void> _showAddSheet() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.sports_soccer_rounded,
+                  color: AppTheme.accentGreen),
+              title: Text('Nuova partita',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () => Navigator.pop(ctx, 'match'),
+            ),
+            ListTile(
+              leading: Icon(Icons.directions_run_rounded,
+                  color: AppTheme.accentBlue),
+              title: Text('Nuovo allenamento',
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () => Navigator.pop(ctx, 'training'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'match') {
+      await Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const NewMatchScreen()));
+      if (mounted) setState(() {});
+    } else {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider<TrainingsController>.value(
+            value: _trainings,
+            child: const TrainingFormPage(),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -170,6 +230,9 @@ class _HomeScreenState extends State<HomeScreen> {
           // ── News Ticker ────────────────────────────────────────
           const SmartNewsTicker(),
 
+          // ── Allenamenti ────────────────────────────────────────
+          HomeTrainingsCard(controller: _trainings),
+
           // ── Info giocatore principale ─────────────────────────
           Expanded(
             flex: 4,
@@ -255,9 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             // Bottone centrale add
             GestureDetector(
-              onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const NewMatchScreen()))
-                  .then((_) => setState(() {})),
+              onTap: _showAddSheet,
               child: Container(
                 width: 56,
                 height: 56,
