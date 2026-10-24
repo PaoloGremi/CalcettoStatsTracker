@@ -44,6 +44,11 @@ Operations that can fail return `Result<T>` (a custom sealed class in [`lib/core
 - `getIt` must be reset in `tearDown(() async { await getIt.reset(); })` in any test that calls `setupServiceLocator()`.
 - Widget tests wrap the widget in `MaterialApp` + `ChangeNotifierProvider<T>.value(value: controller, ...)`.
 
+## Theme (light/dark)
+- `AppTheme` colors are **static getters**, not `const`: they read `AppTheme.isLight`, toggled by `ThemeController` (persisted in SharedPreferences, loaded in `main()`). Never wrap them in `const` and never use them as default parameter values — use a nullable param + `?? AppTheme.x` in `build`.
+- On a theme change `CalcettoApp` marks the whole element tree dirty, so widgets reading `AppTheme.*` update without `Theme.of`. A `CustomPainter` that reads `AppTheme.*` must include the theme in `shouldRepaint`.
+- Prefer `AppTheme` tokens over hardcoded `Colors.white`/`Color(0xFF1x1x1x)` on normal surfaces; hardcoded colors are fine on photos, the pitch, and self-styled sections (newspaper cards, AI coach).
+
 ## Utilities
 - [`resolvePlayerName(id)`](lib/core/util/player_lookup.dart) — resolves player name from Hive by id with a fallback; use this everywhere instead of inline `HiveBoxes.playersBox.get(id)?.name` lookups.
 - [`lib/data/player_icons.dart`](lib/data/player_icons.dart) — canonical list of available player icon names.

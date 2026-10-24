@@ -50,13 +50,12 @@ class MatchDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Dettaglio Partita',
+        title: FifaLabel('Dettaglio Partita',
             color: AppTheme.textPrimary, fontSize: 13),
         actions: [
           IconButton(
             tooltip: 'Prima Pagina',
-            icon:
-                const Icon(Icons.newspaper_rounded, color: AppTheme.accentGold),
+            icon: Icon(Icons.newspaper_rounded, color: AppTheme.accentGold),
             onPressed: () => _showGenerationMenu(context),
           ),
         ],
@@ -129,14 +128,12 @@ class MatchDetailScreen extends StatelessWidget {
           ),
 
           // ── Team A ────────────────────────────────────────────
-          const FifaSectionHeader('Squadra Bianca',
-              accent: AppTheme.accentBlue),
+          FifaSectionHeader('Squadra Bianca', accent: AppTheme.accentBlue),
           ...match.teamA.map((id) => _PlayerDetailTile(
               playerId: id, match: match, voteColor: _voteColor)),
 
           // ── Team B ────────────────────────────────────────────
-          const FifaSectionHeader('Squadra Colorata',
-              accent: AppTheme.accentOrange),
+          FifaSectionHeader('Squadra Colorata', accent: AppTheme.accentOrange),
           ...match.teamB.map((id) => _PlayerDetailTile(
               playerId: id, match: match, voteColor: _voteColor)),
 
@@ -161,7 +158,7 @@ class MatchDetailScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Center(
+                Center(
                   child: FifaLabel(
                     'Scegli il formato della Prima Pagina',
                     color: AppTheme.textPrimary,
@@ -170,21 +167,21 @@ class MatchDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 ListTile(
-                  leading: const Icon(Icons.article_rounded,
+                  leading: Icon(Icons.article_rounded,
                       color: AppTheme.accentGold, size: 28),
-                  title: const Text(
+                  title: Text(
                     'Cronaca Testuale AI',
                     style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.bold),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Genera il testo in stile Gazzetta dello Sport',
                     style:
                         TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                   ),
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppTheme.textMuted),
+                  trailing:
+                      Icon(Icons.chevron_right, color: AppTheme.textMuted),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     Navigator.of(pageContext).push(
@@ -194,23 +191,23 @@ class MatchDetailScreen extends StatelessWidget {
                     );
                   },
                 ),
-                const Divider(color: AppTheme.border, height: 20),
+                Divider(color: AppTheme.border, height: 20),
                 ListTile(
-                  leading: const Icon(Icons.image_rounded,
+                  leading: Icon(Icons.image_rounded,
                       color: AppTheme.accentGreen, size: 28),
-                  title: const Text(
+                  title: Text(
                     'Copertina Illustrata AI',
                     style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.bold),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Genera una vignetta/immagine epica della partita',
                     style:
                         TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                   ),
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppTheme.textMuted),
+                  trailing:
+                      Icon(Icons.chevron_right, color: AppTheme.textMuted),
                   onTap: () {
                     Navigator.pop(sheetContext);
                     showDialog(
@@ -223,7 +220,7 @@ class MatchDetailScreen extends StatelessWidget {
                               color:
                                   AppTheme.accentGreen.withValues(alpha: 0.3)),
                         ),
-                        title: const Row(
+                        title: Row(
                           children: [
                             Icon(Icons.image_rounded,
                                 color: AppTheme.accentGreen, size: 20),
@@ -232,7 +229,7 @@ class MatchDetailScreen extends StatelessWidget {
                                 color: AppTheme.textPrimary, fontSize: 13),
                           ],
                         ),
-                        content: const Text(
+                        content: Text(
                           'Verrà generata un\'immagine con l\'AI di OpenAI (${OpenAiService.imageModel}).\n\n'
                           'Ogni generazione ha un costo non irrisorio sulla tua chiave API OpenAI. '
                           'Vuoi procedere?',
@@ -245,7 +242,7 @@ class MatchDetailScreen extends StatelessWidget {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dialogContext),
-                            child: const Text(
+                            child: Text(
                               'ANNULLA',
                               style: TextStyle(
                                 color: AppTheme.textMuted,
@@ -399,7 +396,7 @@ class _PlayerDetailTile extends StatelessWidget {
                   Row(
                     children: [
                       Text(name.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
@@ -429,7 +426,7 @@ class _PlayerDetailTile extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           goals == 1 ? '1 gol' : '$goals gol',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.accentGreen,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -441,7 +438,7 @@ class _PlayerDetailTile extends StatelessWidget {
                   if (commento.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text('"$commento"',
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 11,
                             fontStyle: FontStyle.italic)),
@@ -1679,7 +1676,7 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Copertina Illustrata AI',
+        title: FifaLabel('Copertina Illustrata AI',
             color: AppTheme.textPrimary, fontSize: 13),
         backgroundColor: AppTheme.surface,
       ),
@@ -1688,7 +1685,7 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(color: AppTheme.accentGreen),
+                  CircularProgressIndicator(color: AppTheme.accentGreen),
                   const SizedBox(height: 16),
                   Text(
                     'DALL-E STA DIPINGENDO LA COPERTINA...',
@@ -1704,7 +1701,7 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
                 ? Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Text(_errorMsg!,
-                        style: const TextStyle(color: AppTheme.accentRed),
+                        style: TextStyle(color: AppTheme.accentRed),
                         textAlign: TextAlign.center),
                   )
                 : SingleChildScrollView(
@@ -1719,7 +1716,7 @@ Looks like an official post-match graphic published by UEFA, Champions League, E
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
+                        Text(
                           "✦ Opera generata dall'intelligenza artificiale di OpenAI basata sui dati reali del match.",
                           style: TextStyle(
                               color: AppTheme.textMuted,

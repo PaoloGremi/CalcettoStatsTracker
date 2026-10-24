@@ -105,7 +105,7 @@ class _ResultsTab extends StatelessWidget {
 
       // ── Win-Rate Rolling ──────────────────────────────
       if (winRatePoints.length >= 2) ...[
-        const FifaSectionHeader('Win-Rate (rolling 5 partite)',
+        FifaSectionHeader('Win-Rate (rolling 5 partite)',
             accent: AppTheme.accentGreen),
         _ChartCard(
           child: LineChart(
@@ -135,8 +135,7 @@ class _ResultsTab extends StatelessWidget {
                     reservedSize: 34,
                     getTitlesWidget: (v, _) => Text(
                       '${v.toInt()}%',
-                      style: const TextStyle(
-                          color: AppTheme.textMuted, fontSize: 10),
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
                     ),
                   ),
                 ),
@@ -157,7 +156,7 @@ class _ResultsTab extends StatelessWidget {
                         return const SizedBox();
                       }
                       return Text(dateLabels[i],
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppTheme.textMuted, fontSize: 9));
                     },
                   ),
@@ -194,7 +193,7 @@ class _ResultsTab extends StatelessWidget {
                     final date = i < dateLabels.length ? dateLabels[i] : '';
                     return LineTooltipItem(
                       '$date\n${s.y.toStringAsFixed(0)}% vittorie',
-                      const TextStyle(
+                      TextStyle(
                           color: AppTheme.accentGreen,
                           fontWeight: FontWeight.w800,
                           fontSize: 12),
@@ -218,7 +217,7 @@ class _ResultsTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text('50% (pareggio tendenziale)',
+              Text('50% (pareggio tendenziale)',
                   style: TextStyle(color: AppTheme.textMuted, fontSize: 10)),
             ],
           ),

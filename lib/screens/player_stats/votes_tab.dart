@@ -35,7 +35,7 @@ class _VotesTab extends StatelessWidget {
     final sections = <Widget>[
       // ── Grafico voti nel tempo ────────────────────────
       if (votePoints.length >= 2) ...[
-        const FifaSectionHeader('Andamento Voti', accent: AppTheme.accentGold),
+        FifaSectionHeader('Andamento Voti', accent: AppTheme.accentGold),
         _ChartCard(
           child: LineChart(
             LineChartData(
@@ -59,8 +59,7 @@ class _VotesTab extends StatelessWidget {
                     reservedSize: 28,
                     getTitlesWidget: (v, _) => Text(
                       v.toInt().toString(),
-                      style: const TextStyle(
-                          color: AppTheme.textMuted, fontSize: 10),
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
                     ),
                   ),
                 ),
@@ -77,8 +76,8 @@ class _VotesTab extends StatelessWidget {
                       }
                       return Text(
                         dateLabels[i],
-                        style: const TextStyle(
-                            color: AppTheme.textMuted, fontSize: 9),
+                        style:
+                            TextStyle(color: AppTheme.textMuted, fontSize: 9),
                       );
                     },
                   ),
@@ -132,7 +131,7 @@ class _VotesTab extends StatelessWidget {
                     final date = i < dateLabels.length ? dateLabels[i] : '';
                     return LineTooltipItem(
                       '$date\n${s.y.toStringAsFixed(1)}',
-                      const TextStyle(
+                      TextStyle(
                         color: AppTheme.accentGold,
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
@@ -187,7 +186,7 @@ class _VotesTab extends StatelessWidget {
                             return const SizedBox();
                           }
                           return Text(v.toInt().toString(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 10));
                         },
                       ),
@@ -203,7 +202,7 @@ class _VotesTab extends StatelessWidget {
                             return const SizedBox();
                           }
                           return Text(labels[i],
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 9));
                         },
                       ),
@@ -247,7 +246,7 @@ class _VotesTab extends StatelessWidget {
                         final labels = ['1-2', '3-4', '5-6', '7-8', '9-10'];
                         return BarTooltipItem(
                           'Voto ${labels[group.x]}\n${rod.toY.toInt()} volte',
-                          const TextStyle(
+                          TextStyle(
                               color: AppTheme.textPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: 12),
@@ -285,7 +284,7 @@ class _VotesTab extends StatelessWidget {
                         reservedSize: 28,
                         getTitlesWidget: (v, _) => Text(
                           v.toInt().toString(),
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppTheme.textMuted, fontSize: 10),
                         ),
                       ),
@@ -308,7 +307,7 @@ class _VotesTab extends StatelessWidget {
                               int.parse(parts[0]), int.parse(parts[1]));
                           return Text(
                             formatMonthYearShort(dt),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textMuted, fontSize: 9),
                           );
                         },
@@ -359,7 +358,7 @@ class _VotesTab extends StatelessWidget {
                             DateFormat('MMM yyyy', 'it_IT').format(dt);
                         return LineTooltipItem(
                           '$label\n${s.y.toStringAsFixed(1)}',
-                          const TextStyle(
+                          TextStyle(
                               color: AppTheme.accentGold,
                               fontWeight: FontWeight.w800,
                               fontSize: 12),
@@ -410,7 +409,7 @@ class _VotesTab extends StatelessWidget {
                               reservedSize: 28,
                               getTitlesWidget: (v, _) => Text(
                                 v.toInt().toString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: AppTheme.textMuted, fontSize: 10),
                               ),
                             ),
@@ -430,7 +429,7 @@ class _VotesTab extends StatelessWidget {
                                   return const SizedBox();
                                 }
                                 return Text(labels[i],
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         color: AppTheme.textMuted,
                                         fontSize: 9));
                               },
@@ -482,7 +481,7 @@ class _VotesTab extends StatelessWidget {
                               if (avg == 0) return null;
                               return BarTooltipItem(
                                 '${labels[group.x]}\n${avg.toStringAsFixed(1)}',
-                                const TextStyle(
+                                TextStyle(
                                     color: AppTheme.textPrimary,
                                     fontWeight: FontWeight.w800,
                                     fontSize: 12),
@@ -538,7 +537,7 @@ class _VotesTab extends StatelessWidget {
 
       // ── Trend Voto con Media Mobile ───────────────────
       if (votePoints.length >= PlayerStatsSummary.movingWindow) ...[
-        const FifaSectionHeader('Trend Voto (Media Mobile)',
+        FifaSectionHeader('Trend Voto (Media Mobile)',
             accent: AppTheme.accentGold),
         _ChartCard(
           child: LineChart(
@@ -561,8 +560,7 @@ class _VotesTab extends StatelessWidget {
                     reservedSize: 28,
                     getTitlesWidget: (v, _) => Text(
                       v.toInt().toString(),
-                      style: const TextStyle(
-                          color: AppTheme.textMuted, fontSize: 10),
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
                     ),
                   ),
                 ),
@@ -578,7 +576,7 @@ class _VotesTab extends StatelessWidget {
                       final step = (matches.length / 5).ceil().clamp(1, 99);
                       if (i % step != 0) return const SizedBox();
                       return Text(dateLabels[i],
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppTheme.textMuted, fontSize: 9));
                     },
                   ),
@@ -653,7 +651,7 @@ class _VotesTab extends StatelessWidget {
                   height: 2,
                   color: AppTheme.textMuted.withValues(alpha: 0.4)),
               const SizedBox(width: 6),
-              const Text('Voto singola partita',
+              Text('Voto singola partita',
                   style: TextStyle(color: AppTheme.textMuted, fontSize: 10)),
               const SizedBox(width: 18),
               Container(
@@ -664,7 +662,7 @@ class _VotesTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(2),
                   )),
               const SizedBox(width: 6),
-              const Text('Media mobile (5 partite)',
+              Text('Media mobile (5 partite)',
                   style: TextStyle(
                       color: AppTheme.accentGold,
                       fontSize: 10,
@@ -829,7 +827,7 @@ class _ConsistencyCard extends StatelessWidget {
                     top: -20,
                     child: Text(
                       avgVote.toStringAsFixed(1),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.accentBlue,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
@@ -846,16 +844,14 @@ class _ConsistencyCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('min ${worstVote.toStringAsFixed(1)}',
-                  style:
-                      const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 10)),
               Text('media',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.accentBlue,
                       fontSize: 10,
                       fontWeight: FontWeight.w700)),
               Text('max ${bestVote.toStringAsFixed(1)}',
-                  style:
-                      const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 10)),
             ],
           ),
           const SizedBox(height: 16),

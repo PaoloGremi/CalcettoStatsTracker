@@ -26,7 +26,7 @@ class _RecordStreaksCard extends StatelessWidget {
             Text(
               s == null ? '' : _range(s),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
             ),
           ],
         ),

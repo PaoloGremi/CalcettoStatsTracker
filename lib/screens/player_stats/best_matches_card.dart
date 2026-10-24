@@ -36,14 +36,12 @@ class _BestMatchesCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(formatShortDate(m.date),
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary, fontSize: 11)),
+                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 11)),
               if (fieldName.isNotEmpty)
                 Text(fieldName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 10)),
+                    style: TextStyle(color: AppTheme.textMuted, fontSize: 10)),
             ],
           ),
         ),

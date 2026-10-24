@@ -44,18 +44,18 @@ class _PlayerSearchFieldState extends State<PlayerSearchField> {
         setState(() {});
       },
       textInputAction: TextInputAction.search,
-      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+      style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
       decoration: InputDecoration(
         isDense: true,
         hintText: widget.hintText,
-        hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
-        prefixIcon: const Icon(Icons.search_rounded,
-            color: AppTheme.textSecondary, size: 20),
+        hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+        prefixIcon:
+            Icon(Icons.search_rounded, color: AppTheme.textSecondary, size: 20),
         suffixIcon: _controller.text.isEmpty
             ? null
             : IconButton(
                 tooltip: 'Cancella ricerca',
-                icon: const Icon(Icons.close_rounded,
+                icon: Icon(Icons.close_rounded,
                     color: AppTheme.textSecondary, size: 18),
                 onPressed: _clear,
               ),

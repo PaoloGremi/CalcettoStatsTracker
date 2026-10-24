@@ -12,7 +12,7 @@ class _WeekdayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxGames = stats.map((s) => s.games).reduce(math.max);
-    const mutedStyle = TextStyle(color: AppTheme.textMuted, fontSize: 9);
+    final mutedStyle = TextStyle(color: AppTheme.textMuted, fontSize: 9);
     return _ChartCard(
       child: BarChart(
         BarChartData(
@@ -40,7 +40,7 @@ class _WeekdayCard extends StatelessWidget {
                     child: Column(
                       children: [
                         Text(_labels[s.weekday - 1],
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800)),
@@ -70,7 +70,7 @@ class _WeekdayCard extends StatelessWidget {
             touchTooltipData: BarTouchTooltipData(
               getTooltipItem: (group, _, rod, __) => BarTooltipItem(
                 '${stats[group.x].games} partite',
-                const TextStyle(
+                TextStyle(
                   color: AppTheme.accentBlue,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,

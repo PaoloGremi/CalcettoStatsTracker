@@ -111,7 +111,7 @@ class _VoteScreenState extends State<VoteScreen> {
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: '0',
               hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 18),
               border: InputBorder.none,
@@ -211,7 +211,7 @@ class _VoteScreenState extends State<VoteScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(name.toUpperCase(),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textPrimary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w900,
@@ -286,9 +286,8 @@ class _VoteScreenState extends State<VoteScreen> {
                     controller: _commentControllers[id],
                     onChanged: (text) => widget.match.comments[id] = text,
                     maxLines: 2,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary, fontSize: 13),
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
                       hintText: 'Commento opzionale...',
                       hintStyle:
                           TextStyle(color: AppTheme.textMuted, fontSize: 12),
@@ -310,7 +309,7 @@ class _VoteScreenState extends State<VoteScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Vota i Giocatori',
+        title: FifaLabel('Vota i Giocatori',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -370,7 +369,7 @@ class _VoteScreenState extends State<VoteScreen> {
                       ),
                       child: Text(
                         '$_remainingGoals rimasti',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.accentGold,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -388,7 +387,7 @@ class _VoteScreenState extends State<VoteScreen> {
                             color:
                                 AppTheme.accentGreen.withValues(alpha: 0.35)),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Completo ✓',
                         style: TextStyle(
                           color: AppTheme.accentGreen,
@@ -411,7 +410,7 @@ class _VoteScreenState extends State<VoteScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          border: const Border(top: BorderSide(color: AppTheme.border)),
+          border: Border(top: BorderSide(color: AppTheme.border)),
         ),
         child: ElevatedButton(
           onPressed: () async {

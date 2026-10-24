@@ -102,14 +102,14 @@ class PlayersView extends StatelessWidget {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(color: AppTheme.accentRed.withValues(alpha: 0.4))),
-        title: const FifaLabel('Elimina Giocatore?',
+        title: FifaLabel('Elimina Giocatore?',
             color: AppTheme.accentRed, fontSize: 11),
-        content: const Text('Il giocatore verrà rimosso da tutte le partite.',
+        content: Text('Il giocatore verrà rimosso da tutte le partite.',
             style: TextStyle(color: AppTheme.textSecondary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const FifaLabel('No', color: AppTheme.textSecondary)),
+              child: FifaLabel('No', color: AppTheme.textSecondary)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accentRed,
@@ -137,7 +137,7 @@ class PlayersView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Rosa Giocatori',
+        title: FifaLabel('Rosa Giocatori',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -145,7 +145,7 @@ class PlayersView extends StatelessWidget {
         ),
       ),
       body: controller.isLoading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppTheme.accentGreen))
           : controller.players.isEmpty
               ? const _EmptyState(
@@ -230,7 +230,7 @@ class _PlayerRow extends StatelessWidget {
             imagePath: player.imagePath,
             radius: 22),
         title: Text(player.name.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -255,12 +255,12 @@ class _PlayerRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.edit_rounded,
+              icon: Icon(Icons.edit_rounded,
                   color: AppTheme.textSecondary, size: 20),
               onPressed: onEdit,
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded,
+              icon: Icon(Icons.delete_outline_rounded,
                   color: AppTheme.accentRed, size: 20),
               onPressed: onDelete,
             ),

@@ -123,7 +123,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
                       ? 'Voto medio con i compagni'
                       : 'Voto medio contro gli avversari',
                   key: ValueKey(_showTeammates),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textMuted,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -163,8 +163,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
                   _showTeammates
                       ? 'Nessun compagno trovato.'
                       : 'Nessun avversario trovato.',
-                  style:
-                      const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 ),
               ),
             )
@@ -181,7 +180,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
           // ── Tooltip peer selezionato ─────────────────────────
           if (_tappedId != null) ...[
             const SizedBox(height: 10),
-            const Divider(height: 1, color: AppTheme.border),
+            Divider(height: 1, color: AppTheme.border),
             _buildTooltip(
               peers.firstWhere((p) => p.peer.id == _tappedId,
                   orElse: () => peers.first),
@@ -256,7 +255,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
                     child: Text(
                       stat.peer.name.toUpperCase(),
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.w900,
@@ -268,8 +267,7 @@ class _ChemistryRadarChartState extends State<ChemistryRadarChart> {
                 const SizedBox(height: 4),
                 Text(
                   '${stat.gamesCount} partite insieme',
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                 ),
               ],
             ),

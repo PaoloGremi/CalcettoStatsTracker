@@ -20,7 +20,7 @@ class _EmptyTab extends StatelessWidget {
   const _EmptyTab();
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: FifaLabel(
@@ -109,7 +109,7 @@ class _LegendRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -194,7 +194,7 @@ class _ConsistStat extends StatelessWidget {
                   color: color, fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 10)),
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 10)),
         ],
       );
 }

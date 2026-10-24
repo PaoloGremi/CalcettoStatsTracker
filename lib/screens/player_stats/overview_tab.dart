@@ -206,7 +206,7 @@ class _OverviewTab extends StatelessWidget {
                               // Data sotto
                               Text(
                                 formatShortDate(r.date),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.textMuted,
                                   fontSize: 8,
                                 ),
@@ -387,13 +387,11 @@ class _RadarCardState extends State<_RadarCard> {
                 tickCount: 4,
                 ticksTextStyle:
                     const TextStyle(color: Colors.transparent, fontSize: 0),
-                radarBorderData:
-                    const BorderSide(color: AppTheme.border, width: 1),
-                gridBorderData:
-                    const BorderSide(color: AppTheme.border, width: 1),
+                radarBorderData: BorderSide(color: AppTheme.border, width: 1),
+                gridBorderData: BorderSide(color: AppTheme.border, width: 1),
                 tickBorderData: BorderSide(
                     color: AppTheme.border.withValues(alpha: 0.4), width: 1),
-                titleTextStyle: const TextStyle(
+                titleTextStyle: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -558,7 +556,7 @@ class _RadarLegendItem extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textMuted,
               fontSize: 11,
             ),

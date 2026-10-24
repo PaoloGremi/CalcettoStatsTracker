@@ -2,34 +2,58 @@ import 'package:flutter/material.dart';
 
 /// Sistema di design centralizzato — stile FIFA/gaming dark
 class AppTheme {
-  // ── Colori base ───────────────────────────────────────────────
-  static const Color bg = Color(0xFF080808);
-  static const Color surface = Color(0xFF111111);
-  static const Color surfaceAlt = Color(0xFF181818);
-  static const Color border = Color(0xFF2A2A2A);
-  static const Color borderLight = Color(0xFF333333);
+  /// Palette attiva. Viene cambiata da [ThemeController]; i colori sotto
+  /// sono getter (non const) così ogni rebuild legge quella corrente.
+  static bool isLight = false;
 
-  // ── Accenti ───────────────────────────────────────────────────
-  static const Color accentGreen = Color(0xFF00E676);
-  static const Color accentRed = Color(0xFFFF1744);
-  static const Color accentGold = Color(0xFFFFD600);
-  static const Color accentOrange = Color(0xFFFF6D00);
-  static const Color accentBlue = Color(0xFF00B0FF);
+  // ── Colori base ───────────────────────────────────────────────
+  static Color get bg =>
+      isLight ? const Color(0xFFF2F3F5) : const Color(0xFF080808);
+  static Color get surface =>
+      isLight ? const Color(0xFFFFFFFF) : const Color(0xFF111111);
+  static Color get surfaceAlt =>
+      isLight ? const Color(0xFFE9EBEE) : const Color(0xFF181818);
+  static Color get border =>
+      isLight ? const Color(0xFFD5D8DD) : const Color(0xFF2A2A2A);
+  static Color get borderLight =>
+      isLight ? const Color(0xFFC4C8CE) : const Color(0xFF333333);
+
+  // ── Accenti (più scuri in chiaro per restare leggibili su bianco) ──
+  static Color get accentGreen =>
+      isLight ? const Color(0xFF00A152) : const Color(0xFF00E676);
+  static Color get accentRed =>
+      isLight ? const Color(0xFFD50032) : const Color(0xFFFF1744);
+  static Color get accentGold =>
+      isLight ? const Color(0xFFC79400) : const Color(0xFFFFD600);
+  static Color get accentOrange =>
+      isLight ? const Color(0xFFE65100) : const Color(0xFFFF6D00);
+  static Color get accentBlue =>
+      isLight ? const Color(0xFF0081CB) : const Color(0xFF00B0FF);
 
   // ── Testo ─────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF888888);
-  static const Color textMuted = Color(0xFF444444);
+  static Color get textPrimary =>
+      isLight ? const Color(0xFF111111) : const Color(0xFFFFFFFF);
+  static Color get textSecondary =>
+      isLight ? const Color(0xFF5F6368) : const Color(0xFF888888);
+  static Color get textMuted =>
+      isLight ? const Color(0xFF9AA0A6) : const Color(0xFF444444);
+
+  /// Colore "in primo piano" per superfici neutre: bianco in scuro,
+  /// nero in chiaro. Sostituisce i `Colors.white` usati come testo/bordi.
+  static Color get onBg => isLight ? Colors.black : Colors.white;
 
   // ── ThemeData globale ─────────────────────────────────────────
-  static ThemeData get theme => ThemeData.dark().copyWith(
+  static ThemeData get theme =>
+      (isLight ? ThemeData.light() : ThemeData.dark()).copyWith(
         scaffoldBackgroundColor: bg,
-        colorScheme: const ColorScheme.dark(
+        colorScheme:
+            (isLight ? const ColorScheme.light() : const ColorScheme.dark())
+                .copyWith(
           primary: accentGreen,
           secondary: accentGold,
           surface: surface,
         ),
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: bg,
           foregroundColor: textPrimary,
           elevation: 0,
@@ -46,19 +70,19 @@ class AppTheme {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: surfaceAlt,
-          labelStyle: const TextStyle(
-              color: textSecondary, fontSize: 11, letterSpacing: 1.5),
+          labelStyle:
+              TextStyle(color: textSecondary, fontSize: 11, letterSpacing: 1.5),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: border),
+            borderSide: BorderSide(color: border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: border),
+            borderSide: BorderSide(color: border),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: accentGreen, width: 1.5),
+            borderSide: BorderSide(color: accentGreen, width: 1.5),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -78,10 +102,10 @@ class AppTheme {
                   ? accentGreen
                   : Colors.transparent),
           checkColor: WidgetStateProperty.all(Colors.black),
-          side: const BorderSide(color: borderLight, width: 1.5),
+          side: BorderSide(color: borderLight, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
-        sliderTheme: const SliderThemeData(
+        sliderTheme: SliderThemeData(
           activeTrackColor: accentGreen,
           inactiveTrackColor: border,
           thumbColor: accentGreen,
@@ -90,7 +114,7 @@ class AppTheme {
           valueIndicatorTextStyle:
               TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: accentGreen,
           foregroundColor: Colors.black,
         ),
@@ -105,12 +129,12 @@ class AppTheme {
 /// Widget riutilizzabili del design system
 class FifaLabel extends StatelessWidget {
   final String text;
-  final Color color;
+  final Color? color;
   final double fontSize;
 
   const FifaLabel(
     this.text, {
-    this.color = AppTheme.textSecondary,
+    this.color,
     this.fontSize = 10,
     super.key,
   });
@@ -119,7 +143,7 @@ class FifaLabel extends StatelessWidget {
   Widget build(BuildContext context) => Text(
         text.toUpperCase(),
         style: TextStyle(
-          color: color,
+          color: color ?? AppTheme.textSecondary,
           fontSize: fontSize,
           fontWeight: FontWeight.w800,
           letterSpacing: 2.5,
@@ -128,13 +152,13 @@ class FifaLabel extends StatelessWidget {
 }
 
 class FifaDivider extends StatelessWidget {
-  final Color color;
-  const FifaDivider({this.color = AppTheme.border, super.key});
+  final Color? color;
+  const FifaDivider({this.color, super.key});
 
   @override
   Widget build(BuildContext context) => Container(
         height: 1,
-        color: color,
+        color: color ?? AppTheme.border,
         margin: const EdgeInsets.symmetric(vertical: 12),
       );
 }
@@ -177,22 +201,24 @@ class FifaBadge extends StatelessWidget {
 
 class FifaSectionHeader extends StatelessWidget {
   final String title;
-  final Color accent;
-  const FifaSectionHeader(this.title,
-      {this.accent = AppTheme.accentGreen, super.key});
+  final Color? accent;
+  const FifaSectionHeader(this.title, {this.accent, super.key});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Container(
-                width: 3,
-                height: 18,
-                color: accent,
-                margin: const EdgeInsets.only(right: 10)),
-            FifaLabel(title, color: accent, fontSize: 11),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final accent = this.accent ?? AppTheme.accentGreen;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          Container(
+              width: 3,
+              height: 18,
+              color: accent,
+              margin: const EdgeInsets.only(right: 10)),
+          FifaLabel(title, color: accent, fontSize: 11),
+        ],
+      ),
+    );
+  }
 }

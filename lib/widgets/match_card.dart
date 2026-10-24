@@ -9,6 +9,7 @@ import '../models/field_model.dart';
 import '../screens/match_detail_screen.dart';
 import '../screens/edit_match_screen.dart';
 import '../services/data_service.dart';
+import '../theme/app_theme.dart';
 
 class MatchCard extends StatelessWidget {
   final MatchModel match;
@@ -43,9 +44,9 @@ class MatchCard extends StatelessWidget {
   // ── Colore risultato ─────────────────────────────────────────
 
   Color _accentColor() {
-    if (match.scoreA > match.scoreB) return const Color(0xFF00E676);
-    if (match.scoreB > match.scoreA) return const Color(0xFFFF1744);
-    return const Color(0xFFFFD600);
+    if (match.scoreA > match.scoreB) return AppTheme.accentGreen;
+    if (match.scoreB > match.scoreA) return AppTheme.accentRed;
+    return AppTheme.accentGold;
   }
 
   String _resultLabel() {
@@ -263,7 +264,7 @@ class _ScoreSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF0D0D0D),
+      color: AppTheme.surface,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Column(
         children: [
@@ -275,10 +276,10 @@ class _ScoreSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'BIANCHI',
                       style: TextStyle(
-                        color: Color(0xFF999999),
+                        color: AppTheme.textSecondary,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2.5,
@@ -289,8 +290,8 @@ class _ScoreSection extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 3),
                           child: Text(
                             name.toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF666666),
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -336,10 +337,10 @@ class _ScoreSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
+                    Text(
                       'COLORATI',
                       style: TextStyle(
-                        color: Color(0xFF999999),
+                        color: AppTheme.textSecondary,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 2.5,
@@ -350,8 +351,8 @@ class _ScoreSection extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 3),
                           child: Text(
                             name.toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF666666),
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -410,13 +411,10 @@ class _ScoreBox extends StatelessWidget {
       width: 62,
       height: 62,
       decoration: BoxDecoration(
-        color:
-            isWinner ? accent.withValues(alpha: 0.13) : const Color(0xFF1C1C1C),
+        color: isWinner ? accent.withValues(alpha: 0.13) : AppTheme.surfaceAlt,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isWinner
-              ? accent.withValues(alpha: 0.55)
-              : const Color(0xFF2A2A2A),
+          color: isWinner ? accent.withValues(alpha: 0.55) : AppTheme.border,
           width: isWinner ? 2 : 1,
         ),
       ),
@@ -424,7 +422,7 @@ class _ScoreBox extends StatelessWidget {
       child: Text(
         '$score',
         style: TextStyle(
-          color: isWinner ? accent : const Color(0xFF555555),
+          color: isWinner ? accent : AppTheme.textMuted,
           fontSize: 36,
           fontWeight: FontWeight.w900,
           height: 1,
@@ -462,7 +460,7 @@ class _FooterSection extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: AppTheme.surfaceAlt,
         border: Border(
           top: BorderSide(color: accent.withValues(alpha: 0.18), width: 1),
         ),
@@ -476,13 +474,13 @@ class _FooterSection extends StatelessWidget {
                     emoji: '👑',
                     label: 'MVP',
                     name: mvp,
-                    color: const Color(0xFFFFD700))),
+                    color: AppTheme.accentGold)),
 
           if (hasMvp && (hasHustle || hasBestGoal))
             Container(
                 width: 1,
                 height: 34,
-                color: Colors.white10,
+                color: AppTheme.border,
                 margin: const EdgeInsets.symmetric(horizontal: 8)),
 
           if (hasHustle)
@@ -491,13 +489,13 @@ class _FooterSection extends StatelessWidget {
                     emoji: '🔥',
                     label: 'COMBATTIVO',
                     name: hustle,
-                    color: const Color(0xFFFF6D00))),
+                    color: AppTheme.accentOrange)),
 
           if (hasHustle && hasBestGoal)
             Container(
                 width: 1,
                 height: 34,
-                color: Colors.white10,
+                color: AppTheme.border,
                 margin: const EdgeInsets.symmetric(horizontal: 8)),
 
           if (hasBestGoal)
@@ -506,12 +504,12 @@ class _FooterSection extends StatelessWidget {
                     emoji: '⚽',
                     label: 'BEST GOAL',
                     name: bestGoal,
-                    color: const Color(0xFF00E676))),
+                    color: AppTheme.accentGreen)),
 
           if (!hasAny)
-            const Expanded(
+            Expanded(
               child: Text('Nessun premio assegnato',
-                  style: TextStyle(color: Colors.white24, fontSize: 11)),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
             ),
 
           const SizedBox(width: 8),

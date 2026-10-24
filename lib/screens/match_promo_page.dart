@@ -85,7 +85,7 @@ class _MatchPromoPageState extends State<MatchPromoPage>
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Locandina Partita',
+        title: FifaLabel('Locandina Partita',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -232,7 +232,7 @@ class _HeroPoster extends StatelessWidget {
             bottom: 0,
             child: Container(
               width: 4,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -421,7 +421,7 @@ class _VsDivider extends StatelessWidget {
       opacity: CurvedAnimation(parent: listController, curve: Curves.easeOut),
       child: Container(
         margin: EdgeInsets.zero,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border.symmetric(
             horizontal: BorderSide(color: AppTheme.border),
           ),
@@ -516,7 +516,7 @@ class _VsDivider extends StatelessWidget {
                                 color: AppTheme.accentBlue, fontSize: 11),
                             const SizedBox(height: 2),
                             Text('$leftCount giocatori',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: AppTheme.textMuted, fontSize: 10)),
                           ],
                         ),
@@ -559,7 +559,7 @@ class _VsDivider extends StatelessWidget {
                       ],
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
+                    child: Text(
                       'VS',
                       style: TextStyle(
                         color: AppTheme.textPrimary,
@@ -582,7 +582,7 @@ class _VsDivider extends StatelessWidget {
                                 color: AppTheme.accentOrange, fontSize: 11),
                             const SizedBox(height: 2),
                             Text('$rightCount giocatori',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: AppTheme.textMuted, fontSize: 10)),
                           ],
                         ),
@@ -785,7 +785,7 @@ class _PlayerFigCard extends StatelessWidget {
                       children: [
                         Text(
                           name.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
@@ -1027,7 +1027,7 @@ class _FooterBranding extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.sports_soccer_rounded,
+                child: Icon(Icons.sports_soccer_rounded,
                     color: AppTheme.accentGreen, size: 13),
               ),
               const SizedBox(width: 10),

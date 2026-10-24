@@ -92,7 +92,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.border),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             'Nessun dato disponibile.\nServono partite con compagni in comune.',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
@@ -138,13 +138,13 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
                     Container(
                       width: 10,
                       height: 10,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: AppTheme.accentGreen,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Text('gol fatti',
+                    Text('gol fatti',
                         style:
                             TextStyle(color: AppTheme.textMuted, fontSize: 9)),
                     const SizedBox(width: 10),
@@ -157,7 +157,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Text('gol subiti',
+                    Text('gol subiti',
                         style:
                             TextStyle(color: AppTheme.textMuted, fontSize: 9)),
                   ],
@@ -191,7 +191,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
 
           // ── Tooltip giocatore selezionato ──────────────────
           if (_tappedId != null) ...[
-            const Divider(height: 1, color: AppTheme.border),
+            Divider(height: 1, color: AppTheme.border),
             _buildTooltip(chemData.firstWhere((d) => d.playerId == _tappedId,
                 orElse: () => chemData.first)),
           ],
@@ -241,7 +241,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
                     Flexible(
                       child: Text(
                         d.name.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
@@ -255,8 +255,7 @@ class ChemistryBubbleChartState extends State<ChemistryBubbleChart> {
                 const SizedBox(height: 6),
                 Text(
                   '${d.games} partite insieme',
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
                 ),
               ],
             ),
@@ -441,6 +440,8 @@ class _BubblePainter extends CustomPainter {
   final double Function(_ChemistryData) bubbleRadius;
   final double animationValue;
   final Map<String, Offset> centers;
+  // Catturato alla costruzione: forza il repaint quando cambia il tema.
+  final bool isLight = AppTheme.isLight;
 
   _BubblePainter({
     required this.data,
@@ -471,7 +472,7 @@ class _BubblePainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: '$pct%',
-          style: const TextStyle(color: AppTheme.textMuted, fontSize: 8),
+          style: TextStyle(color: AppTheme.textMuted, fontSize: 8),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -566,7 +567,7 @@ class _BubblePainter extends CustomPainter {
       final labelTp = TextPainter(
         text: TextSpan(
           text: shortName,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.textMuted,
             fontSize: 8,
             fontWeight: FontWeight.w700,
@@ -597,6 +598,7 @@ class _BubblePainter extends CustomPainter {
   bool shouldRepaint(_BubblePainter old) =>
       old.tappedId != tappedId ||
       old.data != data ||
+      old.isLight != isLight ||
       old.animationValue != animationValue;
 }
 // ── Data class ────────────────────────────────────────────────
@@ -643,7 +645,7 @@ class _TooltipStat extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w700)),
           Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppTheme.textMuted,
                   fontSize: 8,
                   fontWeight: FontWeight.w600)),

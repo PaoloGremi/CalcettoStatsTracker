@@ -13,6 +13,7 @@ import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/data_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_controller.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -24,14 +25,47 @@ void main() async {
   Hive.registerAdapter(FieldModelAdapter());
   await HiveBoxes.init();
   setupServiceLocator();
+  await getIt<ThemeController>().load();
 
   FlutterNativeSplash.remove(); // rimuove splash nativo, parte Flutter
 
   runApp(const CalcettoApp());
 }
 
-class CalcettoApp extends StatelessWidget {
+class CalcettoApp extends StatefulWidget {
   const CalcettoApp({super.key});
+
+  @override
+  State<CalcettoApp> createState() => _CalcettoAppState();
+}
+
+class _CalcettoAppState extends State<CalcettoApp> {
+  final _themeController = getIt<ThemeController>();
+
+  @override
+  void initState() {
+    super.initState();
+    _themeController.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    _themeController.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  /// I colori di [AppTheme] sono statici: i widget che li leggono non
+  /// dipendono da `Theme.of`, quindi forziamo il rebuild di tutto l'albero
+  /// (route già aperte comprese) mantenendo lo stato e la navigazione.
+  void _onThemeChanged() {
+    setState(() {});
+    void rebuild(Element el) {
+      el.markNeedsBuild();
+      el.visitChildren(rebuild);
+    }
+
+    (context as Element).visitChildren(rebuild);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,13 +73,12 @@ class CalcettoApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<DataService>(
             create: (_) => getIt<DataService>()),
+        ChangeNotifierProvider<ThemeController>.value(value: _themeController),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Champions Calcetto Stats',
         theme: AppTheme.theme,
-        darkTheme: AppTheme.theme,
-        themeMode: ThemeMode.dark,
         home: const SplashScreen(),
         routes: {'/home': (context) => const HomeScreen()},
       ),

@@ -99,8 +99,7 @@ class _PlayerFormDialogState extends State<PlayerFormDialog> {
         ),
       );
     }
-    return const Icon(Icons.add_a_photo_rounded,
-        color: AppTheme.textMuted, size: 28);
+    return Icon(Icons.add_a_photo_rounded, color: AppTheme.textMuted, size: 28);
   }
 
   @override
@@ -111,7 +110,7 @@ class _PlayerFormDialogState extends State<PlayerFormDialog> {
       backgroundColor: AppTheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppTheme.border),
+        side: BorderSide(color: AppTheme.border),
       ),
       title: FifaLabel(
         _isEdit ? 'Modifica Giocatore' : 'Nuovo Giocatore',
@@ -153,7 +152,7 @@ class _PlayerFormDialogState extends State<PlayerFormDialog> {
               const SizedBox(height: 16),
               TextField(
                 controller: _nameCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: TextStyle(color: AppTheme.textPrimary),
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'NOME'),
               ),
@@ -162,7 +161,7 @@ class _PlayerFormDialogState extends State<PlayerFormDialog> {
                 initialValue: _selectedRole,
                 decoration: const InputDecoration(labelText: 'RUOLO'),
                 dropdownColor: AppTheme.surfaceAlt,
-                items: const [
+                items: [
                   DropdownMenuItem(
                       value: 'P',
                       child: Text('P — Portiere',
@@ -190,7 +189,7 @@ class _PlayerFormDialogState extends State<PlayerFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const FifaLabel('Annulla', color: AppTheme.textSecondary),
+          child: FifaLabel('Annulla', color: AppTheme.textSecondary),
         ),
         ElevatedButton(
           style: _isEdit

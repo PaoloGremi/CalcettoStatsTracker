@@ -65,7 +65,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Promuovi Partita',
+        title: FifaLabel('Promuovi Partita',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -89,14 +89,16 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                 );
                 if (date == null || !mounted) return;
                 final time = await showTimePicker(
-                    context: context, initialTime: TimeOfDay.now()); // ignore: use_build_context_synchronously
+                    // ignore: use_build_context_synchronously
+                    context: context,
+                    initialTime: TimeOfDay.now());
                 if (time == null || !mounted) return;
                 setState(() => selectedDateTime = DateTime(
                     date.year, date.month, date.day, time.hour, time.minute));
               },
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_today_rounded,
+                  Icon(Icons.calendar_today_rounded,
                       color: AppTheme.accentGreen, size: 20),
                   const SizedBox(width: 12),
                   Text(
@@ -114,7 +116,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                     ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.chevron_right,
+                  Icon(Icons.chevron_right,
                       color: AppTheme.textMuted, size: 18),
                 ],
               ),
@@ -155,7 +157,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                 MaterialPageRoute(
                                     builder: (_) => const FieldsScreen()),
                               ).then((_) => setState(() {})),
-                              child: const Row(
+                              child: Row(
                                 children: [
                                   Icon(Icons.stadium_rounded,
                                       color: AppTheme.textMuted, size: 18),
@@ -182,7 +184,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                 focusedBorder: InputBorder.none,
                                 contentPadding: EdgeInsets.zero,
                               ),
-                              hint: const Text('— Nessuno —',
+                              hint: Text('— Nessuno —',
                                   style: TextStyle(
                                       color: AppTheme.textMuted, fontSize: 13)),
                               items: allFields
@@ -209,7 +211,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                                 ),
                                               )
                                             else
-                                              const Padding(
+                                              Padding(
                                                 padding:
                                                     EdgeInsets.only(right: 8),
                                                 child: Icon(
@@ -223,7 +225,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(f.name,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                         color: AppTheme
                                                             .textPrimary,
                                                         fontSize: 13,
@@ -231,7 +233,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                                             FontWeight.w700)),
                                                 if (f.address.isNotEmpty)
                                                   Text(f.address,
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                           color: AppTheme
                                                               .textMuted,
                                                           fontSize: 10)),
@@ -247,7 +249,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                               selectedItemBuilder: (_) => allFields
                                   .map((f) => Row(
                                         children: [
-                                          const Padding(
+                                          Padding(
                                             padding: EdgeInsets.only(right: 8),
                                             child: Icon(Icons.stadium_rounded,
                                                 color: AppTheme.textMuted,
@@ -258,7 +260,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                               TextSpan(children: [
                                                 TextSpan(
                                                     text: f.name,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                         color: AppTheme
                                                             .textPrimary,
                                                         fontSize: 13,
@@ -267,7 +269,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                                                 if (f.address.isNotEmpty)
                                                   TextSpan(
                                                       text: ' · ${f.address}',
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                           color: AppTheme
                                                               .textMuted,
                                                           fontSize: 11)),
@@ -297,7 +299,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                               color:
                                   AppTheme.accentGreen.withValues(alpha: 0.35)),
                         ),
-                        child: const Icon(Icons.add_location_alt_rounded,
+                        child: Icon(Icons.add_location_alt_rounded,
                             color: AppTheme.accentGreen, size: 18),
                       ),
                     ),
@@ -318,7 +320,7 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                       .map((f) => DropdownMenuItem(
                             value: f,
                             child: Text(f,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: AppTheme.textPrimary, fontSize: 13)),
                           ))
                       .toList(),
@@ -327,14 +329,14 @@ class _MatchPromoFormPageState extends State<MatchPromoFormPage> {
                 const FifaDivider(),
                 Row(
                   children: [
-                    const Icon(Icons.euro_rounded,
+                    Icon(Icons.euro_rounded,
                         color: AppTheme.accentGreen, size: 18),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
                         controller: _prezzoCtrl,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 13,
                             fontWeight: FontWeight.w700),

@@ -9,6 +9,7 @@ import '../../features/players/domain/usecases/get_all_players.dart';
 import '../../features/players/domain/usecases/update_player.dart';
 import '../../features/players/presentation/controllers/players_controller.dart';
 import '../../services/data_service.dart';
+import '../../theme/theme_controller.dart';
 
 /// Service locator per repository/usecase/servizi che devono essere
 /// facilmente sostituibili nei test (es. con fake/mock).
@@ -24,6 +25,7 @@ void setupServiceLocator() {
   if (getIt.isRegistered<DataService>()) return;
 
   getIt.registerLazySingleton<DataService>(() => DataService());
+  getIt.registerLazySingleton<ThemeController>(() => ThemeController());
 
   // ── Feature: Players ─────────────────────────────────────────
   // Factory (non singleton): ogni schermata Players ottiene la propria

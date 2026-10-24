@@ -224,7 +224,7 @@ class _MilestonesCard extends StatelessWidget {
                               const SizedBox(height: 2),
                               Text(
                                 ms.subtitle,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.textMuted,
                                   fontSize: 11,
                                 ),

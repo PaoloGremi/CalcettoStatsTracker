@@ -39,7 +39,7 @@ class _TeamGoalShareCard extends StatelessWidget {
               ),
               Text(
                 '${(share * 100).round()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.accentRed,
                   fontSize: 24,
                   fontWeight: FontWeight.w900,

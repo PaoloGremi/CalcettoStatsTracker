@@ -74,7 +74,7 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
         backgroundColor: AppTheme.bg,
-        title: const FifaLabel('Calendario Partite',
+        title: FifaLabel('Calendario Partite',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -97,7 +97,7 @@ class _CalendarMatchScreenState extends State<CalendarMatchScreen> {
                   FifaLabel('$_selectedYear',
                       color: AppTheme.accentGold, fontSize: 14),
                   const SizedBox(width: 4),
-                  const Icon(Icons.arrow_drop_down,
+                  Icon(Icons.arrow_drop_down,
                       color: AppTheme.accentGold, size: 20),
                 ],
               ),
@@ -209,7 +209,7 @@ class _MonthGrid extends StatelessWidget {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppTheme.accentGold,
                   ),
@@ -224,7 +224,7 @@ class _MonthGrid extends StatelessWidget {
                 .map((lbl) => Expanded(
                       child: Center(
                         child: Text(lbl,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -315,7 +315,7 @@ class _DayCell extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           '$day',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.textMuted,
             fontSize: 11,
             fontWeight: FontWeight.w400,
@@ -340,7 +340,7 @@ class _DayCell extends StatelessWidget {
             children: [
               Text(
                 '$day',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.accentGold,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -351,7 +351,7 @@ class _DayCell extends StatelessWidget {
                 right: 3,
                 child: Container(
                   padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppTheme.accentGold,
                     shape: BoxShape.circle,
                   ),
@@ -589,7 +589,7 @@ class _MultiMatchSheet extends StatelessWidget {
               ),
               title: Text(
                 _resultLabel(m),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -597,11 +597,9 @@ class _MultiMatchSheet extends StatelessWidget {
               ),
               subtitle: Text(
                 formatTime(m.date),
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 11),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
               ),
-              trailing:
-                  const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+              trailing: Icon(Icons.chevron_right, color: AppTheme.textMuted),
             ),
           ),
           const SizedBox(height: 8),

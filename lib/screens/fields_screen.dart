@@ -39,9 +39,9 @@ class _FieldsScreenState extends State<FieldsScreen> {
           backgroundColor: AppTheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppTheme.border),
+            side: BorderSide(color: AppTheme.border),
           ),
-          title: const Row(children: [
+          title: Row(children: [
             Icon(Icons.stadium_rounded, color: AppTheme.accentGreen, size: 18),
             SizedBox(width: 8),
             FifaLabel('Nuovo Campo', color: AppTheme.accentGreen, fontSize: 11),
@@ -90,7 +90,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                                     color: Colors.black.withValues(alpha: 0.6),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.edit_rounded,
+                                  child: Icon(Icons.edit_rounded,
                                       color: AppTheme.accentGreen, size: 14),
                                 ),
                               ),
@@ -104,7 +104,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
                                       .withValues(alpha: 0.6),
                                   size: 36),
                               const SizedBox(height: 8),
-                              const FifaLabel('Aggiungi Foto',
+                              FifaLabel('Aggiungi Foto',
                                   color: AppTheme.textMuted, fontSize: 9),
                             ],
                           ),
@@ -115,11 +115,11 @@ class _FieldsScreenState extends State<FieldsScreen> {
                 TextField(
                   controller: nameCtrl,
                   textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'NOME CAMPO',
                     hintText: 'es. Campo comunale',
                     prefixIcon: Icon(Icons.stadium_rounded,
@@ -131,11 +131,11 @@ class _FieldsScreenState extends State<FieldsScreen> {
                 TextField(
                   controller: addressCtrl,
                   textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'INDIRIZZO',
                     hintText: 'es. Via Roma 10, Milano',
                     prefixIcon: Icon(Icons.location_on_rounded,
@@ -148,7 +148,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const FifaLabel('Annulla', color: AppTheme.textSecondary),
+              child: FifaLabel('Annulla', color: AppTheme.textSecondary),
             ),
             ElevatedButton(
               onPressed: () {
@@ -181,7 +181,7 @@ class _FieldsScreenState extends State<FieldsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Campi di Gioco',
+        title: FifaLabel('Campi di Gioco',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -197,10 +197,10 @@ class _FieldsScreenState extends State<FieldsScreen> {
                       size: 52,
                       color: AppTheme.textMuted.withValues(alpha: 0.5)),
                   const SizedBox(height: 14),
-                  const FifaLabel('Nessun campo',
+                  FifaLabel('Nessun campo',
                       color: AppTheme.textMuted, fontSize: 12),
                   const SizedBox(height: 6),
-                  const Text('Tocca + per aggiungere il primo',
+                  Text('Tocca + per aggiungere il primo',
                       style:
                           TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                 ],
@@ -252,9 +252,9 @@ class _FieldCard extends StatelessWidget {
           backgroundColor: AppTheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppTheme.border),
+            side: BorderSide(color: AppTheme.border),
           ),
-          title: const Row(children: [
+          title: Row(children: [
             Icon(Icons.edit_location_alt_rounded,
                 color: AppTheme.accentGold, size: 18),
             SizedBox(width: 8),
@@ -309,7 +309,7 @@ class _FieldCard extends StatelessWidget {
                                     color: Colors.black.withValues(alpha: 0.6),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.edit_rounded,
+                                  child: Icon(Icons.edit_rounded,
                                       color: AppTheme.accentGold, size: 14),
                                 ),
                               ),
@@ -323,7 +323,7 @@ class _FieldCard extends StatelessWidget {
                                       .withValues(alpha: 0.6),
                                   size: 36),
                               const SizedBox(height: 8),
-                              const FifaLabel('Cambia Foto',
+                              FifaLabel('Cambia Foto',
                                   color: AppTheme.textMuted, fontSize: 9),
                             ],
                           ),
@@ -333,11 +333,11 @@ class _FieldCard extends StatelessWidget {
                 TextField(
                   controller: nameCtrl,
                   textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'NOME CAMPO',
                     prefixIcon: Icon(Icons.stadium_rounded,
                         color: AppTheme.textMuted, size: 18),
@@ -347,11 +347,11 @@ class _FieldCard extends StatelessWidget {
                 TextField(
                   controller: addressCtrl,
                   textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'INDIRIZZO',
                     prefixIcon: Icon(Icons.location_on_rounded,
                         color: AppTheme.textMuted, size: 18),
@@ -363,7 +363,7 @@ class _FieldCard extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const FifaLabel('Annulla', color: AppTheme.textSecondary),
+              child: FifaLabel('Annulla', color: AppTheme.textSecondary),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -401,16 +401,16 @@ class _FieldCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(color: AppTheme.accentRed.withValues(alpha: 0.4)),
         ),
-        title: const FifaLabel('Elimina Campo?',
+        title: FifaLabel('Elimina Campo?',
             color: AppTheme.accentRed, fontSize: 11),
         content: Text(
           'Vuoi eliminare "${field.name}"?',
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const FifaLabel('No', color: AppTheme.textSecondary),
+            child: FifaLabel('No', color: AppTheme.textSecondary),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -473,7 +473,7 @@ class _FieldCard extends StatelessWidget {
                       size: 36,
                       color: AppTheme.textMuted.withValues(alpha: 0.4)),
                   const SizedBox(height: 6),
-                  const FifaLabel('Nessuna foto',
+                  FifaLabel('Nessuna foto',
                       color: AppTheme.textMuted, fontSize: 9),
                 ],
               ),
@@ -490,7 +490,7 @@ class _FieldCard extends StatelessWidget {
                     children: [
                       Text(
                         field.name.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
@@ -501,13 +501,13 @@ class _FieldCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.location_on_rounded,
+                            Icon(Icons.location_on_rounded,
                                 color: AppTheme.textMuted, size: 12),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 field.address,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.textSecondary,
                                   fontSize: 11,
                                 ),
@@ -522,13 +522,13 @@ class _FieldCard extends StatelessWidget {
                 ),
                 // Edit
                 IconButton(
-                  icon: const Icon(Icons.edit_rounded,
+                  icon: Icon(Icons.edit_rounded,
                       color: AppTheme.textSecondary, size: 20),
                   onPressed: () => _showEditDialog(context),
                 ),
                 // Delete
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded,
+                  icon: Icon(Icons.delete_outline_rounded,
                       color: AppTheme.accentRed, size: 20),
                   onPressed: () => _confirmDelete(context),
                 ),

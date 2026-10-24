@@ -57,7 +57,7 @@ class _SeasonsTab extends StatelessWidget {
                           }
                           return Text(
                             v.toInt().toString(),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textMuted, fontSize: 10),
                           );
                         },
@@ -81,7 +81,7 @@ class _SeasonsTab extends StatelessWidget {
                               int.parse(parts[0]), int.parse(parts[1]));
                           return Text(
                             formatMonthYearShort(dt),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textMuted, fontSize: 9),
                           );
                         },
@@ -121,7 +121,7 @@ class _SeasonsTab extends StatelessWidget {
                         final count = matchesByMonth[key]!;
                         return BarTooltipItem(
                           '$label\n$count partite',
-                          const TextStyle(
+                          TextStyle(
                             color: AppTheme.accentBlue,
                             fontWeight: FontWeight.w800,
                             fontSize: 12,

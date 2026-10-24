@@ -52,6 +52,23 @@ class _RelativeVoteCard extends StatelessWidget {
                     FlLine(color: AppTheme.border, strokeWidth: 1),
               ),
               borderData: FlBorderData(show: false),
+              // Senza tooltip esplicito fl_chart mostra toY grezzo
+              // (es. 0.3333333333333335).
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, _, rod, __) => BarTooltipItem(
+                    '${formatShortDate(recent[group.x].date)}\n'
+                    '${formatSignedDelta(rod.toY)}',
+                    TextStyle(
+                      color: rod.toY > 0
+                          ? AppTheme.accentGreen
+                          : AppTheme.accentRed,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
@@ -60,8 +77,7 @@ class _RelativeVoteCard extends StatelessWidget {
                     interval: bound,
                     getTitlesWidget: (v, _) => Text(
                       v.toStringAsFixed(1),
-                      style: const TextStyle(
-                          color: AppTheme.textMuted, fontSize: 10),
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
                     ),
                   ),
                 ),

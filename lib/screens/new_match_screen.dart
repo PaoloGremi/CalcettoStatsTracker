@@ -89,7 +89,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Nuova Partita',
+        title: FifaLabel('Nuova Partita',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -130,7 +130,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                             MaterialPageRoute(
                                 builder: (_) => const FieldsScreen()),
                           ).then((_) => setState(() {})),
-                          child: const Row(
+                          child: Row(
                             children: [
                               Icon(Icons.stadium_rounded,
                                   color: AppTheme.textMuted, size: 18),
@@ -155,7 +155,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                             focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
                           ),
-                          hint: const Text('— Nessuno —',
+                          hint: Text('— Nessuno —',
                               style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 13)),
                           items: allFields
@@ -182,7 +182,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                                             ),
                                           )
                                         else
-                                          const Padding(
+                                          Padding(
                                             padding: EdgeInsets.only(right: 8),
                                             child: Icon(Icons.stadium_rounded,
                                                 color: AppTheme.textMuted,
@@ -194,14 +194,14 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Text(f.name,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                     color: AppTheme.textPrimary,
                                                     fontSize: 13,
                                                     fontWeight:
                                                         FontWeight.w700)),
                                             if (f.address.isNotEmpty)
                                               Text(f.address,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                       color: AppTheme.textMuted,
                                                       fontSize: 10)),
                                           ],
@@ -228,7 +228,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                       border: Border.all(
                           color: AppTheme.accentGreen.withValues(alpha: 0.35)),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.add_location_alt_rounded,
                       color: AppTheme.accentGreen,
                       size: 18,
@@ -253,7 +253,9 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                 );
                 if (date == null || !mounted) return;
                 final time = await showTimePicker(
-                    context: context, initialTime: TimeOfDay.now()); // ignore: use_build_context_synchronously
+                    // ignore: use_build_context_synchronously
+                    context: context,
+                    initialTime: TimeOfDay.now());
                 if (time == null || !mounted) return;
                 setState(() {
                   selectedDateTime = DateTime(
@@ -262,7 +264,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               },
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_today_rounded,
+                  Icon(Icons.calendar_today_rounded,
                       color: AppTheme.accentGreen, size: 20),
                   const SizedBox(width: 12),
                   Text(
@@ -280,7 +282,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.chevron_right,
+                  Icon(Icons.chevron_right,
                       color: AppTheme.textMuted, size: 18),
                 ],
               ),
@@ -346,7 +348,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
           const FifaSectionHeader('Premi Partita'),
           FifaCard(
             child: participatingPlayers.isEmpty
-                ? const Padding(
+                ? Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       'Seleziona i giocatori prima di assegnare i premi',
@@ -427,7 +429,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     context, // ignore: use_build_context_synchronously
                     MaterialPageRoute(builder: (_) => VoteScreen(match: match)),
                   ).then((_) {
-                    if (mounted) Navigator.pop(context); // ignore: use_build_context_synchronously
+                    // ignore: use_build_context_synchronously
+                    if (mounted) Navigator.pop(context);
                   });
                 }
               : null,
@@ -488,11 +491,11 @@ class _AwardDropdown extends StatelessWidget {
               focusedBorder: InputBorder.none,
               contentPadding: EdgeInsets.zero,
             ),
-            hint: const Text('— Nessuno —',
+            hint: Text('— Nessuno —',
                 style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
             items: [
               // Opzione "nessuno"
-              const DropdownMenuItem<String>(
+              DropdownMenuItem<String>(
                 value: null,
                 child: Text('— Nessuno —',
                     style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
@@ -510,7 +513,7 @@ class _AwardDropdown extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           p.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontSize: 13,
                               fontWeight: FontWeight.w700),
@@ -543,12 +546,12 @@ class _ScoreInput extends StatelessWidget {
             controller: controller,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 28,
                 fontWeight: FontWeight.w900),
             onChanged: onChanged,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: '0',
               hintStyle: TextStyle(
                   color: AppTheme.textMuted,

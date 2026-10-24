@@ -9,6 +9,7 @@ import '../services/data_service.dart';
 import '../widgets/fifa_card.dart';
 import '../widgets/player_avatar.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_controller.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Chiavi SharedPreferences
@@ -235,7 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Impostazioni',
+        title: FifaLabel('Impostazioni',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -243,13 +244,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppTheme.accentGreen))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
               children: [
+                // ── ASPETTO ───────────────────────────────────────
+                FifaSectionHeader('Aspetto', accent: AppTheme.accentBlue),
+                const FifaCard(child: _ThemeSelector()),
+
                 // ── GIOCATORE PRINCIPALE ──────────────────────────
-                const FifaSectionHeader('Giocatore Principale',
+                FifaSectionHeader('Giocatore Principale',
                     accent: AppTheme.accentGold),
                 FifaCard(
                   child: Column(
@@ -276,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         radius: 14),
                                     const SizedBox(width: 10),
                                     Text(p.name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             color: AppTheme.textPrimary,
                                             fontSize: 13)),
                                   ]),
@@ -312,7 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 children: [
                                   Text(
                                     mainPlayer.name.toUpperCase(),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppTheme.textPrimary,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
@@ -339,7 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       color: AppTheme.accentGold
                                           .withValues(alpha: 0.35)),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.photo_camera_rounded,
@@ -363,7 +368,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 // ── OBIETTIVI ANNUALI ─────────────────────────────
-                const FifaSectionHeader('Obiettivi Annuali',
+                FifaSectionHeader('Obiettivi Annuali',
                     accent: AppTheme.accentGreen),
                 FifaCard(
                   child: Column(
@@ -407,7 +412,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 // ── INFO PERSONALI ────────────────────────────────
-                const FifaSectionHeader('Info Personali',
+                FifaSectionHeader('Info Personali',
                     accent: AppTheme.accentBlue),
                 FifaCard(
                   child: Column(
@@ -421,7 +426,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Piede dominante
                       Row(
                         children: [
-                          const Icon(Icons.sports_soccer_rounded,
+                          Icon(Icons.sports_soccer_rounded,
                               color: AppTheme.textMuted, size: 18),
                           const SizedBox(width: 12),
                           Expanded(
@@ -439,7 +444,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   .map((f) => DropdownMenuItem(
                                         value: f,
                                         child: Text(f,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 color: AppTheme.textPrimary,
                                                 fontSize: 13)),
                                       ))
@@ -481,7 +486,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // ── Bottone salva ─────────────────────────────────────────
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.surface,
           border: Border(top: BorderSide(color: AppTheme.border)),
         ),
@@ -502,35 +507,34 @@ class _InfoField extends StatelessWidget {
   final String label, hint;
   final TextEditingController controller;
   final IconData icon;
-  final Color iconColor;
+  final Color? iconColor;
   final TextInputType keyboardType;
   const _InfoField({
     required this.label,
     required this.controller,
     required this.hint,
     required this.icon,
-    this.iconColor = AppTheme.textMuted,
+    this.iconColor,
     this.keyboardType = TextInputType.text,
   });
 
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          Icon(icon, color: iconColor, size: 18),
+          Icon(icon, color: iconColor ?? AppTheme.textMuted, size: 18),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: controller,
               keyboardType: keyboardType,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 labelText: label,
                 hintText: hint,
-                hintStyle:
-                    const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 12),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -540,6 +544,88 @@ class _InfoField extends StatelessWidget {
           ),
         ],
       );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Selettore tema chiaro/scuro (applicato subito, senza "Salva")
+// ─────────────────────────────────────────────────────────────
+
+class _ThemeSelector extends StatelessWidget {
+  const _ThemeSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<ThemeController>();
+    return Row(
+      children: [
+        Expanded(
+          child: _ThemeOption(
+            label: 'SCURO',
+            icon: Icons.dark_mode_rounded,
+            selected: !controller.isLight,
+            onTap: () => controller.setLight(false),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ThemeOption(
+            label: 'CHIARO',
+            icon: Icons.light_mode_rounded,
+            selected: controller.isLight,
+            onTap: () => controller.setLight(true),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThemeOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ThemeOption({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppTheme.accentBlue : AppTheme.textSecondary;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.accentBlue.withValues(alpha: 0.1)
+              : AppTheme.surfaceAlt,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected
+                  ? AppTheme.accentBlue.withValues(alpha: 0.5)
+                  : AppTheme.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -775,7 +861,7 @@ class _NationalityDropdownState extends State<_NationalityDropdown> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('NAZIONALITÀ',
+                Text('NAZIONALITÀ',
                     style: TextStyle(
                         color: AppTheme.textMuted,
                         fontSize: 11,
@@ -792,7 +878,7 @@ class _NationalityDropdownState extends State<_NationalityDropdown> {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded,
+          Icon(Icons.chevron_right_rounded,
               color: AppTheme.textMuted, size: 18),
         ],
       ),
@@ -840,12 +926,11 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: TextField(
               autofocus: true,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Cerca paese…',
-                hintStyle:
-                    const TextStyle(color: AppTheme.textMuted, fontSize: 14),
-                prefixIcon: const Icon(Icons.search_rounded,
+                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                prefixIcon: Icon(Icons.search_rounded,
                     color: AppTheme.textMuted, size: 20),
                 filled: true,
                 fillColor: AppTheme.surfaceAlt,
@@ -858,7 +943,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
-          const Divider(color: AppTheme.border, height: 1),
+          Divider(color: AppTheme.border, height: 1),
           // Lista
           Expanded(
             child: ListView.builder(
@@ -881,7 +966,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                             isSelected ? FontWeight.w900 : FontWeight.w500,
                       )),
                   trailing: isSelected
-                      ? const Icon(Icons.check_rounded,
+                      ? Icon(Icons.check_rounded,
                           color: AppTheme.accentGreen, size: 18)
                       : null,
                   onTap: () => Navigator.pop(context, label),

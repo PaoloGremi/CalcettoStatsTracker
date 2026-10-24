@@ -48,7 +48,7 @@ class _PlayerPickerSheetState extends State<PlayerPickerSheet> {
       maxChildSize: 0.95,
       expand: false,
       builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -115,13 +115,12 @@ class _PlayerPickerSheetState extends State<PlayerPickerSheet> {
                 child: TextField(
                   controller: _searchCtrl,
                   autofocus: true,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary, fontSize: 13),
+                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Cerca giocatore…',
-                    hintStyle: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search_rounded,
+                    hintStyle:
+                        TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    prefixIcon: Icon(Icons.search_rounded,
                         color: AppTheme.textMuted, size: 18),
                     suffixIcon: _query.isNotEmpty
                         ? GestureDetector(
@@ -129,7 +128,7 @@ class _PlayerPickerSheetState extends State<PlayerPickerSheet> {
                               _searchCtrl.clear();
                               setState(() => _query = '');
                             },
-                            child: const Icon(Icons.close_rounded,
+                            child: Icon(Icons.close_rounded,
                                 color: AppTheme.textMuted, size: 16),
                           )
                         : null,
@@ -149,8 +148,8 @@ class _PlayerPickerSheetState extends State<PlayerPickerSheet> {
                   ? Center(
                       child: Text(
                         'Nessun giocatore trovato',
-                        style: const TextStyle(
-                            color: AppTheme.textMuted, fontSize: 13),
+                        style:
+                            TextStyle(color: AppTheme.textMuted, fontSize: 13),
                       ),
                     )
                   : ListView.separated(
@@ -230,7 +229,7 @@ class _PlayerPickerSheetState extends State<PlayerPickerSheet> {
             // ── Bottone chiudi ────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppTheme.border)),
               ),
               child: ElevatedButton(

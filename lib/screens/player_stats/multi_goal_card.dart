@@ -38,8 +38,7 @@ class _MultiGoalCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   formatShortDate(max.date),
-                  style:
-                      const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
                 ),
               ],
             ],

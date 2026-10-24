@@ -198,6 +198,37 @@ void main() {
     expect(find.text('VOTO RELATIVO'), findsOneWidget);
   });
 
+  testWidgets('relative vote tooltip shows date and a 1-decimal signed delta',
+      (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tapTab(tester, 'VOTI');
+    await tester.scrollUntilVisible(find.text('VOTO RELATIVO'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    await tester.pumpAndSettle();
+
+    // L'unico grafico a barre con valori negativi è quello del voto relativo.
+    final chart = tester
+        .widgetList<BarChart>(find.byType(BarChart))
+        .firstWhere((c) => c.data.minY < 0);
+    final tooltip = chart.data.barTouchData.touchTooltipData.getTooltipItem;
+
+    for (final group in chart.data.barGroups) {
+      final rod = group.barRods.first;
+      final text = tooltip(group, group.x, rod, 0)!.text;
+      expect(text, matches(RegExp(r'^\d{2}/\d{2}\n([+-]\d+\.\d|0\.0)$')),
+          reason: 'delta ${rod.toY}');
+    }
+    // Un valore periodico come 1/3 deve comparire arrotondato.
+    final rod = BarChartRodData(toY: 1 / 3);
+    final group = BarChartGroupData(x: 0, barRods: [rod]);
+    expect(tooltip(group, 0, rod, 0)!.text, endsWith('\n+0.3'));
+  });
+
   testWidgets(
       'votes tab shows the insufficient-data message when no match has a vote',
       (tester) async {

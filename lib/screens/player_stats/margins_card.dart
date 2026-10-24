@@ -38,7 +38,7 @@ class _MarginsCard extends StatelessWidget {
                     width: 70,
                     child: Text(band.label,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppTheme.textMuted,
                             fontSize: 11,
                             fontWeight: FontWeight.w700)),
@@ -52,7 +52,7 @@ class _MarginsCard extends StatelessWidget {
               ),
             ),
           Text('Pareggi: ${summary.draws}',
-              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
         ],
       ),
     );

@@ -226,8 +226,7 @@ class _FieldLineupPageState extends State<FieldLineupPage>
             Icon(Icons.sports_soccer_rounded,
                 size: 16, color: AppTheme.accentBlue),
             const SizedBox(width: 7),
-            const FifaLabel('FORMAZIONE',
-                color: AppTheme.textPrimary, fontSize: 13),
+            FifaLabel('FORMAZIONE', color: AppTheme.textPrimary, fontSize: 13),
           ],
         ),
         actions: [

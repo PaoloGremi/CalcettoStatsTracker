@@ -216,7 +216,7 @@ class _SplashScreenState extends State<SplashScreen>
                         // Titolo
                         FadeTransition(
                           opacity: _titleOpacity,
-                          child: const Text(
+                          child: Text(
                             'CHAMPIONS',
                             style: TextStyle(
                               color: AppTheme.accentGold,
@@ -255,7 +255,7 @@ class _SplashScreenState extends State<SplashScreen>
                                       .withValues(alpha: 0.5)),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text(
+                            child: Text(
                               '⚽ EMOZIONI DA SEGNARE',
                               style: TextStyle(
                                 color: AppTheme.accentGreen,

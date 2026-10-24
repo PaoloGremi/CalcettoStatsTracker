@@ -71,9 +71,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness:
+          AppTheme.isLight ? Brightness.dark : Brightness.light,
     ));
 
     final data = Provider.of<DataService>(context, listen: false);
@@ -86,32 +87,32 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
         backgroundColor: AppTheme.bg,
-        title: const FifaLabel('Champions Calcetto Stats',
+        title: FifaLabel('Champions Calcetto Stats',
             color: AppTheme.textPrimary, fontSize: 12),
         actions: [
           IconButton(
-            icon: const Icon(Icons.campaign_rounded,
+            icon: Icon(Icons.campaign_rounded,
                 color: AppTheme.textSecondary, size: 22),
             tooltip: 'Promo',
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const MatchPromoFormPage())),
           ),
           IconButton(
-            icon: const Icon(Icons.psychology_outlined,
+            icon: Icon(Icons.psychology_outlined,
                 color: AppTheme.textSecondary, size: 22),
             tooltip: 'AI Coach',
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AiCoachPage())),
           ),
           IconButton(
-            icon: const Icon(Icons.backup_rounded,
+            icon: Icon(Icons.backup_rounded,
                 color: AppTheme.textSecondary, size: 22),
             tooltip: 'Backup CSV',
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const BackupScreen())),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_rounded,
+            icon: Icon(Icons.settings_rounded,
                 color: AppTheme.textSecondary, size: 22),
             tooltip: 'Impostazioni',
             onPressed: () async {
@@ -192,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: AppTheme.accentGold.withValues(alpha: 0.5),
                               size: 40),
                           const SizedBox(height: 12),
-                          const Text(
+                          Text(
                             'Configura il tuo profilo',
                             style: TextStyle(
                               color: AppTheme.accentGold,
@@ -202,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text('Tocca per aprire le impostazioni',
+                          Text('Tocca per aprire le impostazioni',
                               style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 11)),
                         ],
@@ -230,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          border: const Border(top: BorderSide(color: AppTheme.border)),
+          border: Border(top: BorderSide(color: AppTheme.border)),
         ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).padding.bottom + 4,
@@ -312,7 +313,7 @@ class _NavBtn extends StatelessWidget {
               Icon(icon, color: AppTheme.textSecondary, size: 22),
               const SizedBox(height: 3),
               Text(label,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
@@ -334,12 +335,12 @@ class _InfoRow extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 11,
                     letterSpacing: 1)),
             Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w800)),
@@ -465,10 +466,15 @@ class _MainPlayerCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0.6),
-              Colors.black.withValues(alpha: 0.88),
-            ],
+            colors: AppTheme.isLight
+                ? [
+                    AppTheme.bg.withValues(alpha: 0.82),
+                    AppTheme.bg.withValues(alpha: 0.95),
+                  ]
+                : [
+                    Colors.black.withValues(alpha: 0.6),
+                    Colors.black.withValues(alpha: 0.88),
+                  ],
           ),
         ),
         child: SingleChildScrollView(
@@ -485,7 +491,7 @@ class _MainPlayerCard extends StatelessWidget {
                       children: [
                         Text(
                           player.name.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
@@ -519,7 +525,7 @@ class _MainPlayerCard extends StatelessWidget {
               ),
 
               const SizedBox(height: 10),
-              Container(height: 1, color: Colors.white10),
+              Container(height: 1, color: AppTheme.border),
               const SizedBox(height: 10),
 
               // ── Stats partite ─────────────────────────────────
@@ -583,7 +589,7 @@ class _MainPlayerCard extends StatelessWidget {
               ],
 
               const SizedBox(height: 10),
-              Container(height: 1, color: Colors.white10),
+              Container(height: 1, color: AppTheme.border),
               const SizedBox(height: 10),
 
               // ── Obiettivi annuali ──────────────────────────────
@@ -591,7 +597,7 @@ class _MainPlayerCard extends StatelessWidget {
                   settings.goalWins > 0 ||
                   settings.goalGoals > 0 ||
                   settings.goalMvp > 0) ...[
-                const Text(
+                Text(
                   'OBIETTIVI ANNUALI',
                   style: TextStyle(
                     color: AppTheme.textSecondary,
@@ -634,7 +640,7 @@ class _MainPlayerCard extends StatelessWidget {
                     color: AppTheme.accentOrange,
                   ),
                 const SizedBox(height: 10),
-                Container(height: 1, color: Colors.white10),
+                Container(height: 1, color: AppTheme.border),
                 const SizedBox(height: 10),
               ],
 
@@ -688,7 +694,7 @@ class _StatBox extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textMuted,
                   fontSize: 8,
                   fontWeight: FontWeight.w700,
@@ -1406,11 +1412,11 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
       onTap: _loading ? null : _openNewsSheet,
       child: Container(
         height: 30,
-        decoration: const BoxDecoration(
-          color: Colors.black,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
           border: Border(
-            top: BorderSide(color: Colors.white24, width: 0.5),
-            bottom: BorderSide(color: Colors.white24, width: 0.5),
+            top: BorderSide(color: AppTheme.border, width: 0.5),
+            bottom: BorderSide(color: AppTheme.border, width: 0.5),
           ),
         ),
         child: Row(
@@ -1430,7 +1436,7 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
                 ),
               ),
             ),
-            Container(width: 0.5, color: Colors.white24),
+            Container(width: 0.5, color: AppTheme.border),
 
             // ── Area scorrevole ───────────────────
             Expanded(
@@ -1438,7 +1444,7 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
                 children: [
                   ClipRect(
                     child: _loading
-                        ? const Center(
+                        ? Center(
                             child: SizedBox(
                               width: 12,
                               height: 12,
@@ -1463,7 +1469,7 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
                                   alignment: Alignment.centerLeft,
                                   child: Text(
                                     _singlePassText + _singlePassText,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppTheme.textPrimary,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
@@ -1485,9 +1491,11 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
                     width: 20,
                     child: IgnorePointer(
                       child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                              colors: [Colors.black, Colors.transparent]),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [
+                            AppTheme.surface,
+                            AppTheme.surface.withValues(alpha: 0)
+                          ]),
                         ),
                       ),
                     ),
@@ -1501,9 +1509,11 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
                     width: 20,
                     child: IgnorePointer(
                       child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                              colors: [Colors.transparent, Colors.black]),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [
+                            AppTheme.surface.withValues(alpha: 0),
+                            AppTheme.surface
+                          ]),
                         ),
                       ),
                     ),
@@ -1512,14 +1522,14 @@ class _SmartNewsTickerState extends State<SmartNewsTicker>
               ),
             ),
 
-            Container(width: 0.5, color: Colors.white24),
+            Container(width: 0.5, color: AppTheme.border),
 
             // ── Badge destro ──────────────────────────────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               color: AppTheme.accentGold.withValues(alpha: 0.15),
               alignment: Alignment.center,
-              child: const Text(
+              child: Text(
                 'NEWS',
                 style: TextStyle(
                   color: AppTheme.accentGold,

@@ -137,7 +137,7 @@ class _StatsScreenState extends State<StatsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        title: const FifaLabel('Statistiche Giocatori',
+        title: FifaLabel('Statistiche Giocatori',
             color: AppTheme.textPrimary, fontSize: 13),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
@@ -149,7 +149,7 @@ class _StatsScreenState extends State<StatsScreen> {
           // ── Dropdown selezione classifica ─────────────────────
           Container(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppTheme.surface,
               border: Border(bottom: BorderSide(color: AppTheme.border)),
             ),
@@ -247,7 +247,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.search_off_rounded,
+                        Icon(Icons.search_off_rounded,
                             size: 48, color: AppTheme.textMuted),
                         const SizedBox(height: 12),
                         FifaLabel('Nessun risultato',
@@ -390,7 +390,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                     children: [
                                       Text(
                                         player.name.toUpperCase(),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: AppTheme.textPrimary,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w900,
@@ -410,7 +410,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                               }),
                                           const SizedBox(width: 6),
                                           Text('$games partite',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                   color: AppTheme.textSecondary,
                                                   fontSize: 11)),
                                         ],

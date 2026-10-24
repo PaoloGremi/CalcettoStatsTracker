@@ -62,7 +62,7 @@ class _GoalsTab extends StatelessWidget {
                           }
                           return Text(
                             v.toInt().toString(),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textMuted, fontSize: 10),
                           );
                         },
@@ -82,7 +82,7 @@ class _GoalsTab extends StatelessWidget {
                           if (i % step != 0) return const SizedBox();
                           return Text(
                             dateLabels[i],
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textMuted, fontSize: 9),
                           );
                         },
@@ -120,7 +120,7 @@ class _GoalsTab extends StatelessWidget {
                         final goals = goalPoints[i].y.toInt();
                         return BarTooltipItem(
                           '$date\n$goals 🥅',
-                          const TextStyle(
+                          TextStyle(
                             color: AppTheme.accentRed,
                             fontWeight: FontWeight.w800,
                             fontSize: 12,
@@ -159,7 +159,7 @@ class _GoalsTab extends StatelessWidget {
                             return const SizedBox();
                           }
                           return Text(v.toInt().toString(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 10));
                         },
                       ),
@@ -176,7 +176,7 @@ class _GoalsTab extends StatelessWidget {
                           final step = (matches.length / 5).ceil().clamp(1, 99);
                           if (i % step != 0) return const SizedBox();
                           return Text(dateLabels[i],
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 9));
                         },
                       ),
@@ -206,7 +206,7 @@ class _GoalsTab extends StatelessWidget {
                         final date = i < dateLabels.length ? dateLabels[i] : '';
                         return LineTooltipItem(
                           '$date\n${s.y.toInt()} gol totali',
-                          const TextStyle(
+                          TextStyle(
                               color: AppTheme.accentRed,
                               fontWeight: FontWeight.w800,
                               fontSize: 12),
@@ -249,7 +249,7 @@ class _GoalsTab extends StatelessWidget {
                             return const SizedBox();
                           }
                           return Text(v.toInt().toString(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 10));
                         },
                       ),
@@ -271,7 +271,7 @@ class _GoalsTab extends StatelessWidget {
                           final dt = DateTime(
                               int.parse(parts[0]), int.parse(parts[1]));
                           return Text(formatMonthYearShort(dt),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: AppTheme.textMuted, fontSize: 9));
                         },
                       ),
@@ -312,7 +312,7 @@ class _GoalsTab extends StatelessWidget {
                         final count = goalsByMonth[key] ?? 0;
                         return BarTooltipItem(
                           '$label\n$count ⚽',
-                          const TextStyle(
+                          TextStyle(
                               color: AppTheme.accentRed,
                               fontWeight: FontWeight.w800,
                               fontSize: 12),

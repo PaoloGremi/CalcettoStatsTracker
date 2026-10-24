@@ -74,7 +74,7 @@ class PlayerStatsScreen extends StatelessWidget {
             child: Container(height: 1, color: AppTheme.border),
           ),
         ),
-        body: const Center(
+        body: Center(
           child: Text(
             'Nessuna partita registrata per questo giocatore.',
             style: TextStyle(color: AppTheme.textSecondary),
@@ -151,7 +151,7 @@ class _CompactHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTheme.surface,
           border: Border(bottom: BorderSide(color: AppTheme.border)),
         ),
@@ -170,7 +170,7 @@ class _CompactHeader extends StatelessWidget {
                   Text(
                     player.name.toUpperCase(),
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
@@ -181,8 +181,8 @@ class _CompactHeader extends StatelessWidget {
                   Text(
                     '${summary.totalGames} ${summary.totalGames == 1 ? 'partita' : 'partite'} · '
                     '${summary.votedGames > 0 ? summary.avgVote.toStringAsFixed(1) : '—'} ⭐',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12),
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
