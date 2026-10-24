@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'core/di/service_locator.dart';
 import 'core/migration/hive_migration_service.dart';
 import 'data/hive_boxes.dart';
+import 'features/trainings/data/models/training_model.dart';
 import 'models/match_model.dart';
 import 'models/field_model.dart';
 import 'screens/splash_screen.dart';
@@ -23,6 +24,7 @@ void main() async {
   await HiveMigrationService.migratePlayersIfNeeded();
   Hive.registerAdapter(MatchModelAdapter());
   Hive.registerAdapter(FieldModelAdapter());
+  Hive.registerAdapter(TrainingModelAdapter());
   await HiveBoxes.init();
   setupServiceLocator();
   await getIt<ThemeController>().load();
