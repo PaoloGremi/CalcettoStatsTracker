@@ -183,8 +183,9 @@ class _TrainingFormPageState extends State<TrainingFormPage> {
                   style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
               onTap: _pickDate,
             ),
-            if (_type.hasRun) ...[
-              _sectionTitle('Corsa'),
+            if (_type.hasDistance) ...[
+              _sectionTitle(
+                  _type == TrainingType.walking ? 'Camminata' : 'Corsa'),
               TextFormField(
                 key: const Key('distance_field'),
                 controller: _distance,
@@ -199,8 +200,10 @@ class _TrainingFormPageState extends State<TrainingFormPage> {
                 key: const Key('run_time_field'),
                 controller: _runTime,
                 keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(
-                    labelText: 'Tempo di corsa',
+                decoration: InputDecoration(
+                    labelText: _type == TrainingType.walking
+                        ? 'Tempo'
+                        : 'Tempo di corsa',
                     hintText: 'mm:ss o h:mm:ss'),
                 validator: _validateRunTime,
               ),

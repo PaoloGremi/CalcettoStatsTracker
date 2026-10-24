@@ -11,7 +11,7 @@ import 'training_list_tile.dart' show trainingTypeColor, trainingTypeIcon;
 String homeTrainingSummary(Training t, DateTime today) {
   final head = '${formatTrainingDay(t.date, today)} · ${t.type.label}';
   final pace = t.paceSecondsPerKm;
-  if (t.type.hasRun && t.distanceKm != null && pace != null) {
+  if (t.type.hasDistance && t.distanceKm != null && pace != null) {
     return '$head ${formatKm(t.distanceKm!)} km · ${formatPace(pace)}/km';
   }
   if (t.durationMinutes != null) return '$head ${t.durationMinutes} min';

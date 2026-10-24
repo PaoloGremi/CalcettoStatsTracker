@@ -55,18 +55,49 @@ void main() {
     });
 
     test('type flags', () {
-      expect(TrainingType.running.hasRun, isTrue);
+      expect(TrainingType.running.hasDistance, isTrue);
+      expect(TrainingType.running.countsAsRun, isTrue);
       expect(TrainingType.running.hasTechnical, isFalse);
-      expect(TrainingType.technical.hasRun, isFalse);
+      expect(TrainingType.walking.hasDistance, isTrue);
+      expect(TrainingType.walking.countsAsRun, isFalse);
+      expect(TrainingType.walking.hasTechnical, isFalse);
+      expect(TrainingType.technical.hasDistance, isFalse);
+      expect(TrainingType.technical.countsAsRun, isFalse);
       expect(TrainingType.technical.hasTechnical, isTrue);
-      expect(TrainingType.mixed.hasRun, isTrue);
+      expect(TrainingType.mixed.hasDistance, isTrue);
+      expect(TrainingType.mixed.countsAsRun, isTrue);
       expect(TrainingType.mixed.hasTechnical, isTrue);
+    });
+
+    test('walking label', () {
+      expect(TrainingType.walking.label, 'Camminata');
+    });
+
+    test('walking pace and total minutes come from distance and time', () {
+      final walk = Training(
+        id: 'w',
+        date: DateTime(2026, 10, 20),
+        type: TrainingType.walking,
+        distanceKm: 4,
+        runSeconds: 2760,
+      );
+      expect(walk.paceSecondsPerKm, 690);
+      expect(walk.totalMinutes, 46);
     });
   });
 
   group('normalized', () {
     test('drops technical fields when switching to running', () {
       final t = _mixed().copyWith(type: TrainingType.running).normalized();
+
+      expect(t.durationMinutes, isNull);
+      expect(t.categories, isEmpty);
+      expect(t.distanceKm, 5.0);
+      expect(t.runSeconds, 1500);
+    });
+
+    test('drops technical fields when switching to walking', () {
+      final t = _mixed().copyWith(type: TrainingType.walking).normalized();
 
       expect(t.durationMinutes, isNull);
       expect(t.categories, isEmpty);
@@ -125,6 +156,22 @@ void main() {
     test('missing run time', () {
       expect(validateTraining(_run(seconds: null), today: _today),
           'Inserisci un tempo di corsa maggiore di zero');
+    });
+
+    test('walking without distance', () {
+      expect(
+          validateTraining(
+              _run(km: null).copyWith(type: TrainingType.walking),
+              today: _today),
+          'Inserisci una distanza maggiore di zero');
+    });
+
+    test('walking without time uses a generic message', () {
+      expect(
+          validateTraining(
+              _run(seconds: null).copyWith(type: TrainingType.walking),
+              today: _today),
+          'Inserisci un tempo maggiore di zero');
     });
 
     test('missing duration', () {

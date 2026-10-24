@@ -39,6 +39,14 @@ final _listScrollable = find
     .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
     .first;
 
+final _walk = Training(
+  id: 'w',
+  date: DateTime(2026, 10, 22),
+  type: TrainingType.walking,
+  distanceKm: 4,
+  runSeconds: 2760,
+);
+
 void main() {
   late MockGetAllTrainings getAll;
   late TrainingsController controller;
@@ -84,6 +92,35 @@ void main() {
     await tester.scrollUntilVisible(find.text('Ieri · Corsa'), 200,
         scrollable: _listScrollable);
     expect(find.text('5 km · 25:00 · 5:00/km'), findsOneWidget);
+  });
+
+  testWidgets('walking section is hidden without walks', (tester) async {
+    await pump(tester, [_run]);
+
+    expect(find.text('Camminata più lunga'), findsNothing);
+  });
+
+  testWidgets('walking section shows the longest walk and its own chart',
+      (tester) async {
+    await pump(tester, [_run, _walk]);
+
+    await tester.scrollUntilVisible(find.text('Camminata più lunga'), 200,
+        scrollable: _listScrollable);
+    expect(find.text('4 km'), findsOneWidget);
+    expect(find.text('Servono almeno 2 camminate per vedere l\'andamento'),
+        findsOneWidget);
+    // La camminata non entra nei record corsa.
+    expect(find.text('5 km'), findsOneWidget);
+  });
+
+  testWidgets('history row for a walk', (tester) async {
+    await pump(tester, [_walk]);
+
+    await tester.scrollUntilVisible(
+        find.text('4 km · 46:00 · 11:30/km'), 200,
+        scrollable: _listScrollable);
+    expect(find.text('Ieri · Camminata'), findsNothing); // 22 ott, non ieri
+    expect(find.text('4 km · 46:00 · 11:30/km'), findsOneWidget);
   });
 
   testWidgets('history row subtitle for a mixed training', (tester) async {

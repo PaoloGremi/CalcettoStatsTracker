@@ -90,21 +90,26 @@ class _TrainingsPageState extends State<TrainingsPage> {
                 TrainingRecordsCard(stats: stats),
                 const SizedBox(height: 12),
                 PaceChartCard(points: stats.pacePoints),
+                // Sezione camminata: solo se ce n'è almeno una.
+                if (stats.longestWalkKm != null) ...[
+                  _sectionTitle('Camminata'),
+                  WalkingRecordsCard(stats: stats),
+                  const SizedBox(height: 12),
+                  PaceChartCard(
+                    points: stats.walkPacePoints,
+                    title: 'Passo camminata (min/km)',
+                    emptyMessage:
+                        'Servono almeno 2 camminate per vedere l\'andamento',
+                    color: AppTheme.accentGold,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TrainingHeatmap(
                   dayTypes: stats.dayTypes,
                   activeYears: stats.activeYears,
                   today: c.today,
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 20, bottom: 8),
-                  child: Text('STORICO',
-                      style: TextStyle(
-                          color: AppTheme.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2)),
-                ),
+                _sectionTitle('Storico'),
                 for (final t in c.trainings)
                   TrainingListTile(
                     training: t,
@@ -119,6 +124,16 @@ class _TrainingsPageState extends State<TrainingsPage> {
     );
   }
 }
+
+Widget _sectionTitle(String text) => Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      child: Text(text.toUpperCase(),
+          style: TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2)),
+    );
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.onAdd});

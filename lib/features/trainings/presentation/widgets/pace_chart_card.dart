@@ -9,9 +9,20 @@ import '../training_format.dart';
 /// Andamento del passo, un punto per corsa. Il passo è disegnato col segno
 /// meno così un passo più veloce (meno secondi) sta più in alto.
 class PaceChartCard extends StatelessWidget {
-  const PaceChartCard({super.key, required this.points});
+  const PaceChartCard({
+    super.key,
+    required this.points,
+    this.title = 'Passo medio (min/km)',
+    this.emptyMessage = 'Servono almeno 2 corse per vedere l\'andamento',
+    this.color,
+  });
 
   final List<PacePoint> points;
+  final String title;
+  final String emptyMessage;
+
+  /// Colore della linea; null → `AppTheme.accentBlue`.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +38,7 @@ class PaceChartCard extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: Text('Passo medio (min/km)',
+            child: Text(title,
                 style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w700)),
@@ -35,7 +46,7 @@ class PaceChartCard extends StatelessWidget {
           if (points.length < 2)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-              child: Text('Servono almeno 2 corse per vedere l\'andamento',
+              child: Text(emptyMessage,
                   style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
             )
           else ...[
@@ -64,7 +75,7 @@ class PaceChartCard extends StatelessWidget {
     final ys = points.map((p) => -p.secondsPerKm);
     final minY = ys.reduce((a, b) => a < b ? a : b) - 10;
     final maxY = ys.reduce((a, b) => a > b ? a : b) + 10;
-    final color = AppTheme.accentBlue;
+    final color = this.color ?? AppTheme.accentBlue;
     return LineChart(
       LineChartData(
         minY: minY,

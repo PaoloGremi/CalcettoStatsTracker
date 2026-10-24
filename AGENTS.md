@@ -18,7 +18,7 @@ dart run build_runner build --delete-conflicting-outputs  # regenerate Hive adap
 - **`lib/features/players/`** — fully migrated to Clean Architecture: `domain/entities`, `domain/usecases`, `domain/repositories`, `data/` (datasource + mapper + repository), `presentation/controllers + pages`.
 - **`lib/screens/` + `lib/services/DataService`** — legacy layer, still in use for matches/fields/stats. Not yet migrated.
 - These two layers coexist intentionally. Do not collapse them.
-- **`lib/features/trainings/`** — personal training log (running/technical/mixed), also Clean Architecture. Unlike players it has **no link to `DataService`**: the repository writes straight to `HiveBoxes.trainingsBox`. Stats live in the pure `TrainingStats` class; `TrainingsController` is a get_it factory (the home screen owns one, shared with the + sheet and `TrainingsPage`).
+- **`lib/features/trainings/`** — personal training log (running/walking/technical/mixed; walking has its own records and never counts toward run records — use `TrainingType.countsAsRun`), also Clean Architecture. Unlike players it has **no link to `DataService`**: the repository writes straight to `HiveBoxes.trainingsBox`. Stats live in the pure `TrainingStats` class; `TrainingsController` is a get_it factory (the home screen owns one, shared with the + sheet and `TrainingsPage`).
 
 ## Critical coupling: `PlayerRepositoryImpl` must delegate writes to `DataService`
 Mutations (`add`/`update`/`delete`) in [`PlayerRepositoryImpl`](lib/features/players/data/repositories/player_repository_impl.dart) call `DataService` instead of writing directly to the Hive box. `DataService` is the sole source of `notifyListeners()` for players — bypassing it silently breaks reactivity in un-migrated screens.

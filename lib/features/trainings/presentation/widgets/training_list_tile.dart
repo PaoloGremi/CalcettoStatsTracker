@@ -7,12 +7,14 @@ import '../training_format.dart';
 /// Colore associato a un tipo di allenamento (heatmap, storico, legenda).
 Color trainingTypeColor(TrainingType type) => switch (type) {
       TrainingType.running => AppTheme.accentBlue,
+      TrainingType.walking => AppTheme.accentGold,
       TrainingType.technical => AppTheme.accentOrange,
       TrainingType.mixed => AppTheme.accentGreen,
     };
 
 IconData trainingTypeIcon(TrainingType type) => switch (type) {
       TrainingType.running => Icons.directions_run_rounded,
+      TrainingType.walking => Icons.directions_walk_rounded,
       TrainingType.technical => Icons.sports_soccer_rounded,
       TrainingType.mixed => Icons.fitness_center_rounded,
     };
@@ -20,7 +22,7 @@ IconData trainingTypeIcon(TrainingType type) => switch (type) {
 /// Dettagli di un allenamento: `5,2 km · 25:30 · 4:54/km · 60 min · Tiri`.
 String trainingDetails(Training t) {
   final parts = <String>[];
-  if (t.type.hasRun && t.distanceKm != null && t.runSeconds != null) {
+  if (t.type.hasDistance && t.distanceKm != null && t.runSeconds != null) {
     parts
       ..add('${formatKm(t.distanceKm!)} km')
       ..add(formatRunTime(t.runSeconds!));

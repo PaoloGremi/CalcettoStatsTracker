@@ -82,6 +82,50 @@ void main() {
     expect(find.text('Tiri'), findsOneWidget);
   });
 
+  testWidgets('walking shows distance and time under a walking title',
+      (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Camminata'));
+    await tester.pump();
+
+    expect(find.byKey(_runTime), findsOneWidget);
+    expect(find.byKey(_distance), findsOneWidget);
+    expect(find.byKey(_duration), findsNothing);
+    expect(find.text('CAMMINATA'), findsOneWidget);
+    expect(find.text('Tempo'), findsOneWidget);
+    expect(find.text('CORSA'), findsNothing);
+  });
+
+  testWidgets('saves a walking training', (tester) async {
+    when(() => save(any())).thenAnswer((_) async => Result.success(_mixed));
+    await pump(tester);
+    await tester.tap(find.text('Camminata'));
+    await tester.pump();
+    await tester.enterText(find.byKey(_runTime), '46:00');
+    await tester.enterText(find.byKey(_distance), '4');
+    await tester.ensureVisible(find.byKey(_saveButton));
+    await tester.tap(find.byKey(_saveButton));
+    await tester.pump();
+
+    final saved = verify(() => save(captureAny())).captured.single as Training;
+    expect(saved.type, TrainingType.walking);
+    expect(saved.runSeconds, 2760);
+    expect(saved.distanceKm, 4);
+  });
+
+  testWidgets('type selector fits at 320 px with text scale 1.3',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await pump(tester);
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('mixed shows both', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Misto'));

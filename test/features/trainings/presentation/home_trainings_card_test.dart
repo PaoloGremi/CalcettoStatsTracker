@@ -71,6 +71,20 @@ void main() {
     expect(find.text('2 questa settimana'), findsOneWidget);
   });
 
+  testWidgets('walking latest shows km and pace', (tester) async {
+    await pump(tester, [
+      Training(
+        id: 'w',
+        date: DateTime(2026, 10, 23),
+        type: TrainingType.walking,
+        distanceKm: 4,
+        runSeconds: 2760,
+      ),
+    ]);
+
+    expect(find.text('Ieri · Camminata 4 km · 11:30/km'), findsOneWidget);
+  });
+
   testWidgets('technical latest shows minutes', (tester) async {
     await pump(tester, [_tech]);
 

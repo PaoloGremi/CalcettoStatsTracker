@@ -32,8 +32,18 @@ class TrainingStats {
   static DateTime _minusWeek(DateTime monday) =>
       DateTime.utc(monday.year, monday.month, monday.day - 7);
 
-  Iterable<Training> get _runs =>
-      _trainings.where((t) => t.paceSecondsPerKm != null);
+  /// Corse e misti con passo valido: solo questi entrano nei record corsa.
+  Iterable<Training> get _runs => _trainings
+      .where((t) => t.type.countsAsRun && t.paceSecondsPerKm != null);
+
+  Iterable<Training> get _walks => _trainings.where(
+      (t) => t.type == TrainingType.walking && t.paceSecondsPerKm != null);
+
+  static List<PacePoint> _pointsOf(Iterable<Training> items) => [
+        for (final t in items)
+          PacePoint(DateTime(t.date.year, t.date.month, t.date.day),
+              t.paceSecondsPerKm!),
+      ]..sort((a, b) => a.date.compareTo(b.date));
 
   double? get bestPaceSecondsPerKm {
     double? best;
@@ -81,14 +91,19 @@ class TrainingStats {
     return count;
   }();
 
-  List<PacePoint> get pacePoints {
-    final points = [
-      for (final t in _runs)
-        PacePoint(DateTime(t.date.year, t.date.month, t.date.day),
-            t.paceSecondsPerKm!),
-    ]..sort((a, b) => a.date.compareTo(b.date));
-    return points;
+  /// Punti del grafico corsa (corse e misti).
+  List<PacePoint> get pacePoints => _pointsOf(_runs);
+
+  double? get longestWalkKm {
+    double? longest;
+    for (final t in _walks) {
+      if (longest == null || t.distanceKm! > longest) longest = t.distanceKm;
+    }
+    return longest;
   }
+
+  /// Punti del grafico camminata.
+  List<PacePoint> get walkPacePoints => _pointsOf(_walks);
 
   /// Tipo per giorno; tipi diversi nello stesso giorno → misto.
   Map<DateTime, TrainingType> get dayTypes {

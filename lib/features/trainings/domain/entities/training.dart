@@ -1,6 +1,7 @@
 /// Tipo di allenamento individuale.
 enum TrainingType {
   running('Corsa'),
+  walking('Camminata'),
   technical('Tecnico'),
   mixed('Misto');
 
@@ -8,11 +9,16 @@ enum TrainingType {
 
   final String label;
 
-  /// L'allenamento comprende una parte di corsa (km + tempo).
-  bool get hasRun => this != TrainingType.technical;
+  /// Ha distanza e tempo (corsa, camminata, misto).
+  bool get hasDistance => this != TrainingType.technical;
+
+  /// Conta per i record e il grafico della corsa (non la camminata).
+  bool get countsAsRun =>
+      this == TrainingType.running || this == TrainingType.mixed;
 
   /// L'allenamento comprende una parte tecnica (durata + categorie).
-  bool get hasTechnical => this != TrainingType.running;
+  bool get hasTechnical =>
+      this == TrainingType.technical || this == TrainingType.mixed;
 }
 
 /// Macro categorie della parte tecnica.
@@ -37,6 +43,9 @@ class Training {
   /// Durata della sessione tecnica/mista, in minuti.
   final int? durationMinutes;
   final double? distanceKm;
+
+  /// Tempo di corsa o di camminata, in secondi. Il nome resta `runSeconds`
+  /// per non cambiare il formato salvato (Hive e CSV).
   final int? runSeconds;
   final Set<TechnicalCategory> categories;
   final String? notes;
@@ -74,8 +83,8 @@ class Training {
       date: DateTime(date.year, date.month, date.day),
       type: type,
       durationMinutes: type.hasTechnical ? durationMinutes : null,
-      distanceKm: type.hasRun ? distanceKm : null,
-      runSeconds: type.hasRun ? runSeconds : null,
+      distanceKm: type.hasDistance ? distanceKm : null,
+      runSeconds: type.hasDistance ? runSeconds : null,
       categories: type.hasTechnical ? categories : const {},
       notes: (trimmed == null || trimmed.isEmpty) ? null : trimmed,
     );

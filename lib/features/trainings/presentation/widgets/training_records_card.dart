@@ -45,6 +45,35 @@ class TrainingRecordsCard extends StatelessWidget {
   }
 }
 
+/// Record della camminata, separati da quelli della corsa.
+class WalkingRecordsCard extends StatelessWidget {
+  const WalkingRecordsCard({super.key, required this.stats});
+
+  final TrainingStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final longest = stats.longestWalkKm;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          _Record(
+            label: 'Camminata più lunga',
+            value: longest == null ? '—' : '${formatKm(longest)} km',
+            color: AppTheme.accentGold,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Record extends StatelessWidget {
   const _Record({
     required this.label,

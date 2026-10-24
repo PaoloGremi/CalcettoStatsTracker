@@ -6,13 +6,15 @@ String? validateTraining(Training t, {required DateTime today}) {
   final todayDay = DateTime(today.year, today.month, today.day);
   if (day.isAfter(todayDay)) return 'La data non può essere nel futuro';
 
-  if (t.type.hasRun) {
+  if (t.type.hasDistance) {
     final km = t.distanceKm ?? 0;
     if (!km.isFinite || km <= 0) {
       return 'Inserisci una distanza maggiore di zero';
     }
     if ((t.runSeconds ?? 0) <= 0) {
-      return 'Inserisci un tempo di corsa maggiore di zero';
+      return t.type == TrainingType.walking
+          ? 'Inserisci un tempo maggiore di zero'
+          : 'Inserisci un tempo di corsa maggiore di zero';
     }
   }
   if (t.type.hasTechnical) {

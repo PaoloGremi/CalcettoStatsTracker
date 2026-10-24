@@ -30,6 +30,14 @@ Training _mixed(DateTime date, double km, int seconds) => Training(
       categories: const {TechnicalCategory.sprint},
     );
 
+Training _walk(DateTime date, double km, int seconds) => Training(
+      id: 'w${_n++}',
+      date: date,
+      type: TrainingType.walking,
+      distanceKm: km,
+      runSeconds: seconds,
+    );
+
 final _today = DateTime(2026, 10, 21); // mercoledì
 
 void main() {
@@ -45,6 +53,44 @@ void main() {
     expect(s.activeYears, isEmpty);
     expect(s.thisWeekCount, 0);
     expect(s.latest, isNull);
+    expect(s.longestWalkKm, isNull);
+    expect(s.walkPacePoints, isEmpty);
+  });
+
+  test('walks stay out of run records and run pace points', () {
+    final s = TrainingStats([
+      _run(DateTime(2026, 10, 1), 5, 1500),
+      _walk(DateTime(2026, 10, 2), 9, 3000), // 333 s/km, più lunga
+      _walk(DateTime(2026, 10, 3), 2, 400), // 200 s/km, più veloce
+    ], today: _today);
+
+    expect(s.bestPaceSecondsPerKm, 300);
+    expect(s.longestRunKm, 5);
+    expect(s.pacePoints, hasLength(1));
+  });
+
+  test('walking records and pace points', () {
+    final s = TrainingStats([
+      _walk(DateTime(2026, 10, 5), 6, 4200),
+      _run(DateTime(2026, 10, 4), 10, 3000),
+      _walk(DateTime(2026, 10, 2), 4, 2760),
+    ], today: _today);
+
+    expect(s.longestWalkKm, 6);
+    expect(s.walkPacePoints.map((p) => p.date),
+        [DateTime(2026, 10, 2), DateTime(2026, 10, 5)]);
+    expect(s.walkPacePoints.first.secondsPerKm, 690);
+  });
+
+  test('walks count for streaks, week count and day types', () {
+    final s = TrainingStats([
+      _walk(DateTime(2026, 10, 20), 4, 2760),
+      _walk(DateTime(2026, 10, 13), 4, 2760),
+    ], today: _today);
+
+    expect(s.currentWeekStreak, 2);
+    expect(s.thisWeekCount, 1);
+    expect(s.dayTypes[DateTime.utc(2026, 10, 20)], TrainingType.walking);
   });
 
   test('best pace ignores runs shorter than 1 km', () {

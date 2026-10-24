@@ -72,6 +72,13 @@ void main() {
         isNull);
   });
 
+  test('walking row is accepted', () {
+    final back = trainingFromCsvRow(
+        ['w', '20/10/2026', 'walking', '', '4.0', '2760', '', ''])!;
+    expect(back.type, 'walking');
+    expect(back.distanceKm, 4.0);
+  });
+
   test('unknown type returns null', () {
     expect(
         trainingFromCsvRow(['a', '20/10/2026', 'yoga', '30', '', '', '', '']),
