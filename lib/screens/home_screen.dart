@@ -22,6 +22,7 @@ import 'stats_screen.dart';
 import 'backup_screen.dart';
 import '../data/player_icons.dart';
 import 'settings_screen.dart';
+import '../widgets/add_action_menu.dart';
 import 'fields_screen.dart';
 import '../services/player_stats_calculator.dart';
 
@@ -62,34 +63,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   /// Il + centrale: nuova partita o nuovo allenamento.
-  Future<void> _showAddSheet() async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.sports_soccer_rounded,
-                  color: AppTheme.accentGreen),
-              title: Text('Nuova partita',
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              onTap: () => Navigator.pop(ctx, 'match'),
-            ),
-            ListTile(
-              leading: Icon(Icons.directions_run_rounded,
-                  color: AppTheme.accentBlue),
-              title: Text('Nuovo allenamento',
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              onTap: () => Navigator.pop(ctx, 'training'),
-            ),
-          ],
-        ),
-      ),
-    );
+  final _addButtonKey = GlobalKey();
+
+  Future<void> _showAddMenu() async {
+    final choice = await showAddActionMenu(context, anchorKey: _addButtonKey);
     if (!mounted || choice == null) return;
-    if (choice == 'match') {
+    if (choice == AddAction.match) {
       await Navigator.push(
           context, MaterialPageRoute(builder: (_) => const NewMatchScreen()));
       if (mounted) setState(() {});
@@ -329,8 +308,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             // Bottone centrale add
             GestureDetector(
-              onTap: _showAddSheet,
+              onTap: _showAddMenu,
               child: Container(
+                key: _addButtonKey,
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
