@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/hive_boxes.dart';
+import '../features/trainings/data/training_csv.dart';
 import '../models/field_model.dart';
 import '../models/match_model.dart';
 import '../models/player_model.dart';
@@ -97,6 +98,15 @@ class CsvService {
           ]),
     ];
     return _writeFile('fields.csv', _toCsv(rows));
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // EXPORT — ALLENAMENTI
+  // ─────────────────────────────────────────────────────────────
+
+  Future<File> exportTrainings() async {
+    final rows = trainingsToCsvRows(HiveBoxes.trainingsBox.values.toList());
+    return _writeFile('trainings.csv', _toCsv(rows));
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -248,7 +258,7 @@ class CsvService {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // EXPORT COMPLETO — tutti e 4 i file + condivisione
+  // EXPORT COMPLETO — tutti i file + condivisione
   // ─────────────────────────────────────────────────────────────
 
   Future<void> exportAll() async {
@@ -257,6 +267,7 @@ class CsvService {
     final matchesFile = await exportMatches();
     final votesFile = await exportVotes();
     final statsFile = await exportStats();
+    final trainingsFile = await exportTrainings();
 
     await Share.shareXFiles(
       [
@@ -265,6 +276,7 @@ class CsvService {
         XFile(matchesFile.path),
         XFile(votesFile.path),
         XFile(statsFile.path),
+        XFile(trainingsFile.path),
       ],
       subject:
           'Calcetto Tracker — Backup dati ${DateFormat('dd-MM-yyyy').format(DateTime.now())}',
@@ -346,6 +358,43 @@ class CsvService {
       }
     }
 
+    return ImportResult.success(imported: imported, skipped: skipped);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // IMPORT — ALLENAMENTI
+  // Gli id già presenti vengono saltati (non sovrascritti).
+  // ─────────────────────────────────────────────────────────────
+
+  Future<ImportResult> importTrainings() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      dialogTitle: 'Seleziona trainings.csv',
+    );
+    if (result == null || result.files.single.path == null) {
+      return ImportResult.cancelled();
+    }
+
+    final raw = await File(result.files.single.path!).readAsString();
+    final rows = _fromCsv(raw);
+    if (rows.length < 2) return ImportResult.error('File vuoto o non valido');
+
+    int imported = 0;
+    int skipped = 0;
+    for (int i = 1; i < rows.length; i++) {
+      final model = trainingFromCsvRow(rows[i]);
+      if (model == null || HiveBoxes.trainingsBox.containsKey(model.id)) {
+        skipped++;
+        continue;
+      }
+      try {
+        await HiveBoxes.trainingsBox.put(model.id, model);
+        imported++;
+      } catch (_) {
+        skipped++;
+      }
+    }
     return ImportResult.success(imported: imported, skipped: skipped);
   }
 

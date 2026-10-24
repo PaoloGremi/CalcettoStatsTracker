@@ -74,7 +74,7 @@ class _BackupScreenState extends State<BackupScreen> {
               _ActionCard(
                 icon: Icons.file_download_rounded,
                 title: 'Esporta tutto',
-                subtitle: 'Genera tutti e 5 i CSV e condividili',
+                subtitle: 'Genera tutti e 6 i CSV e condividili',
                 color: Colors.green,
                 onTap: () => _run(() => _csvService.exportAll()),
               ),
@@ -130,6 +130,17 @@ class _BackupScreenState extends State<BackupScreen> {
                 color: Colors.blue,
                 onTap: () => _run(() async {
                   final f = await _csvService.exportStats();
+                  _showSnack('✅ Salvato: ${f.path.split('/').last}');
+                }),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.directions_run_rounded,
+                title: 'Esporta Allenamenti',
+                subtitle: 'trainings.csv — data, tipo, km, tempi, categorie',
+                color: Colors.blue,
+                onTap: () => _run(() async {
+                  final f = await _csvService.exportTrainings();
                   _showSnack('✅ Salvato: ${f.path.split('/').last}');
                 }),
               ),
@@ -208,6 +219,18 @@ class _BackupScreenState extends State<BackupScreen> {
                 onTap: () => _run(() async {
                   final result = await _csvService.importVotes();
                   await _showImportResult(result, 'Voti');
+                }),
+              ),
+              const SizedBox(height: 10),
+              _ActionCard(
+                icon: Icons.directions_run_rounded,
+                title: 'Importa Allenamenti',
+                subtitle:
+                    'Seleziona trainings.csv — gli allenamenti già presenti vengono saltati',
+                color: Colors.orange,
+                onTap: () => _run(() async {
+                  final result = await _csvService.importTrainings();
+                  await _showImportResult(result, 'Allenamenti');
                 }),
               ),
             ],
