@@ -3,14 +3,18 @@ enum TrainingType {
   running('Corsa'),
   walking('Camminata'),
   technical('Tecnico'),
-  mixed('Misto');
+  mixed('Misto'),
+  swimming('Nuoto');
 
   const TrainingType(this.label);
 
   final String label;
 
   /// Ha distanza e tempo (corsa, camminata, misto).
-  bool get hasDistance => this != TrainingType.technical;
+  bool get hasDistance =>
+      this == TrainingType.running ||
+      this == TrainingType.walking ||
+      this == TrainingType.mixed;
 
   /// Conta per i record e il grafico della corsa (non la camminata).
   bool get countsAsRun =>
@@ -19,6 +23,9 @@ enum TrainingType {
   /// L'allenamento comprende una parte tecnica (durata + categorie).
   bool get hasTechnical =>
       this == TrainingType.technical || this == TrainingType.mixed;
+
+  /// Si registra una durata in minuti (parte tecnica o nuoto).
+  bool get hasDuration => hasTechnical || this == TrainingType.swimming;
 }
 
 /// Macro categorie della parte tecnica.
@@ -40,7 +47,7 @@ class Training {
   final DateTime date;
   final TrainingType type;
 
-  /// Durata della sessione tecnica/mista, in minuti.
+  /// Durata della sessione tecnica/mista o della nuotata, in minuti.
   final int? durationMinutes;
   final double? distanceKm;
 
@@ -69,7 +76,7 @@ class Training {
   }
 
   /// Durata complessiva: nella sola corsa coincide col tempo di corsa.
-  int get totalMinutes => type.hasTechnical
+  int get totalMinutes => type.hasDuration
       ? durationMinutes ?? 0
       : ((runSeconds ?? 0) / 60).round();
 
@@ -82,7 +89,7 @@ class Training {
       id: id,
       date: DateTime(date.year, date.month, date.day),
       type: type,
-      durationMinutes: type.hasTechnical ? durationMinutes : null,
+      durationMinutes: type.hasDuration ? durationMinutes : null,
       distanceKm: type.hasDistance ? distanceKm : null,
       runSeconds: type.hasDistance ? runSeconds : null,
       categories: type.hasTechnical ? categories : const {},

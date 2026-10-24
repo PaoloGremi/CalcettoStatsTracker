@@ -85,6 +85,19 @@ void main() {
     expect(find.text('Ieri · Camminata 4 km · 11:30/km'), findsOneWidget);
   });
 
+  testWidgets('swimming latest shows minutes', (tester) async {
+    await pump(tester, [
+      Training(
+        id: 's',
+        date: DateTime(2026, 10, 23),
+        type: TrainingType.swimming,
+        durationMinutes: 45,
+      ),
+    ]);
+
+    expect(find.text('Ieri · Nuoto 45 min'), findsOneWidget);
+  });
+
   testWidgets('technical latest shows minutes', (tester) async {
     await pump(tester, [_tech]);
 

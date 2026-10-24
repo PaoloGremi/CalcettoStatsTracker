@@ -29,6 +29,8 @@ class AppTheme {
       isLight ? const Color(0xFFE65100) : const Color(0xFFFF6D00);
   static Color get accentBlue =>
       isLight ? const Color(0xFF0081CB) : const Color(0xFF00B0FF);
+  static Color get accentCyan =>
+      isLight ? const Color(0xFF00897B) : const Color(0xFF1DE9B6);
 
   // ── Testo ─────────────────────────────────────────────────────
   static Color get textPrimary =>

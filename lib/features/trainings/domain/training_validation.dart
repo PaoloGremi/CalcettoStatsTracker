@@ -17,11 +17,11 @@ String? validateTraining(Training t, {required DateTime today}) {
           : 'Inserisci un tempo di corsa maggiore di zero';
     }
   }
-  if (t.type.hasTechnical) {
-    if ((t.durationMinutes ?? 0) <= 0) {
-      return 'Inserisci una durata maggiore di zero';
-    }
-    if (t.categories.isEmpty) return 'Scegli almeno una categoria tecnica';
+  if (t.type.hasDuration && (t.durationMinutes ?? 0) <= 0) {
+    return 'Inserisci una durata maggiore di zero';
+  }
+  if (t.type.hasTechnical && t.categories.isEmpty) {
+    return 'Scegli almeno una categoria tecnica';
   }
   return null;
 }

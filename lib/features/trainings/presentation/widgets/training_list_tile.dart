@@ -10,6 +10,7 @@ Color trainingTypeColor(TrainingType type) => switch (type) {
       TrainingType.walking => AppTheme.accentGold,
       TrainingType.technical => AppTheme.accentOrange,
       TrainingType.mixed => AppTheme.accentGreen,
+      TrainingType.swimming => AppTheme.accentCyan,
     };
 
 IconData trainingTypeIcon(TrainingType type) => switch (type) {
@@ -17,6 +18,7 @@ IconData trainingTypeIcon(TrainingType type) => switch (type) {
       TrainingType.walking => Icons.directions_walk_rounded,
       TrainingType.technical => Icons.sports_soccer_rounded,
       TrainingType.mixed => Icons.fitness_center_rounded,
+      TrainingType.swimming => Icons.pool_rounded,
     };
 
 /// Dettagli di un allenamento: `5,2 km · 25:30 · 4:54/km · 60 min · Tiri`.
@@ -29,8 +31,10 @@ String trainingDetails(Training t) {
     final pace = t.paceSecondsPerKm;
     if (pace != null) parts.add('${formatPace(pace)}/km');
   }
+  if (t.type.hasDuration && t.durationMinutes != null) {
+    parts.add('${t.durationMinutes} min');
+  }
   if (t.type.hasTechnical) {
-    if (t.durationMinutes != null) parts.add('${t.durationMinutes} min');
     final cats = TechnicalCategory.values
         .where(t.categories.contains)
         .map((c) => c.label)

@@ -226,4 +226,23 @@ void main() {
 
     expect(s.activeYears, [2024, 2026]);
   });
+
+  test('swims stay out of run and walk records but count for streaks', () {
+    final swim = Training(
+      id: 's',
+      date: DateTime(2026, 10, 20),
+      type: TrainingType.swimming,
+      durationMinutes: 45,
+    );
+    final s = TrainingStats([swim], today: DateTime(2026, 10, 24));
+
+    expect(s.bestPaceSecondsPerKm, isNull);
+    expect(s.longestRunKm, isNull);
+    expect(s.longestWalkKm, isNull);
+    expect(s.pacePoints, isEmpty);
+    expect(s.walkPacePoints, isEmpty);
+    expect(s.currentWeekStreak, 1);
+    expect(s.thisWeekCount, 1);
+    expect(s.dayTypes[DateTime.utc(2026, 10, 20)], TrainingType.swimming);
+  });
 }

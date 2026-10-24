@@ -126,6 +126,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('swimming shows only the duration', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Nuoto'));
+    await tester.pump();
+
+    expect(find.byKey(_runTime), findsNothing);
+    expect(find.byKey(_distance), findsNothing);
+    expect(find.byKey(_duration), findsOneWidget);
+    expect(find.text('Tiri'), findsNothing);
+    expect(find.text('NUOTO'), findsOneWidget);
+  });
+
+  testWidgets('saves a swimming training', (tester) async {
+    when(() => save(any())).thenAnswer((_) async => Result.success(_mixed));
+    await pump(tester);
+    await tester.tap(find.text('Nuoto'));
+    await tester.pump();
+    await tester.enterText(find.byKey(_duration), '45');
+    await tester.ensureVisible(find.byKey(_saveButton));
+    await tester.tap(find.byKey(_saveButton));
+    await tester.pump();
+
+    final saved = verify(() => save(captureAny())).captured.single as Training;
+    expect(saved.type, TrainingType.swimming);
+    expect(saved.durationMinutes, 45);
+  });
+
   testWidgets('mixed shows both', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Misto'));

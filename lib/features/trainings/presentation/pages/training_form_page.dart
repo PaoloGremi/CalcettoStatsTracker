@@ -7,6 +7,8 @@ import '../../../../theme/app_theme.dart';
 import '../../domain/entities/training.dart';
 import '../controllers/trainings_controller.dart';
 import '../training_format.dart';
+import '../widgets/training_list_tile.dart'
+    show trainingTypeColor, trainingTypeIcon;
 
 /// Crea o modifica un allenamento. Legge [TrainingsController] dal Provider.
 /// Torna `true` al chiamante se ha salvato o eliminato.
@@ -164,14 +166,24 @@ class _TrainingFormPageState extends State<TrainingFormPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            SegmentedButton<TrainingType>(
-              segments: [
+            // Chip che vanno a capo: con cinque tipi una barra a segmenti
+            // non starebbe su uno schermo stretto.
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
                 for (final t in TrainingType.values)
-                  ButtonSegment(value: t, label: Text(t.label)),
+                  ChoiceChip(
+                    avatar: Icon(trainingTypeIcon(t),
+                        size: 18, color: trainingTypeColor(t)),
+                    label: Text(t.label),
+                    selected: _type == t,
+                    showCheckmark: false,
+                    selectedColor:
+                        trainingTypeColor(t).withValues(alpha: 0.25),
+                    onSelected: (_) => setState(() => _type = t),
+                  ),
               ],
-              selected: {_type},
-              showSelectedIcon: false,
-              onSelectionChanged: (s) => setState(() => _type = s.first),
             ),
             const SizedBox(height: 12),
             ListTile(
@@ -208,8 +220,9 @@ class _TrainingFormPageState extends State<TrainingFormPage> {
                 validator: _validateRunTime,
               ),
             ],
-            if (_type.hasTechnical) ...[
-              _sectionTitle('Parte tecnica'),
+            if (_type.hasDuration) ...[
+              _sectionTitle(
+                  _type.hasTechnical ? 'Parte tecnica' : _type.label),
               TextFormField(
                 key: const Key('duration_field'),
                 controller: _duration,
@@ -218,6 +231,8 @@ class _TrainingFormPageState extends State<TrainingFormPage> {
                     const InputDecoration(labelText: 'Durata (minuti)'),
                 validator: _validateDuration,
               ),
+            ],
+            if (_type.hasTechnical) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,

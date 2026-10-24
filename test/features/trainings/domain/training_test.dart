@@ -188,4 +188,57 @@ void main() {
       expect(validateTraining(_mixed(), today: _today), isNull);
     });
   });
+
+  group('swimming', () {
+    final swim = Training(
+      id: 's',
+      date: DateTime(2026, 10, 20),
+      type: TrainingType.swimming,
+      durationMinutes: 45,
+    );
+
+    test('label and flags: duration only', () {
+      expect(TrainingType.swimming.label, 'Nuoto');
+      expect(TrainingType.swimming.hasDistance, isFalse);
+      expect(TrainingType.swimming.countsAsRun, isFalse);
+      expect(TrainingType.swimming.hasTechnical, isFalse);
+      expect(TrainingType.swimming.hasDuration, isTrue);
+    });
+
+    test('duration flag for the other types', () {
+      expect(TrainingType.running.hasDuration, isFalse);
+      expect(TrainingType.walking.hasDuration, isFalse);
+      expect(TrainingType.technical.hasDuration, isTrue);
+      expect(TrainingType.mixed.hasDuration, isTrue);
+    });
+
+    test('total minutes is the duration', () {
+      expect(swim.totalMinutes, 45);
+    });
+
+    test('normalized keeps the duration and drops everything else', () {
+      final t = swim
+          .copyWith(
+            distanceKm: 1.5,
+            runSeconds: 1800,
+            categories: {TechnicalCategory.shots},
+          )
+          .normalized();
+      expect(t.durationMinutes, 45);
+      expect(t.distanceKm, isNull);
+      expect(t.runSeconds, isNull);
+      expect(t.categories, isEmpty);
+    });
+
+    test('valid without distance or categories', () {
+      expect(validateTraining(swim, today: _today), isNull);
+    });
+
+    test('requires a duration', () {
+      final noDuration = Training(
+          id: 's', date: DateTime(2026, 10, 20), type: TrainingType.swimming);
+      expect(validateTraining(noDuration, today: _today),
+          'Inserisci una durata maggiore di zero');
+    });
+  });
 }

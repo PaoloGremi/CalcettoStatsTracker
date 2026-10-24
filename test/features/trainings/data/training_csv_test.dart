@@ -79,6 +79,13 @@ void main() {
     expect(back.distanceKm, 4.0);
   });
 
+  test('swimming row is accepted', () {
+    final back = trainingFromCsvRow(
+        ['s', '20/10/2026', 'swimming', '45', '', '', '', ''])!;
+    expect(back.type, 'swimming');
+    expect(back.durationMinutes, 45);
+  });
+
   test('unknown type returns null', () {
     expect(
         trainingFromCsvRow(['a', '20/10/2026', 'yoga', '30', '', '', '', '']),
