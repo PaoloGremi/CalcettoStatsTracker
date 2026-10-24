@@ -65,8 +65,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Il + centrale: nuova partita o nuovo allenamento.
   final _addButtonKey = GlobalKey();
 
+  /// Il + della barra è nascosto mentre il menu mostra la sua X.
+  bool _addMenuOpen = false;
+
   Future<void> _showAddMenu() async {
+    setState(() => _addMenuOpen = true);
     final choice = await showAddActionMenu(context, anchorKey: _addButtonKey);
+    if (mounted) setState(() => _addMenuOpen = false);
     if (!mounted || choice == null) return;
     if (choice == AddAction.match) {
       await Navigator.push(
@@ -309,22 +314,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // Bottone centrale add
             GestureDetector(
               onTap: _showAddMenu,
-              child: Container(
-                key: _addButtonKey,
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppTheme.accentGreen,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppTheme.accentGreen.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        spreadRadius: 2)
-                  ],
+              child: Opacity(
+                opacity: _addMenuOpen ? 0 : 1,
+                child: Container(
+                  key: _addButtonKey,
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentGreen,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                          color: AppTheme.accentGreen.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          spreadRadius: 2)
+                    ],
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: Colors.black, size: 30),
                 ),
-                child: const Icon(Icons.add_rounded,
-                    color: Colors.black, size: 30),
               ),
             ),
             _NavBtn(

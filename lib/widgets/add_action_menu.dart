@@ -8,8 +8,10 @@ import '../theme/app_theme.dart';
 enum AddAction { match, training }
 
 /// Apre il menu del + : due sfere escono a ventaglio sopra il pulsante
-/// indicato da [anchorKey] (Partita a sinistra, Allenamento a destra), il +
-/// ruota in una ×. Ritorna la scelta, o null se il menu viene chiuso.
+/// indicato da [anchorKey] (Partita a sinistra, Allenamento a destra) e al
+/// posto del + compare una X per chiudere. Il chiamante dovrebbe nascondere il
+/// proprio + finché il Future non si completa. Ritorna la scelta, o null se il
+/// menu viene chiuso.
 Future<AddAction?> showAddActionMenu(
   BuildContext context, {
   required GlobalKey anchorKey,
@@ -77,7 +79,8 @@ class _AddActionMenu extends StatelessWidget {
           icon: Icons.directions_run_rounded,
           color: AppTheme.accentBlue,
         ),
-        // Il + che diventa × , sopra al + vero.
+        // Pulsante X al posto del + (la home nasconde il suo + finché il
+        // menu è aperto, così non si vedono due pulsanti sovrapposti).
         Positioned.fromRect(
           rect: anchor,
           child: Tooltip(
@@ -91,13 +94,15 @@ class _AddActionMenu extends StatelessWidget {
                 ),
                 child: AnimatedBuilder(
                   animation: animation,
+                  // Entra con un quarto di giro.
                   builder: (_, child) => Transform.rotate(
-                    angle:
-                        Curves.easeOut.transform(animation.value) * math.pi / 4,
+                    angle: (1 - Curves.easeOut.transform(animation.value)) *
+                        -math.pi /
+                        2,
                     child: child,
                   ),
-                  child: const Icon(Icons.add_rounded,
-                      color: Colors.black, size: 30),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.black, size: 28),
                 ),
               ),
             ),

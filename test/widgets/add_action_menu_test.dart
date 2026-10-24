@@ -105,6 +105,18 @@ void main() {
     expect(find.text('Partita'), findsNothing);
   });
 
+  testWidgets('the close button is an X centred on the +', (tester) async {
+    await open(tester);
+
+    final close = find.byTooltip('Chiudi');
+    expect(
+        find.descendant(of: close, matching: find.byIcon(Icons.close_rounded)),
+        findsOneWidget);
+    expect(find.descendant(of: close, matching: find.byIcon(Icons.add_rounded)),
+        findsNothing);
+    expect(tester.getCenter(close), tester.getCenter(find.byKey(_plusKey)));
+  });
+
   testWidgets('the close button closes without a choice', (tester) async {
     final host = await open(tester);
 
