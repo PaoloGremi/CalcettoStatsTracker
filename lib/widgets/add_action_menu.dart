@@ -24,8 +24,12 @@ Future<AddAction?> showAddActionMenu(
     barrierLabel: 'Chiudi menu',
     barrierColor: Colors.black.withValues(alpha: 0.55),
     transitionDuration: const Duration(milliseconds: 320),
-    pageBuilder: (ctx, animation, _) =>
-        _AddActionMenu(anchor: anchor, animation: animation),
+    // showGeneralDialog non fornisce un Material: senza, i Text usano lo stile
+    // di fallback (sottolineatura gialla di debug).
+    pageBuilder: (ctx, animation, _) => Material(
+      type: MaterialType.transparency,
+      child: _AddActionMenu(anchor: anchor, animation: animation),
+    ),
   );
 }
 
