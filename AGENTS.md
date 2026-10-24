@@ -18,6 +18,7 @@ dart run build_runner build --delete-conflicting-outputs  # regenerate Hive adap
 - **`lib/features/players/`** — fully migrated to Clean Architecture: `domain/entities`, `domain/usecases`, `domain/repositories`, `data/` (datasource + mapper + repository), `presentation/controllers + pages`.
 - **`lib/screens/` + `lib/services/DataService`** — legacy layer, still in use for matches/fields/stats. Not yet migrated.
 - These two layers coexist intentionally. Do not collapse them.
+- **`lib/features/trainings/`** — personal training log (running/technical/mixed), also Clean Architecture. Unlike players it has **no link to `DataService`**: the repository writes straight to `HiveBoxes.trainingsBox`. Stats live in the pure `TrainingStats` class; `TrainingsController` is a get_it factory (the home screen owns one, shared with the + sheet and `TrainingsPage`).
 
 ## Critical coupling: `PlayerRepositoryImpl` must delegate writes to `DataService`
 Mutations (`add`/`update`/`delete`) in [`PlayerRepositoryImpl`](lib/features/players/data/repositories/player_repository_impl.dart) call `DataService` instead of writing directly to the Hive box. `DataService` is the sole source of `notifyListeners()` for players — bypassing it silently breaks reactivity in un-migrated screens.
@@ -34,6 +35,7 @@ Operations that can fail return `Result<T>` (a custom sealed class in [`lib/core
 - `DataService` is a **lazy singleton** in both `get_it` and `Provider` (same instance, accessed via `getIt<DataService>()`).
 
 ## Hive model rules
+- Hive typeIds in use: 0 `PlayerModel`, 1 `MatchModel`, 2 `FieldModel`, 3 `TrainingModel` (generated adapter, registered in `main()` before `HiveBoxes.init()`). `TrainingModel` stores enums by `.name`, never by index.
 - `PlayerModel` uses `@HiveType(typeId: 0)` with `@HiveField` annotations; the `.g.dart` adapter is generated — never hand-write it.
 - `HiveMigrationService.migratePlayersIfNeeded()` must be called in `main()` **after** `Hive.initFlutter()` and **before** `HiveBoxes.init()` — it registers `PlayerModelAdapter`. `HiveBoxes.init()` must not register it again.
 - In tests requiring Hive: use `Hive.init(tempDir.path)` with a temp dir, register adapters manually, assign `HiveBoxes.*Box` directly, and call `Hive.deleteFromDisk()` in `tearDown`.
