@@ -52,13 +52,16 @@ TrainingModel? trainingFromCsvRow(List<dynamic> row) {
   final type = cells[2];
   if (!TrainingType.values.any((t) => t.name == type)) return null;
 
+  final km = double.tryParse(cells[4]);
+  if (km != null && !km.isFinite) return null;
+
   final notes = row[7].toString();
   return TrainingModel(
     id: id,
     date: date,
     type: type,
     durationMinutes: int.tryParse(cells[3]),
-    distanceKm: double.tryParse(cells[4]),
+    distanceKm: km,
     runSeconds: int.tryParse(cells[5]),
     categories: [
       for (final c in cells[6].split('|'))

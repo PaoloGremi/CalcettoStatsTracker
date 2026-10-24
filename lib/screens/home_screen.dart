@@ -32,7 +32,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   AppSettings _settings = const AppSettings();
 
   /// Condiviso tra la card in home e il "Nuovo allenamento" del +, così la
@@ -44,12 +44,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadSettings();
     _trainings.load();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _trainings.dispose();
     super.dispose();
+  }
+
+  /// Al rientro in primo piano ricarica gli allenamenti: la card della home
+  /// non deve restare a "ieri" o alla settimana precedente.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _trainings.load();
   }
 
   /// Il + centrale: nuova partita o nuovo allenamento.
@@ -81,8 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (!mounted || choice == null) return;
     if (choice == 'match') {
-      await Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const NewMatchScreen()));
+      await Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const NewMatchScreen()));
       if (mounted) setState(() {});
     } else {
       await Navigator.push(
@@ -169,7 +178,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppTheme.textSecondary, size: 22),
             tooltip: 'Backup CSV',
             onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const BackupScreen())),
+                    MaterialPageRoute(builder: (_) => const BackupScreen()))
+                // Un import può aver aggiunto allenamenti.
+                .then((_) => _trainings.load()),
           ),
           IconButton(
             icon: Icon(Icons.settings_rounded,

@@ -7,7 +7,8 @@ String? validateTraining(Training t, {required DateTime today}) {
   if (day.isAfter(todayDay)) return 'La data non può essere nel futuro';
 
   if (t.type.hasRun) {
-    if ((t.distanceKm ?? 0) <= 0) {
+    final km = t.distanceKm ?? 0;
+    if (!km.isFinite || km <= 0) {
       return 'Inserisci una distanza maggiore di zero';
     }
     if ((t.runSeconds ?? 0) <= 0) {

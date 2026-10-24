@@ -115,6 +115,13 @@ void main() {
           'Inserisci una distanza maggiore di zero');
     });
 
+    test('non-finite distance', () {
+      expect(validateTraining(_run(km: double.nan), today: _today),
+          'Inserisci una distanza maggiore di zero');
+      expect(validateTraining(_run(km: double.infinity), today: _today),
+          'Inserisci una distanza maggiore di zero');
+    });
+
     test('missing run time', () {
       expect(validateTraining(_run(seconds: null), today: _today),
           'Inserisci un tempo di corsa maggiore di zero');

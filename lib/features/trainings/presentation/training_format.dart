@@ -32,7 +32,7 @@ int? parseRunTime(String input) {
 /// Km da testo con virgola o punto decimale. Null se vuoto, non valido o ≤ 0.
 double? parseKm(String input) {
   final value = double.tryParse(input.trim().replaceAll(',', '.'));
-  if (value == null || value <= 0) return null;
+  if (value == null || !value.isFinite || value <= 0) return null;
   return value;
 }
 

@@ -78,6 +78,13 @@ void main() {
         isNull);
   });
 
+  test('non-finite distance returns null', () {
+    expect(
+        trainingFromCsvRow(
+            ['a', '20/10/2026', 'running', '', 'NaN', '1500', '', '']),
+        isNull);
+  });
+
   test('short row returns null', () {
     expect(trainingFromCsvRow(['a', '20/10/2026']), isNull);
   });

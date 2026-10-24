@@ -31,7 +31,11 @@ class _TrainingsPageState extends State<TrainingsPage> {
     super.initState();
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? getIt<TrainingsController>();
-    _controller.load();
+    // Dopo il primo frame: il controller può essere quello della home, che
+    // ha listener già montati; notificare durante questa build li sporcherebbe.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.load();
+    });
   }
 
   @override

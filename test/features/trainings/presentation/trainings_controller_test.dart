@@ -54,6 +54,22 @@ void main() {
     expect(controller.stats.thisWeekCount, 1);
   });
 
+  test('stats follow the clock across a week boundary', () async {
+    var now = DateTime(2026, 10, 21);
+    controller = TrainingsController(
+      getAllTrainings: getAll,
+      saveTraining: save,
+      deleteTraining: delete,
+      clock: () => now,
+    );
+    await controller.load();
+    expect(controller.stats.thisWeekCount, 1);
+
+    now = DateTime(2026, 10, 27); // martedì della settimana dopo
+    expect(controller.stats.thisWeekCount, 0);
+    expect(controller.stats.currentWeekStreak, 1);
+  });
+
   test('load failure sets error', () async {
     when(() => getAll())
         .thenAnswer((_) async => Result.failure(const CacheFailure('boom')));

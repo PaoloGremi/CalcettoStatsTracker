@@ -77,6 +77,17 @@ void main() {
     expect(find.text('20 ott 2026 · Tecnico 60 min'), findsOneWidget);
   });
 
+  testWidgets('tapping the card opens the progress page without errors',
+      (tester) async {
+    await pump(tester, [_run]);
+
+    await tester.tap(find.byType(HomeTrainingsCard));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Allenamenti'), findsOneWidget);
+  });
+
   testWidgets('does not overflow at 320x568 with textScaler 1.3',
       (tester) async {
     tester.view.physicalSize = const Size(320, 568);

@@ -33,7 +33,19 @@ class TrainingsController extends ChangeNotifier {
   List<Training> get trainings => _trainings;
 
   TrainingStats? _stats;
-  TrainingStats get stats => _stats ??= TrainingStats(_trainings, today: _clock());
+  DateTime? _statsDay;
+
+  /// Ricalcolate quando cambia la lista o il giorno (es. app lasciata
+  /// aperta oltre la mezzanotte).
+  TrainingStats get stats {
+    final now = _clock();
+    final day = DateTime(now.year, now.month, now.day);
+    if (_stats == null || _statsDay != day) {
+      _stats = TrainingStats(_trainings, today: now);
+      _statsDay = day;
+    }
+    return _stats!;
+  }
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;

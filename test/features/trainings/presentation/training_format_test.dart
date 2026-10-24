@@ -25,6 +25,8 @@ void main() {
     test('text', () => expect(parseKm('cinque'), isNull));
     test('zero', () => expect(parseKm('0'), isNull));
     test('negative', () => expect(parseKm('-3'), isNull));
+    test('NaN', () => expect(parseKm('NaN'), isNull));
+    test('overflow to infinity', () => expect(parseKm('1e400'), isNull));
   });
 
   group('formatting', () {
