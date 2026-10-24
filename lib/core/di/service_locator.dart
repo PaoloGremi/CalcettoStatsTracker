@@ -8,6 +8,13 @@ import '../../features/players/domain/usecases/delete_player.dart';
 import '../../features/players/domain/usecases/get_all_players.dart';
 import '../../features/players/domain/usecases/update_player.dart';
 import '../../features/players/presentation/controllers/players_controller.dart';
+import '../../features/trainings/data/datasources/training_local_datasource.dart';
+import '../../features/trainings/data/repositories/training_repository_impl.dart';
+import '../../features/trainings/domain/repositories/training_repository.dart';
+import '../../features/trainings/domain/usecases/delete_training.dart';
+import '../../features/trainings/domain/usecases/get_all_trainings.dart';
+import '../../features/trainings/domain/usecases/save_training.dart';
+import '../../features/trainings/presentation/controllers/trainings_controller.dart';
 import '../../services/data_service.dart';
 import '../../theme/theme_controller.dart';
 
@@ -48,5 +55,25 @@ void setupServiceLocator() {
         addPlayer: getIt<AddPlayer>(),
         updatePlayer: getIt<UpdatePlayer>(),
         deletePlayer: getIt<DeletePlayer>(),
+      ));
+
+  // ── Feature: Trainings ───────────────────────────────────────
+  // Nessun legame con DataService: gli allenamenti sono indipendenti da
+  // giocatori e partite. Controller factory come per Players.
+  getIt.registerFactory<TrainingLocalDataSource>(
+      () => TrainingLocalDataSource());
+  getIt.registerFactory<TrainingRepository>(() => TrainingRepositoryImpl(
+        localDataSource: getIt<TrainingLocalDataSource>(),
+      ));
+  getIt.registerFactory<GetAllTrainings>(
+      () => GetAllTrainings(getIt<TrainingRepository>()));
+  getIt.registerFactory<SaveTraining>(
+      () => SaveTraining(getIt<TrainingRepository>()));
+  getIt.registerFactory<DeleteTraining>(
+      () => DeleteTraining(getIt<TrainingRepository>()));
+  getIt.registerFactory<TrainingsController>(() => TrainingsController(
+        getAllTrainings: getIt<GetAllTrainings>(),
+        saveTraining: getIt<SaveTraining>(),
+        deleteTraining: getIt<DeleteTraining>(),
       ));
 }

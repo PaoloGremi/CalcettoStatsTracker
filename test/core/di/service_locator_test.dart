@@ -1,4 +1,5 @@
 import 'package:calcetto_tracker/core/di/service_locator.dart';
+import 'package:calcetto_tracker/features/trainings/presentation/controllers/trainings_controller.dart';
 import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,5 +21,12 @@ void main() {
 
     expect(() => setupServiceLocator(), returnsNormally);
     expect(getIt<DataService>(), same(first));
+  });
+
+  test('TrainingsController is a factory', () {
+    setupServiceLocator();
+
+    expect(getIt<TrainingsController>(),
+        isNot(same(getIt<TrainingsController>())));
   });
 }
