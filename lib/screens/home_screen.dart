@@ -12,6 +12,7 @@ import '../services/data_service.dart';
 import '../theme/app_theme.dart';
 import '../features/players/presentation/pages/players_page.dart';
 import '../core/di/service_locator.dart';
+import '../features/calendar/presentation/activity_calendar_page.dart';
 import '../features/trainings/presentation/controllers/trainings_controller.dart';
 import '../features/trainings/presentation/pages/training_form_page.dart';
 import '../features/trainings/presentation/widgets/home_trainings_card.dart';
@@ -89,6 +90,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
   }
+
+  /// Calendario di partite e allenamenti. Il Consumer lo aggiorna quando
+  /// una partita cambia (es. eliminata dal dettaglio).
+  void _openCalendar() => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Consumer<DataService>(
+            builder: (_, data, __) => ActivityCalendarPage(
+              matches: data.getAllMatches(),
+              trainings: _trainings,
+              playerId: _settings.mainPlayerId,
+              fieldLookup: data.getFieldById,
+            ),
+          ),
+        ),
+      );
 
   Future<void> _loadSettings() async {
     final s = await AppSettings.load();
@@ -273,6 +290,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     player: mainPlayer,
                     settings: _settings,
                     data: data,
+                    onCalendarTap: _openCalendar,
                     onSettingsTap: () async {
                       final updated = await Navigator.push<bool>(
                           context,
@@ -463,12 +481,14 @@ class _MainPlayerCard extends StatelessWidget {
   final AppSettings settings;
   final DataService data;
   final VoidCallback onSettingsTap;
+  final VoidCallback onCalendarTap;
 
   const _MainPlayerCard({
     required this.player,
     required this.settings,
     required this.data,
     required this.onSettingsTap,
+    required this.onCalendarTap,
   });
 
   @override
@@ -580,6 +600,12 @@ class _MainPlayerCard extends StatelessWidget {
                         ]),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Calendario',
+                    onPressed: onCalendarTap,
+                    icon: Icon(Icons.calendar_month_rounded,
+                        color: AppTheme.accentGreen, size: 24),
                   ),
                 ],
               ),
