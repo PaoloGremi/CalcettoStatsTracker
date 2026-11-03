@@ -25,6 +25,9 @@ class _OverviewTab extends StatelessWidget {
     final recentResults = summary.recentResults;
 
     final sections = <Widget>[
+      _ProfileHero(player: player, summary: summary),
+      const SizedBox(height: 16),
+
       // ── Statistiche sommario ──────────────────────────
       Row(
         children: [
@@ -563,4 +566,74 @@ class _RadarLegendItem extends StatelessWidget {
           ),
         ],
       );
+}
+
+/// Riquadro in cima alla panoramica: foto grande con cornice del colore del
+/// ruolo, nome, ruolo e riepilogo partite/voto.
+class _ProfileHero extends StatelessWidget {
+  final PlayerModel player;
+  final PlayerStatsSummary summary;
+
+  const _ProfileHero({required this.player, required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final roleColor = _roleColor(player.role);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: roleColor, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: roleColor.withValues(alpha: 0.3),
+                  blurRadius: 18,
+                ),
+              ],
+            ),
+            child: _TappablePlayerAvatar(
+                player: player, radius: 64, heroTag: 'overview'),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            player.name.toUpperCase(),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FifaBadge(player.role, color: roleColor),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  _gamesAndVoteLine(summary),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -8,6 +8,8 @@ import 'package:calcetto_tracker/screens/match_detail_screen.dart';
 import 'package:calcetto_tracker/screens/player_stats_screen.dart';
 import 'package:calcetto_tracker/services/data_service.dart';
 import 'package:calcetto_tracker/services/player_stats_summary.dart';
+import 'package:calcetto_tracker/widgets/player_avatar.dart';
+import 'package:calcetto_tracker/widgets/player_photo_viewer.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,7 +156,9 @@ void main() {
     await seed(tester, sixMatches());
     await pumpScreen(tester);
     // Il radar è sotto il bordo: la ListView lo costruisce solo se visibile.
-    await tester.scrollUntilVisible(find.byType(RadarChart), 300,
+    // Si scorre fino al selettore, che sta sopra il grafico, così sono
+    // visibili entrambi.
+    await tester.scrollUntilVisible(find.text('Attributi FIFA'), 300,
         scrollable: find
             .descendant(
                 of: find.byType(ListView), matching: find.byType(Scrollable))
@@ -259,12 +263,69 @@ void main() {
     expect(find.textContaining('6.0 ⭐'), findsOneWidget);
   });
 
+  testWidgets('tapping the overview photo opens it full screen',
+      (tester) async {
+    // Basta un file qualsiasi: il test verifica la navigazione, non la decodifica.
+    final photo = File('${tempDir.path}/photo.png')..writeAsBytesSync([0]);
+    mario = PlayerModel(
+        id: 'p1',
+        name: 'Mario',
+        role: 'A',
+        icon: 'star',
+        imagePath: photo.path);
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tester.tap(find.byType(PlayerAvatar));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPhotoViewer), findsOneWidget);
+    tester.takeException(); // byte non decodificabili: irrilevante qui
+
+    await tester.tap(find.byTooltip('Chiudi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPhotoViewer), findsNothing);
+  });
+
+  testWidgets('tapping the header photo in other tabs opens it full screen',
+      (tester) async {
+    final photo = File('${tempDir.path}/photo.png')..writeAsBytesSync([0]);
+    mario = PlayerModel(
+        id: 'p1',
+        name: 'Mario',
+        role: 'A',
+        icon: 'star',
+        imagePath: photo.path);
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+    await tapTab(tester, 'VOTI');
+
+    await tester.tap(find.byType(PlayerAvatar));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPhotoViewer), findsOneWidget);
+    tester.takeException(); // byte non decodificabili: irrilevante qui
+  });
+
+  testWidgets('overview photo without an image does not open the viewer',
+      (tester) async {
+    await seed(tester, sixMatches());
+    await pumpScreen(tester);
+
+    await tester.tap(find.byType(PlayerAvatar));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPhotoViewer), findsNothing);
+  });
+
   testWidgets('every tab renders its moved sections without errors',
       (tester) async {
     await seed(tester, sixMatches());
     await pumpScreen(tester);
 
     expect(find.text('PARTITE'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('RADAR PERFORMANCE'), 300,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
     expect(find.text('RADAR PERFORMANCE'), findsOneWidget);
 
     const expectedHeaders = {

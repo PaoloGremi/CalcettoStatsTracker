@@ -12,6 +12,7 @@ import '../models/match_model.dart';
 import '../services/data_service.dart';
 import '../services/player_stats_summary.dart';
 import '../widgets/player_avatar.dart';
+import '../widgets/player_photo_viewer.dart';
 import '../theme/app_theme.dart';
 import '../services/player_stats_calculator.dart';
 import '../core/util/date_formatters.dart';
@@ -120,7 +121,20 @@ class PlayerStatsScreen extends StatelessWidget {
         ),
         body: Column(
           children: [
-            _CompactHeader(player: player, summary: summary),
+            // Sulla panoramica la foto grande sta già nel riquadro in cima:
+            // l'header compatto serve solo nelle altre tab.
+            Builder(builder: (context) {
+              final controller = DefaultTabController.of(context);
+              return ListenableBuilder(
+                listenable: controller,
+                builder: (context, _) => AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  child: controller.index == 0
+                      ? const SizedBox(width: double.infinity)
+                      : _CompactHeader(player: player, summary: summary),
+                ),
+              );
+            }),
             Expanded(
               child: TabBarView(
                 children: [
@@ -157,12 +171,9 @@ class _CompactHeader extends StatelessWidget {
         ),
         child: Row(
           children: [
-            PlayerAvatar(
-                name: player.name,
-                icon: player.icon,
-                imagePath: player.imagePath,
-                radius: 22),
-            const SizedBox(width: 12),
+            _TappablePlayerAvatar(
+                player: player, radius: 28, heroTag: 'header'),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,8 +190,7 @@ class _CompactHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${summary.totalGames} ${summary.totalGames == 1 ? 'partita' : 'partite'} · '
-                    '${summary.votedGames > 0 ? summary.avgVote.toStringAsFixed(1) : '—'} ⭐',
+                    _gamesAndVoteLine(summary),
                     style:
                         TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                   ),
@@ -188,15 +198,57 @@ class _CompactHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            FifaBadge(player.role,
-                color: switch (player.role) {
-                  'P' => AppTheme.accentGold,
-                  'D' => AppTheme.accentBlue,
-                  'C' => AppTheme.accentGreen,
-                  'A' => AppTheme.accentRed,
-                  _ => AppTheme.textMuted,
-                }),
+            FifaBadge(player.role, color: _roleColor(player.role)),
           ],
         ),
       );
 }
+
+/// Foto del giocatore; se c'è un'immagine vera, un tocco la apre a schermo
+/// intero. [heroTag] distingue header e panoramica, che durante lo swipe tra
+/// le tab possono essere costruiti insieme (due Hero con lo stesso tag
+/// nella stessa route fanno fallire la transizione).
+class _TappablePlayerAvatar extends StatelessWidget {
+  final PlayerModel player;
+  final double radius;
+  final String heroTag;
+
+  const _TappablePlayerAvatar({
+    required this.player,
+    required this.radius,
+    required this.heroTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = PlayerAvatar(
+      name: player.name,
+      icon: player.icon,
+      imagePath: player.imagePath,
+      radius: radius,
+    );
+    final image = PlayerPhotoViewer.imageFor(
+        icon: player.icon, imagePath: player.imagePath);
+    if (image == null) return avatar;
+
+    final tag = 'player-photo-${player.id}-$heroTag';
+    return GestureDetector(
+      onTap: () => PlayerPhotoViewer.open(context, image: image, heroTag: tag),
+      child: Hero(tag: tag, child: avatar),
+    );
+  }
+}
+
+/// Colore del ruolo (P/D/C/A) usato per badge e cornice della foto.
+Color _roleColor(String role) => switch (role) {
+      'P' => AppTheme.accentGold,
+      'D' => AppTheme.accentBlue,
+      'C' => AppTheme.accentGreen,
+      'A' => AppTheme.accentRed,
+      _ => AppTheme.textMuted,
+    };
+
+/// `6 partite · 6.5 ⭐` — riga di riepilogo condivisa da header e panoramica.
+String _gamesAndVoteLine(PlayerStatsSummary summary) =>
+    '${summary.totalGames} ${summary.totalGames == 1 ? 'partita' : 'partite'} · '
+    '${summary.votedGames > 0 ? summary.avgVote.toStringAsFixed(1) : '—'} ⭐';
